@@ -67,7 +67,6 @@
       
       <!-- 表格区域 -->
       <el-table :data="tableData" style="width: 100%" v-loading="loading" border stripe>
-        <el-table-column type="selection" width="55"></el-table-column>
         <el-table-column prop="id" label="日志ID" width="80"></el-table-column>
         <el-table-column prop="operator" label="操作人" width="120"></el-table-column>
         <el-table-column prop="operationType" label="操作类型" width="100">
@@ -84,11 +83,10 @@
           </template>
         </el-table-column>
         <el-table-column prop="operationTime" label="操作时间" width="180"></el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="100" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
-              <el-button size="small" @click="handleView(scope.row)">详情</el-button>
-              <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+              <el-button size="small" type="primary" @click="handleView(scope.row)">详情</el-button>
             </div>
           </template>
         </el-table-column>
@@ -446,31 +444,6 @@ const handleView = (row: any) => {
   dialogVisible.value = true
 }
 
-// 删除日志
-const handleDelete = (row: any) => {
-  ElMessageBox.confirm(
-    `确定要删除ID为"${row.id}"的日志记录吗？`,
-    '警告',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    }
-  )
-    .then(() => {
-      ElMessage({
-        type: 'success',
-        message: `日志记录已删除`,
-      })
-    })
-    .catch(() => {
-      ElMessage({
-        type: 'info',
-        message: '已取消删除',
-      })
-    })
-}
-
 // 格式化JSON
 const formatJson = (json: string) => {
   try {
@@ -650,12 +623,14 @@ onMounted(() => {
 
 .action-buttons {
   display: flex;
-  flex-wrap: wrap;
   gap: 5px;
+  white-space: nowrap;
 }
 
 .action-buttons .el-button {
   margin-left: 0 !important;
   margin-right: 0 !important;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 </style> 

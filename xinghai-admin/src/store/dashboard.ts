@@ -24,7 +24,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
   
   // 热销商品数据
   const hotProducts = ref([
-    { name: '台湾茶叶香 (美国)', value: 368, percentage: 100, color: '#f56c6c' },
+    { name: 'Gmail（美国）', value: 368, percentage: 100, color: '#f56c6c' },
     { name: 'ChatGPT账号 (美国)', value: 292, percentage: 79, color: '#67c23a' },
     { name: 'Facebook账号 (美国)', value: 256, percentage: 69, color: '#e6a23c' },
     { name: 'Twitter账号 (美国)', value: 198, percentage: 54, color: '#909399' },
@@ -60,7 +60,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const recentOrders = ref([
     { 
       orderId: 'DD20240315001', 
-      productName: '台湾茶叶香号 (美国)', 
+      productName: 'Gmail（美国）', 
       price: '¥99.99', 
       buyer: 'user***123', 
       status: '已完成', 

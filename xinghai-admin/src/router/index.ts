@@ -201,6 +201,15 @@ const routes: Array<RouteRecordRaw> = [
     ]
   },
   {
+    path: '/docs',
+    name: 'docs',
+    component: () => import('../views/info/HelpView.vue'),
+    meta: {
+      title: '文档设置',
+      requiresAuth: true
+    }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('../views/NotFoundView.vue'),

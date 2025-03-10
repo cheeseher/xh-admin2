@@ -42,16 +42,12 @@
               <el-input v-model="userForm.username" placeholder="请输入用户名"></el-input>
             </el-form-item>
             
-            <el-form-item label="昵称" prop="nickname">
-              <el-input v-model="userForm.nickname" placeholder="请输入昵称"></el-input>
-            </el-form-item>
-            
             <el-form-item label="邮箱" prop="email">
               <el-input v-model="userForm.email" placeholder="请输入邮箱"></el-input>
             </el-form-item>
             
             <el-form-item label="角色">
-              <el-tag :type="getRoleType(userForm.role)">{{ userForm.role }}</el-tag>
+              <el-tag type="danger">超级管理员</el-tag>
             </el-form-item>
             
             <el-form-item label="注册时间">
@@ -137,7 +133,6 @@ const logsDialogVisible = ref(false)
 // 用户表单数据
 const userForm = reactive({
   username: 'admin',
-  nickname: '管理员',
   email: 'admin@xinghai.com',
   role: '超级管理员',
   avatar: 'https://picsum.photos/200',
@@ -150,10 +145,6 @@ const rules = reactive<FormRules>({
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
     { min: 3, max: 20, message: '长度在 3 到 20 个字符', trigger: 'blur' }
-  ],
-  nickname: [
-    { required: true, message: '请输入昵称', trigger: 'blur' },
-    { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
   ],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },

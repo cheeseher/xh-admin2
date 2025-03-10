@@ -4,7 +4,7 @@
       <template #header>
         <div class="card-header">
           <span>会员等级设置</span>
-          <el-button type="primary" size="small" @click="handleAddLevel">新增等级</el-button>
+          <el-button type="primary" @click="handleAddLevel">新增等级</el-button>
         </div>
       </template>
       
@@ -17,7 +17,14 @@
         <el-table-column type="index" label="序号" width="60"></el-table-column>
         <el-table-column prop="name" label="等级名称" min-width="120">
           <template #default="scope">
-            <el-tag :type="getLevelTagType(scope.row.level)">{{ scope.row.name }}</el-tag>
+            <div class="level-name-cell">
+              <el-image 
+                :src="scope.row.icon" 
+                fit="contain" 
+                style="width: 24px; height: 24px; margin-right: 8px;"
+              ></el-image>
+              <el-tag :type="getLevelTagType(scope.row.level)">{{ scope.row.name }}</el-tag>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="level" label="等级" width="80"></el-table-column>
@@ -32,7 +39,8 @@
             <span>{{ scope.row.discount }}%</span>
           </template>
         </el-table-column>
-        <el-table-column prop="description" label="说明" min-width="200"></el-table-column>
+        <el-table-column prop="description" label="备注" min-width="200"></el-table-column>
+        <el-table-column prop="introduction" label="会员介绍" min-width="200"></el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
@@ -47,54 +55,6 @@
           </template>
         </el-table-column>
       </el-table>
-      
-      <!-- 充值折扣预览 -->
-      <div class="recharge-preview" style="margin-top: 20px;">
-        <h3>充值折扣预览</h3>
-        <div class="auto-upgrade-tip">
-          <el-alert
-            title="会员等级自动升级说明"
-            type="info"
-            description="系统会根据用户的累计充值金额自动调整会员等级。当用户累计充值金额达到或超过某一等级的最低充值金额要求时，系统将自动将用户升级到该等级。"
-            show-icon
-            :closable="false"
-          />
-        </div>
-        <el-table :data="rechargePreviewData" style="width: 100%; margin-top: 15px;" border>
-          <el-table-column prop="level" label="会员等级" width="120">
-            <template #default="scope">
-              <el-tag :type="getLevelTagType(scope.row.level)">{{ scope.row.name }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="discount" label="折扣率" width="100">
-            <template #default="scope">
-              <span>{{ scope.row.discount }}%</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="充值示例" min-width="400">
-            <template #default="scope">
-              <div class="recharge-examples">
-                <div class="recharge-example-item">
-                  <span>充值100元，实际到账：</span>
-                  <span class="amount">{{ (100 * 100 / scope.row.discount).toFixed(2) }}元</span>
-                </div>
-                <div class="recharge-example-item">
-                  <span>充值500元，实际到账：</span>
-                  <span class="amount">{{ (500 * 100 / scope.row.discount).toFixed(2) }}元</span>
-                </div>
-                <div class="recharge-example-item">
-                  <span>充值1000元，实际到账：</span>
-                  <span class="amount">{{ (1000 * 100 / scope.row.discount).toFixed(2) }}元</span>
-                </div>
-                <div v-if="scope.row.level < 3" class="upgrade-tip">
-                  <el-divider content-position="left">升级提示</el-divider>
-                  <span>再累计充值 {{ getNextLevelRechargeAmount(scope.row) }} 元可升级到 {{ getNextLevelName(scope.row) }}</span>
-                </div>
-              </div>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
     </el-card>
     
     <!-- 会员等级表单对话框 -->
@@ -106,6 +66,19 @@
       <el-form :model="levelForm" label-width="100px" :rules="levelRules" ref="levelFormRef">
         <el-form-item label="等级名称" prop="name">
           <el-input v-model="levelForm.name" placeholder="请输入等级名称"></el-input>
+        </el-form-item>
+        <el-form-item label="等级图标" prop="icon">
+          <el-upload
+            class="avatar-uploader"
+            action="/api/upload"
+            :show-file-list="false"
+            :on-success="handleIconSuccess"
+            :before-upload="beforeIconUpload"
+          >
+            <img v-if="levelForm.icon" :src="levelForm.icon" class="avatar" />
+            <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+          </el-upload>
+          <div class="form-tip">建议上传正方形图片，大小不超过200KB</div>
         </el-form-item>
         <el-form-item label="等级" prop="level">
           <el-input-number v-model="levelForm.level" :min="0" :max="10" :disabled="dialogType === 'edit'"></el-input-number>
@@ -135,12 +108,20 @@
           ></el-input-number>
           <span class="form-tip">%（百分比，例如：95表示95折，即9.5折）</span>
         </el-form-item>
-        <el-form-item label="说明" prop="description">
+        <el-form-item label="备注" prop="description">
           <el-input 
             v-model="levelForm.description" 
             type="textarea" 
+            :rows="2" 
+            placeholder="请输入备注说明"
+          ></el-input>
+        </el-form-item>
+        <el-form-item label="会员介绍" prop="introduction">
+          <el-input 
+            v-model="levelForm.introduction" 
+            type="textarea" 
             :rows="3" 
-            placeholder="请输入说明"
+            placeholder="请输入会员等级权益介绍"
           ></el-input>
         </el-form-item>
       </el-form>
@@ -213,11 +194,13 @@ const levelFormRef = ref<FormInstance>()
 const levelForm = reactive({
   id: 0,
   name: '',
+  icon: '',
   level: 0,
   condition: '',
   minRecharge: 0,
   discount: 100,
-  description: ''
+  description: '',
+  introduction: ''
 })
 
 // 表单验证规则
@@ -225,6 +208,9 @@ const levelRules = reactive<FormRules>({
   name: [
     { required: true, message: '请输入等级名称', trigger: 'blur' },
     { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
+  ],
+  icon: [
+    { required: true, message: '请上传等级图标', trigger: 'change' }
   ],
   level: [
     { required: true, message: '请输入等级', trigger: 'blur' }
@@ -237,6 +223,9 @@ const levelRules = reactive<FormRules>({
   ],
   discount: [
     { required: true, message: '请输入充值折扣', trigger: 'blur' }
+  ],
+  introduction: [
+    { required: true, message: '请输入会员介绍', trigger: 'blur' }
   ]
 })
 
@@ -263,6 +252,7 @@ const handleAddLevel = () => {
   levelForm.minRecharge = 0
   levelForm.discount = 100
   levelForm.description = ''
+  levelForm.introduction = ''
   levelDialogVisible.value = true
 }
 
@@ -276,6 +266,8 @@ const handleEditLevel = (row: any) => {
   levelForm.minRecharge = row.minRecharge
   levelForm.discount = row.discount
   levelForm.description = row.description
+  levelForm.introduction = row.introduction
+  levelForm.icon = row.icon
   levelDialogVisible.value = true
 }
 
@@ -327,7 +319,9 @@ const submitLevelForm = async () => {
           condition: levelForm.condition,
           minRecharge: levelForm.minRecharge,
           discount: levelForm.discount,
-          description: levelForm.description
+          description: levelForm.description,
+          introduction: levelForm.introduction,
+          icon: levelForm.icon
         })
         ElMessage.success('新增会员等级成功')
       } else {
@@ -340,7 +334,9 @@ const submitLevelForm = async () => {
             condition: levelForm.condition,
             minRecharge: levelForm.minRecharge,
             discount: levelForm.discount,
-            description: levelForm.description
+            description: levelForm.description,
+            introduction: levelForm.introduction,
+            icon: levelForm.icon
           }
         }
         ElMessage.success('编辑会员等级成功')
@@ -352,17 +348,24 @@ const submitLevelForm = async () => {
   })
 }
 
-// 获取下一等级名称
-const getNextLevelName = (currentLevel: any) => {
-  const nextLevel = memberLevels.value.find(level => level.level === currentLevel.level + 1)
-  return nextLevel ? nextLevel.name : ''
+// 处理图标上传
+const handleIconSuccess = (response: any) => {
+  levelForm.icon = response.data.url
 }
 
-// 获取升级到下一等级所需的充值金额
-const getNextLevelRechargeAmount = (currentLevel: any) => {
-  const nextLevel = memberLevels.value.find(level => level.level === currentLevel.level + 1)
-  if (!nextLevel) return 0
-  return nextLevel.minRecharge - currentLevel.minRecharge
+const beforeIconUpload = (file: File) => {
+  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
+  const isLt200K = file.size / 1024 < 200
+
+  if (!isJPG) {
+    ElMessage.error('图标只能是 JPG 或 PNG 格式!')
+    return false
+  }
+  if (!isLt200K) {
+    ElMessage.error('图标大小不能超过 200KB!')
+    return false
+  }
+  return true
 }
 
 // 初始化
@@ -450,5 +453,39 @@ onMounted(() => {
   padding: 10px;
   background-color: #f0f0f0;
   border-radius: 4px;
+}
+
+.level-name-cell {
+  display: flex;
+  align-items: center;
+}
+
+.avatar-uploader {
+  width: 100px;
+  height: 100px;
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.avatar-uploader:hover {
+  border-color: #409EFF;
+}
+
+.avatar-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 100px;
+  height: 100px;
+  text-align: center;
+  line-height: 100px;
+}
+
+.avatar {
+  width: 100px;
+  height: 100px;
+  display: block;
 }
 </style> 

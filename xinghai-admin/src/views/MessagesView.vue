@@ -18,7 +18,7 @@
       <div class="search-area">
         <el-form :inline="true" :model="searchForm" class="search-form">
           <el-form-item label="状态">
-            <el-select v-model="searchForm.status" placeholder="全部状态" clearable>
+            <el-select v-model="searchForm.status" placeholder="全部状态" clearable style="width: 168px;">
               <el-option label="未解决" value="pending"></el-option>
               <el-option label="已解决" value="resolved"></el-option>
             </el-select>
@@ -66,30 +66,22 @@
           <el-table-column prop="quantity" label="需求数量" width="100"></el-table-column>
           <el-table-column prop="description" label="备注说明" min-width="200"></el-table-column>
           <el-table-column prop="createTime" label="发送时间" width="180"></el-table-column>
-          <el-table-column label="操作" width="150" fixed="right">
+          <el-table-column label="操作" width="180" fixed="right">
             <template #default="scope">
-              <el-button-group>
-                <el-button size="small" type="primary" @click="viewMessage(scope.row)" title="查看详情">
-                  <el-icon><View /></el-icon>
-                </el-button>
+              <div class="action-buttons">
+                <el-button size="small" type="primary" @click="viewMessage(scope.row)">查看</el-button>
                 <el-button 
                   size="small" 
-                  type="success" 
+                  type="primary" 
                   @click="resolveMessage(scope.row)"
                   :disabled="scope.row.status === 'resolved'"
-                  title="标记为已解决"
-                >
-                  <el-icon><Check /></el-icon>
-                </el-button>
+                >解决</el-button>
                 <el-button 
                   size="small" 
                   type="danger" 
                   @click="deleteMessage(scope.row.id)"
-                  title="删除"
-                >
-                  <el-icon><Delete /></el-icon>
-                </el-button>
-              </el-button-group>
+                >删除</el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -453,5 +445,16 @@ defineExpose({
 
 :deep(.pending-row:hover) {
   background-color: #ffece8 !important;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.action-buttons .el-button {
+  padding-left: 8px;
+  padding-right: 8px;
 }
 </style> 

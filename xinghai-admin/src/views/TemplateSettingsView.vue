@@ -4,7 +4,7 @@
       <template #header>
         <div class="card-header">
           <span>模板设置</span>
-          <el-button type="primary" size="small" @click="handleAddTemplate">新增模板</el-button>
+          <el-button type="primary" @click="handleAddTemplate">新增模板</el-button>
         </div>
       </template>
       

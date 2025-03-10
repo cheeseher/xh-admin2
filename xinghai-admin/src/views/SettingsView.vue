@@ -115,35 +115,14 @@
             <el-form-item label="登录失败锁定">
               <el-switch v-model="securityForm.loginLock"></el-switch>
               <span class="form-text" v-if="securityForm.loginLock">
-                <el-input-number v-model="securityForm.loginLockCount" :min="1" :max="10" class="small-input"></el-input-number>
+                <el-input-number v-model="securityForm.loginLockCount" :min="1" :max="10" controls-position="right" style="width: 120px;"></el-input-number>
                 次失败后锁定
-                <el-input-number v-model="securityForm.loginLockTime" :min="1" :max="1440" class="small-input"></el-input-number>
+                <el-input-number v-model="securityForm.loginLockTime" :min="1" :max="1440" controls-position="right" style="width: 120px;"></el-input-number>
                 分钟
               </span>
             </el-form-item>
             <el-form-item label="启用验证码">
               <el-switch v-model="securityForm.captcha"></el-switch>
-              <span class="form-text" v-if="securityForm.captcha">
-                <el-radio-group v-model="securityForm.captchaType">
-                  <el-radio label="image">图片验证码</el-radio>
-                  <el-radio label="slide">滑动验证码</el-radio>
-                </el-radio-group>
-              </span>
-            </el-form-item>
-            <el-form-item label="启用双因素认证">
-              <el-switch v-model="securityForm.twoFactor"></el-switch>
-            </el-form-item>
-            <el-form-item label="IP白名单">
-              <el-switch v-model="securityForm.ipWhitelist"></el-switch>
-              <div v-if="securityForm.ipWhitelist" class="ip-whitelist">
-                <el-input
-                  v-model="securityForm.ipWhitelistValue"
-                  type="textarea"
-                  :rows="4"
-                  placeholder="请输入IP地址，每行一个"
-                ></el-input>
-                <div class="form-tip">每行输入一个IP地址或IP段，例如: 192.168.1.1 或 192.168.1.0/24</div>
-              </div>
             </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="saveSecuritySettings">保存设置</el-button>
@@ -183,7 +162,7 @@
               <el-switch v-model="otherForm.systemLog"></el-switch>
               <span class="form-text" v-if="otherForm.systemLog">
                 保留
-                <el-input-number v-model="otherForm.logRetention" :min="1" :max="365" class="small-input"></el-input-number>
+                <el-input-number v-model="otherForm.logRetention" :min="1" :max="365" controls-position="right" style="width: 120px;"></el-input-number>
                 天
               </span>
             </el-form-item>
@@ -191,7 +170,7 @@
               <el-switch v-model="otherForm.operationLog"></el-switch>
               <span class="form-text" v-if="otherForm.operationLog">
                 保留
-                <el-input-number v-model="otherForm.operationLogRetention" :min="1" :max="365" class="small-input"></el-input-number>
+                <el-input-number v-model="otherForm.operationLogRetention" :min="1" :max="365" controls-position="right" style="width: 120px;"></el-input-number>
                 天
               </span>
             </el-form-item>
@@ -199,7 +178,7 @@
               <el-switch v-model="otherForm.loginLog"></el-switch>
               <span class="form-text" v-if="otherForm.loginLog">
                 保留
-                <el-input-number v-model="otherForm.loginLogRetention" :min="1" :max="365" class="small-input"></el-input-number>
+                <el-input-number v-model="otherForm.loginLogRetention" :min="1" :max="365" controls-position="right" style="width: 120px;"></el-input-number>
                 天
               </span>
             </el-form-item>
@@ -388,11 +367,7 @@ const securityForm = reactive({
   loginLock: true,
   loginLockCount: 5,
   loginLockTime: 30,
-  captcha: true,
-  captchaType: 'image',
-  twoFactor: false,
-  ipWhitelist: false,
-  ipWhitelistValue: ''
+  captcha: true
 })
 
 // 其他设置表单
@@ -417,9 +392,9 @@ const paymentFormRef = ref<FormInstance>()
 const paymentForm = reactive({
   // USDT支付设置
   enableUsdt: true,
-  usdtTitle: '得多号码平台',
+  usdtTitle: '星海平台',
   usdtDescription: '当前USDT支付区块链网络协议为TRC20',
-  usdtOrderPrefix: 'HENDUOHAO',
+  usdtOrderPrefix: 'XINGHAI',
   usdtAddress: 'THDpUb2RCAv26mZ6jQZc1MMhR6WmJy5Jn9',
   usdtNetwork: 'TRC20',
   usdtTimeout: 30,
@@ -600,9 +575,9 @@ const savePaymentSettings = () => {
 const resetPaymentForm = () => {
   // 重置为初始值
   paymentForm.enableUsdt = true
-  paymentForm.usdtTitle = '得多号码平台'
+  paymentForm.usdtTitle = '星海平台'
   paymentForm.usdtDescription = '当前USDT支付区块链网络协议为TRC20'
-  paymentForm.usdtOrderPrefix = 'HENDUOHAO'
+  paymentForm.usdtOrderPrefix = 'XINGHAI'
   paymentForm.usdtAddress = 'THDpUb2RCAv26mZ6jQZc1MMhR6WmJy5Jn9'
   paymentForm.usdtNetwork = 'TRC20'
   paymentForm.usdtTimeout = 30
@@ -683,7 +658,7 @@ onMounted(() => {
 }
 
 .small-input {
-  width: 80px;
+  width: 120px !important;
   margin: 0 5px;
 }
 
@@ -712,6 +687,7 @@ onMounted(() => {
 
 .form-text {
   margin-left: 10px;
+  font-size: 14px;
   color: #606266;
 }
 

@@ -73,20 +73,10 @@
             <el-icon><Document /></el-icon>
             <template #title>模板设置</template>
           </el-menu-item>
-          <el-sub-menu index="/info">
-            <template #title>
-              <el-icon><InfoFilled /></el-icon>
-              <span>资讯管理</span>
-            </template>
-            <el-menu-item index="/info/faq">
-              <el-icon><QuestionFilled /></el-icon>
-              <span>常见问题</span>
-            </el-menu-item>
-            <el-menu-item index="/info/help">
-              <el-icon><Document /></el-icon>
-              <span>帮助文档</span>
-            </el-menu-item>
-          </el-sub-menu>
+          <el-menu-item index="/docs">
+            <el-icon><Document /></el-icon>
+            <template #title>文档设置</template>
+          </el-menu-item>
           <el-menu-item index="/settings">
             <el-icon><Setting /></el-icon>
             <template #title>系统设置</template>
