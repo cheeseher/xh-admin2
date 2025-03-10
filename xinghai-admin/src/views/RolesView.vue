@@ -225,52 +225,65 @@ const checkedPermissions = ref<number[]>([])
 const permissionTree = ref([
   {
     id: 1,
-    name: '系统管理',
+    name: '数据概览',
     children: [
-      { id: 11, name: '用户管理' },
-      { id: 12, name: '角色管理' },
-      { id: 13, name: '菜单管理' },
-      { id: 14, name: '部门管理' }
+      { id: 101, name: '数据概览' }
     ]
   },
   {
     id: 2,
-    name: '内容管理',
+    name: '订单管理',
     children: [
-      { id: 21, name: '文章管理' },
-      { id: 22, name: '分类管理' },
-      { id: 23, name: '标签管理' },
-      { id: 24, name: '评论管理' }
+      { id: 201, name: '商品订单' },
+      { id: 202, name: '充值订单' }
     ]
   },
   {
     id: 3,
     name: '商品管理',
     children: [
-      { id: 31, name: '商品列表' },
-      { id: 32, name: '商品分类' },
-      { id: 33, name: '商品规格' },
-      { id: 34, name: '商品评价' }
+      { id: 301, name: '商品列表' },
+      { id: 302, name: '分类管理' },
+      { id: 303, name: '库存管理' }
     ]
   },
   {
     id: 4,
-    name: '订单管理',
+    name: '用户管理',
     children: [
-      { id: 41, name: '订单列表' },
-      { id: 42, name: '订单设置' },
-      { id: 43, name: '退款管理' },
-      { id: 44, name: '物流管理' }
+      { id: 401, name: '用户管理' }
     ]
   },
   {
     id: 5,
-    name: '统计分析',
+    name: '会员设置',
     children: [
-      { id: 51, name: '销售统计' },
-      { id: 52, name: '用户统计' },
-      { id: 53, name: '商品统计' },
-      { id: 54, name: '搜索统计' }
+      { id: 501, name: '会员设置' }
+    ]
+  },
+  {
+    id: 6,
+    name: '内容管理',
+    children: [
+      { id: 601, name: '文档设置' },
+      { id: 602, name: '模板设置' },
+      { id: 603, name: '站内信' }
+    ]
+  },
+  {
+    id: 7,
+    name: '权限管理',
+    children: [
+      { id: 701, name: '角色管理' },
+      { id: 702, name: '账户管理' }
+    ]
+  },
+  {
+    id: 8,
+    name: '系统管理',
+    children: [
+      { id: 801, name: '系统设置' },
+      { id: 802, name: '操作日志' }
     ]
   }
 ])
@@ -329,19 +342,27 @@ const handlePermission = (row: any) => {
   // 模拟获取当前角色的权限
   if (row.roleId === 'R001') {
     // 超级管理员拥有所有权限
-    checkedPermissions.value = [11, 12, 13, 14, 21, 22, 23, 24, 31, 32, 33, 34, 41, 42, 43, 44, 51, 52, 53, 54]
+    checkedPermissions.value = [
+      101, 201, 202, 301, 302, 303, 401, 501, 601, 602, 603, 701, 702, 801, 802
+    ]
   } else if (row.roleId === 'R002') {
     // 普通管理员拥有部分权限
-    checkedPermissions.value = [11, 12, 21, 22, 23, 31, 32, 41, 42, 51]
+    checkedPermissions.value = [
+      101, 201, 202, 301, 302, 303, 401, 501, 601, 602, 603, 701, 702, 801, 802
+    ]
   } else if (row.roleId === 'R003') {
     // VIP用户拥有部分权限
-    checkedPermissions.value = [21, 22, 23, 31, 32, 41]
+    checkedPermissions.value = [
+      101, 201, 202, 301, 302, 303, 401, 501, 601
+    ]
   } else if (row.roleId === 'R004') {
     // 普通用户拥有基本权限
-    checkedPermissions.value = [21, 31, 41]
+    checkedPermissions.value = [
+      101, 201, 301, 401, 601
+    ]
   } else {
     // 游客几乎没有权限
-    checkedPermissions.value = []
+    checkedPermissions.value = [101]
   }
   permissionDialogVisible.value = true
 }

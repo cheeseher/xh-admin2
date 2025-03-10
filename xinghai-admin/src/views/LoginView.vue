@@ -7,7 +7,6 @@
           <el-icon><Monitor /></el-icon>
           <h2 class="title">星海后台管理系统</h2>
         </div>
-        <p class="subtitle">专业的邮箱账号和社交媒体账号管理平台</p>
       </div>
       
       <div class="login-form">
@@ -52,7 +51,6 @@
           
           <div class="login-options">
             <el-checkbox v-model="loginForm.remember">记住密码</el-checkbox>
-            <el-link type="primary" :underline="false">忘记密码？</el-link>
           </div>
           
           <el-form-item>
@@ -68,7 +66,6 @@
       </div>
       
       <div class="login-footer">
-        <p>© 2023 星海科技有限公司 版权所有</p>
       </div>
     </div>
   </div>
@@ -171,9 +168,7 @@ const handleLogin = async () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, #1a237e, #0d47a1, #01579b);
-  background-size: 600% 600%;
-  animation: gradientBackground 15s ease infinite;
+  background: #1976d2;
   z-index: -1;
 }
 
@@ -189,18 +184,6 @@ const handleLogin = async () => {
   background-repeat: no-repeat;
   background-size: 100% 50%;
   opacity: 0.8;
-}
-
-@keyframes gradientBackground {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
 }
 
 .login-box {
@@ -260,6 +243,7 @@ const handleLogin = async () => {
   display: flex;
   align-items: center;
   gap: 10px;
+  justify-content: space-between;
 }
 
 .captcha-image {
@@ -268,6 +252,7 @@ const handleLogin = async () => {
   border-radius: 4px;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
 .captcha-image img {
