@@ -4,12 +4,12 @@
       <template #header>
         <div class="card-header">
           <span>分类管理</span>
-          <el-button type="primary" size="small" @click="handleAddCategory">新增分类</el-button>
+          <el-button type="primary" @click="handleAddCategory">新增分类</el-button>
         </div>
       </template>
       
       <div class="page-description">
-        <p>管理所有邮箱账号和社交媒体账号的分类信息，包括Gmail、微软邮箱、Instagram、Twitter、Facebook等账号类型。您可以添加、编辑、删除分类，并设置分类的图标、排序等信息。</p>
+        <p>管理所有邮箱账号和社交媒体账号的分类信息，包括Gmail、微软邮箱、Instagram、Twitter、Facebook等账号类型。您可以添加、编辑、删除分类，并设置分类的描述、排序等信息。</p>
       </div>
       
       <!-- 搜索区域 -->
@@ -17,13 +17,6 @@
         <el-form :inline="true" :model="searchForm" class="demo-form-inline">
           <el-form-item label="分类名称">
             <el-input v-model="searchForm.name" placeholder="请输入分类名称" clearable></el-input>
-          </el-form-item>
-          <el-form-item label="分类类型">
-            <el-select v-model="searchForm.type" placeholder="请选择" clearable style="width: 168px;">
-              <el-option label="全部" value=""></el-option>
-              <el-option label="邮箱" value="email"></el-option>
-              <el-option label="账号" value="account"></el-option>
-            </el-select>
           </el-form-item>
           <el-form-item label="状态">
             <el-select v-model="searchForm.status" placeholder="请选择" clearable style="width: 168px;">
@@ -41,18 +34,9 @@
       
       <!-- 表格区域 -->
       <el-table :data="categoryList" style="width: 100%" v-loading="loading" border stripe>
-        <el-table-column type="index" label="序号" width="60"></el-table-column>
+        <el-table-column prop="id" label="分类ID" width="80"></el-table-column>
         <el-table-column prop="name" label="分类名称" min-width="180"></el-table-column>
-        <el-table-column prop="type" label="分类类型" width="100">
-          <template #default="scope">
-            <el-tag :type="getTypeTag(scope.row.type)">{{ scope.row.type }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="icon" label="图标" width="80">
-          <template #default="scope">
-            <el-icon :size="20" :color="scope.row.iconColor"><component :is="scope.row.icon" /></el-icon>
-          </template>
-        </el-table-column>
+        <el-table-column prop="description" label="分类描述" min-width="200"></el-table-column>
         <el-table-column prop="sort" label="排序" width="80"></el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
@@ -66,10 +50,9 @@
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
-              <el-button size="small" @click="handleView(scope.row)">查看</el-button>
               <el-button size="small" type="primary" @click="handleEdit(scope.row)">编辑</el-button>
               <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
             </div>
@@ -102,24 +85,8 @@
         <el-form-item label="分类名称" prop="name">
           <el-input v-model="categoryForm.name" placeholder="请输入分类名称"></el-input>
         </el-form-item>
-        <el-form-item label="分类类型" prop="type">
-          <el-select v-model="categoryForm.type" placeholder="请选择分类类型" style="width: 100%;">
-            <el-option label="邮箱" value="email"></el-option>
-            <el-option label="账号" value="account"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="图标" prop="icon">
-          <el-select v-model="categoryForm.icon" placeholder="请选择图标" style="width: 100%;">
-            <el-option v-for="icon in iconOptions" :key="icon.value" :label="icon.label" :value="icon.value">
-              <div style="display: flex; align-items: center;">
-                <el-icon :size="20" :color="icon.color"><component :is="icon.value" /></el-icon>
-                <span style="margin-left: 10px;">{{ icon.label }}</span>
-              </div>
-            </el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="图标颜色" prop="iconColor">
-          <el-color-picker v-model="categoryForm.iconColor"></el-color-picker>
+        <el-form-item label="分类描述" prop="description">
+          <el-input v-model="categoryForm.description" type="textarea" :rows="3" placeholder="请输入分类描述"></el-input>
         </el-form-item>
         <el-form-item label="排序" prop="sort">
           <el-input-number v-model="categoryForm.sort" :min="0" :max="999" style="width: 100%;"></el-input-number>
@@ -207,34 +174,15 @@ const Facebook = defineComponent({
 // 搜索表单
 const searchForm = reactive({
   name: '',
-  type: '',
   status: ''
 })
-
-// 图标选项
-const iconOptions = [
-  { label: '邮件', value: 'Message', color: '#409EFF' },
-  { label: '聊天', value: 'ChatDotRound', color: '#67C23A' },
-  { label: 'Instagram', value: 'Instagram', color: '#E6A23C' },
-  { label: 'Twitter', value: 'Twitter', color: '#1DA1F2' },
-  { label: 'Facebook', value: 'Facebook', color: '#4267B2' },
-  { label: '聊天框', value: 'ChatLineRound', color: '#F56C6C' },
-  { label: '邮箱', value: 'Postcard', color: '#909399' },
-  { label: '标签', value: 'Discount', color: '#9C27B0' },
-  { label: '促销', value: 'Promotion', color: '#FF9800' },
-  { label: '公文包', value: 'Briefcase', color: '#795548' },
-  { label: '收藏', value: 'Collection', color: '#607D8B' },
-  { label: '更多', value: 'More', color: '#2196F3' }
-]
 
 // 表格数据
 const categoryList = ref([
   { 
     id: 1,
     name: '谷歌邮箱', 
-    type: '邮箱',
-    icon: 'Message',
-    iconColor: '#409EFF',
+    description: 'Gmail邮箱账号，支持自定义密码和换绑手机',
     sort: 1,
     status: '启用',
     statusBool: true,
@@ -243,9 +191,7 @@ const categoryList = ref([
   { 
     id: 2,
     name: '微软邮箱', 
-    type: '邮箱',
-    icon: 'Message',
-    iconColor: '#67C23A',
+    description: 'Microsoft邮箱账号，支持自定义密码和换绑手机',
     sort: 2,
     status: '启用',
     statusBool: true,
@@ -254,9 +200,7 @@ const categoryList = ref([
   { 
     id: 3,
     name: 'Instagram账号', 
-    type: '账号',
-    icon: 'Instagram',
-    iconColor: '#E6A23C',
+    description: 'Instagram社交媒体账号，支持自定义密码和换绑手机',
     sort: 3,
     status: '启用',
     statusBool: true,
@@ -265,9 +209,7 @@ const categoryList = ref([
   { 
     id: 4,
     name: 'Twitter账号', 
-    type: '账号',
-    icon: 'Twitter',
-    iconColor: '#1DA1F2',
+    description: 'Twitter社交媒体账号，支持自定义密码和换绑手机',
     sort: 4,
     status: '启用',
     statusBool: true,
@@ -276,9 +218,7 @@ const categoryList = ref([
   { 
     id: 5,
     name: 'Facebook账号', 
-    type: '账号',
-    icon: 'Facebook',
-    iconColor: '#4267B2',
+    description: 'Facebook社交媒体账号，支持自定义密码和换绑手机',
     sort: 5,
     status: '启用',
     statusBool: true,
@@ -287,9 +227,7 @@ const categoryList = ref([
   { 
     id: 6,
     name: 'Discord账号', 
-    type: '账号',
-    icon: 'ChatDotRound',
-    iconColor: '#7289DA',
+    description: 'Discord社交媒体账号，支持自定义密码和换绑手机',
     sort: 6,
     status: '启用',
     statusBool: true,
@@ -298,9 +236,7 @@ const categoryList = ref([
   { 
     id: 7,
     name: 'ChatGPT账号', 
-    type: '账号',
-    icon: 'ChatLineRound',
-    iconColor: '#10A37F',
+    description: 'ChatGPT人工智能账号，支持自定义密码和换绑手机',
     sort: 7,
     status: '启用',
     statusBool: true,
@@ -309,9 +245,7 @@ const categoryList = ref([
   { 
     id: 8,
     name: '雅虎邮箱', 
-    type: '邮箱',
-    icon: 'Message',
-    iconColor: '#6001D2',
+    description: 'Yahoo邮箱账号，支持自定义密码和换绑手机',
     sort: 8,
     status: '启用',
     statusBool: true,
@@ -320,9 +254,7 @@ const categoryList = ref([
   { 
     id: 9,
     name: 'GMX邮箱账号', 
-    type: '邮箱',
-    icon: 'Message',
-    iconColor: '#F56C6C',
+    description: 'GMX邮箱账号，支持自定义密码和换绑手机',
     sort: 9,
     status: '启用',
     statusBool: true,
@@ -331,9 +263,7 @@ const categoryList = ref([
   { 
     id: 10,
     name: 'TikTok账号', 
-    type: '账号',
-    icon: 'Promotion',
-    iconColor: '#000000',
+    description: 'TikTok社交媒体账号，支持自定义密码和换绑手机',
     sort: 10,
     status: '启用',
     statusBool: true,
@@ -342,9 +272,7 @@ const categoryList = ref([
   { 
     id: 11,
     name: '美国AOL邮箱', 
-    type: '邮箱',
-    icon: 'Message',
-    iconColor: '#FF0000',
+    description: 'AOL邮箱账号，支持自定义密码和换绑手机',
     sort: 11,
     status: '启用',
     statusBool: true,
@@ -353,9 +281,7 @@ const categoryList = ref([
   { 
     id: 12,
     name: 'ProtonMail邮箱', 
-    type: '邮箱',
-    icon: 'Message',
-    iconColor: '#8A2BE2',
+    description: 'ProtonMail邮箱账号，支持自定义密码和换绑手机',
     sort: 12,
     status: '启用',
     statusBool: true,
@@ -364,9 +290,7 @@ const categoryList = ref([
   { 
     id: 13,
     name: '亚马逊账号', 
-    type: '账号',
-    icon: 'Briefcase',
-    iconColor: '#FF9900',
+    description: 'Amazon社交媒体账号，支持自定义密码和换绑手机',
     sort: 13,
     status: '启用',
     statusBool: true,
@@ -375,9 +299,7 @@ const categoryList = ref([
   { 
     id: 14,
     name: 'Mail.COM邮箱', 
-    type: '邮箱',
-    icon: 'Message',
-    iconColor: '#4CAF50',
+    description: 'Mail.COM邮箱账号，支持自定义密码和换绑手机',
     sort: 14,
     status: '启用',
     statusBool: true,
@@ -386,9 +308,7 @@ const categoryList = ref([
   { 
     id: 15,
     name: 'Naver邮箱', 
-    type: '邮箱',
-    icon: 'Message',
-    iconColor: '#1EC800',
+    description: 'Naver邮箱账号，支持自定义密码和换绑手机',
     sort: 15,
     status: '启用',
     statusBool: true,
@@ -397,9 +317,7 @@ const categoryList = ref([
   { 
     id: 16,
     name: '俄罗斯RU邮箱', 
-    type: '邮箱',
-    icon: 'Message',
-    iconColor: '#2196F3',
+    description: '俄罗斯RU邮箱账号，支持自定义密码和换绑手机',
     sort: 16,
     status: '启用',
     statusBool: true,
@@ -408,9 +326,7 @@ const categoryList = ref([
   { 
     id: 17,
     name: '德国DE邮箱', 
-    type: '邮箱',
-    icon: 'Message',
-    iconColor: '#FFC107',
+    description: '德国DE邮箱账号，支持自定义密码和换绑手机',
     sort: 17,
     status: '启用',
     statusBool: true,
@@ -419,9 +335,7 @@ const categoryList = ref([
   { 
     id: 18,
     name: '其他邮箱集合', 
-    type: '邮箱',
-    icon: 'More',
-    iconColor: '#009688',
+    description: '其他邮箱账号集合，支持自定义密码和换绑手机',
     sort: 18,
     status: '启用',
     statusBool: true,
@@ -442,9 +356,7 @@ const categoryFormRef = ref<FormInstance>()
 const categoryForm = reactive({
   id: 0,
   name: '',
-  type: '',
-  icon: '',
-  iconColor: '#409EFF',
+  description: '',
   sort: 0,
   statusBool: true
 })
@@ -455,11 +367,9 @@ const rules = reactive<FormRules>({
     { required: true, message: '请输入分类名称', trigger: 'blur' },
     { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
   ],
-  type: [
-    { required: true, message: '请选择分类类型', trigger: 'change' }
-  ],
-  icon: [
-    { required: true, message: '请选择图标', trigger: 'change' }
+  description: [
+    { required: true, message: '请输入分类描述', trigger: 'blur' },
+    { min: 2, max: 200, message: '长度在 2 到 200 个字符', trigger: 'blur' }
   ],
   sort: [
     { required: true, message: '请输入排序', trigger: 'blur' }
@@ -488,7 +398,6 @@ const handleSearch = () => {
 // 重置
 const resetSearch = () => {
   searchForm.name = ''
-  searchForm.type = ''
   searchForm.status = ''
 }
 
@@ -499,20 +408,12 @@ const handleStatusChange = (val: boolean, row: any) => {
   row.status = val ? '启用' : '禁用'
 }
 
-// 查看
-const handleView = (row: any) => {
-  console.log('查看分类', row)
-  ElMessage.info(`查看分类: ${row.name}`)
-}
-
 // 新增分类
 const handleAddCategory = () => {
   dialogType.value = 'add'
   categoryForm.id = 0
   categoryForm.name = ''
-  categoryForm.type = ''
-  categoryForm.icon = ''
-  categoryForm.iconColor = '#409EFF'
+  categoryForm.description = ''
   categoryForm.sort = categoryList.value.length + 1
   categoryForm.statusBool = true
   dialogVisible.value = true
@@ -523,9 +424,7 @@ const handleEdit = (row: any) => {
   dialogType.value = 'edit'
   categoryForm.id = row.id
   categoryForm.name = row.name
-  categoryForm.type = row.type
-  categoryForm.icon = row.icon
-  categoryForm.iconColor = row.iconColor
+  categoryForm.description = row.description
   categoryForm.sort = row.sort
   categoryForm.statusBool = row.statusBool
   dialogVisible.value = true

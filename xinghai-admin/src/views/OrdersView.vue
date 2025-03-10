@@ -3,8 +3,7 @@
     <el-card class="box-card">
       <template #header>
         <div class="card-header">
-          <span>订单管理</span>
-          <el-button type="primary" size="small" @click="handleAddOrder">新增订单</el-button>
+          <span>商品订单列表</span>
         </div>
       </template>
       
@@ -34,11 +33,8 @@
           <el-form-item label="支付方式">
             <el-select v-model="searchForm.payMethod" placeholder="请选择" clearable style="width: 168px;">
               <el-option label="全部" value=""></el-option>
-              <el-option label="支付宝" value="支付宝"></el-option>
-              <el-option label="微信支付" value="微信支付"></el-option>
-              <el-option label="银行卡" value="银行卡"></el-option>
-              <el-option label="PayPal" value="PayPal"></el-option>
-              <el-option label="USDT" value="USDT"></el-option>
+              <el-option label="USDT" value="usdt"></el-option>
+              <el-option label="其他方式" value="other"></el-option>
             </el-select>
           </el-form-item>
           <el-form-item label="发货方式">
@@ -84,15 +80,24 @@
             <el-tag :type="getCategoryTag(scope.row.category)">{{ scope.row.category }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="price" label="价格" width="100">
+        <el-table-column prop="quantity" label="数量" width="80"></el-table-column>
+        <el-table-column prop="totalPrice" label="总价" width="100">
           <template #default="scope">
-            <span class="price">¥{{ scope.row.price }}</span>
+            <span class="price">{{ scope.row.totalPrice }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="buyer" label="买家" width="120"></el-table-column>
+        <el-table-column prop="cardId" label="卡密ID" width="100"></el-table-column>
+        <el-table-column prop="cardInfo" label="卡密信息" min-width="120">
+          <template #default="scope">
+            <el-button link type="primary" @click="viewCardInfo(scope.row)">查看</el-button>
+          </template>
+        </el-table-column>
+        <el-table-column prop="userEmail" label="用户邮箱" width="180"></el-table-column>
         <el-table-column prop="payMethod" label="支付方式" width="100">
           <template #default="scope">
-            <el-tag size="small" effect="plain" :type="getPayMethodTag(scope.row.payMethod)">{{ scope.row.payMethod }}</el-tag>
+            <el-tag size="small" effect="plain" :type="scope.row.payMethod === 'usdt' ? 'danger' : 'info'">
+              {{ scope.row.payMethod === 'usdt' ? 'USDT' : '其他方式' }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="deliveryMethod" label="发货方式" width="100">
@@ -108,11 +113,10 @@
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
-        <el-table-column label="操作" width="250" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
               <el-button size="small" @click="handleView(scope.row)">查看</el-button>
-              <el-button size="small" type="primary" @click="handleEdit(scope.row)">编辑</el-button>
               <el-button 
                 v-if="scope.row.status === '待发货'" 
                 size="small" 
@@ -140,88 +144,6 @@
       </div>
     </el-card>
     
-    <!-- 订单表单对话框 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogType === 'add' ? '新增订单' : '编辑订单'"
-      width="650px"
-    >
-      <el-form :model="orderForm" label-width="100px" :rules="rules" ref="orderFormRef">
-        <el-form-item label="商品名称" prop="productName">
-          <el-select v-model="orderForm.productName" placeholder="请选择商品" filterable style="width: 100%;">
-            <el-option v-for="item in productOptions" :key="item.value" :label="item.label" :value="item.value">
-              <div style="display: flex; justify-content: space-between; align-items: center">
-                <span>{{ item.label }}</span>
-                <span style="color: #f56c6c; font-weight: bold">¥{{ item.price }}</span>
-              </div>
-            </el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="商品分类" prop="category">
-          <el-select v-model="orderForm.category" placeholder="请选择商品分类" style="width: 100%;">
-            <el-option label="谷歌邮箱" value="谷歌邮箱"></el-option>
-            <el-option label="微软邮箱" value="微软邮箱"></el-option>
-            <el-option label="Instagram账号" value="Instagram账号"></el-option>
-            <el-option label="Twitter账号" value="Twitter账号"></el-option>
-            <el-option label="Facebook账号" value="Facebook账号"></el-option>
-            <el-option label="Discord账号" value="Discord账号"></el-option>
-            <el-option label="ChatGPT账号" value="ChatGPT账号"></el-option>
-            <el-option label="其他账号" value="其他账号"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="价格" prop="price">
-          <el-input-number v-model="orderForm.price" :min="0" :precision="2" :step="0.01" style="width: 100%;"></el-input-number>
-        </el-form-item>
-        <el-form-item label="买家" prop="buyer">
-          <el-input v-model="orderForm.buyer" placeholder="请输入买家信息"></el-input>
-        </el-form-item>
-        <el-form-item label="买家联系方式" prop="contact">
-          <el-input v-model="orderForm.contact" placeholder="请输入买家联系方式"></el-input>
-        </el-form-item>
-        <el-form-item label="支付方式" prop="payMethod">
-          <el-select v-model="orderForm.payMethod" placeholder="请选择支付方式" style="width: 100%;">
-            <el-option label="支付宝" value="支付宝"></el-option>
-            <el-option label="微信支付" value="微信支付"></el-option>
-            <el-option label="银行卡" value="银行卡"></el-option>
-            <el-option label="PayPal" value="PayPal"></el-option>
-            <el-option label="USDT" value="USDT"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="发货方式" prop="deliveryMethod">
-          <el-radio-group v-model="orderForm.deliveryMethod">
-            <el-radio label="自动发货">自动发货</el-radio>
-            <el-radio label="手动发货">手动发货</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="订单状态" prop="status">
-          <el-select v-model="orderForm.status" placeholder="请选择订单状态" style="width: 100%;">
-            <el-option label="待付款" value="待付款"></el-option>
-            <el-option label="待发货" value="待发货"></el-option>
-            <el-option label="已发货" value="已发货"></el-option>
-            <el-option label="已完成" value="已完成"></el-option>
-            <el-option label="已取消" value="已取消"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="账号信息" prop="accountInfo" v-if="orderForm.status === '已发货' || orderForm.status === '已完成'">
-          <el-input 
-            v-model="orderForm.accountInfo" 
-            type="textarea" 
-            :rows="4" 
-            placeholder="请输入账号信息（账号、密码等）"
-          ></el-input>
-        </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input v-model="orderForm.remark" type="textarea" :rows="3" placeholder="请输入备注信息"></el-input>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitForm">确定</el-button>
-        </span>
-      </template>
-    </el-dialog>
-    
     <!-- 发货对话框 -->
     <el-dialog
       v-model="deliverDialogVisible"
@@ -235,15 +157,18 @@
         <el-form-item label="商品名称">
           <el-input v-model="deliverForm.productName" disabled></el-input>
         </el-form-item>
-        <el-form-item label="买家">
-          <el-input v-model="deliverForm.buyer" disabled></el-input>
+        <el-form-item label="用户邮箱">
+          <el-input v-model="deliverForm.userEmail" disabled></el-input>
         </el-form-item>
-        <el-form-item label="账号信息" prop="accountInfo">
+        <el-form-item label="卡密ID" prop="cardId">
+          <el-input v-model="deliverForm.cardId" placeholder="请输入卡密ID"></el-input>
+        </el-form-item>
+        <el-form-item label="卡密信息" prop="cardInfo">
           <el-input 
-            v-model="deliverForm.accountInfo" 
+            v-model="deliverForm.cardInfo" 
             type="textarea" 
             :rows="4" 
-            placeholder="请输入账号信息（账号、密码等）"
+            placeholder="请输入卡密信息"
           ></el-input>
         </el-form-item>
         <el-form-item label="备注">
@@ -298,13 +223,14 @@ const orderList = ref([
     orderId: 'DD20240315001', 
     productName: 'Gmail邮箱-稳定可用', 
     category: '谷歌邮箱',
-    price: '¥2.75', 
-    buyer: 'user***123', 
-    contact: '138****1234',
-    payMethod: '支付宝',
+    quantity: 1,
+    totalPrice: '¥2.75',
+    cardId: 'CM001',
+    cardInfo: 'example@gmail.com|password123',
+    userEmail: 'user123@example.com',
+    payMethod: 'usdt',
     deliveryMethod: '自动发货',
-    status: '已完成', 
-    accountInfo: 'example@gmail.com|password123',
+    status: '已完成',
     remark: '客户要求稳定可用的账号',
     createTime: '2024-03-15 10:00:00' 
   },
@@ -313,13 +239,14 @@ const orderList = ref([
     orderId: 'DD20240315002', 
     productName: 'ChatGPT账号', 
     category: 'ChatGPT账号',
-    price: '¥199.99', 
-    buyer: 'user***456', 
-    contact: '139****5678',
-    payMethod: '微信支付',
+    quantity: 2,
+    totalPrice: '¥399.98',
+    cardId: 'CM002',
+    cardInfo: 'chatgpt_user1@example.com|pass123\nchatgpt_user2@example.com|pass456',
+    userEmail: 'user456@example.com',
+    payMethod: 'other',
     deliveryMethod: '自动发货',
-    status: '待付款', 
-    accountInfo: '',
+    status: '待付款',
     remark: '',
     createTime: '2024-03-15 09:30:00' 
   },
@@ -328,13 +255,14 @@ const orderList = ref([
     orderId: 'DD20240315003', 
     productName: 'Facebook账号', 
     category: 'Facebook账号',
-    price: '¥59.99', 
-    buyer: 'user***789', 
-    contact: '137****9012',
-    payMethod: 'PayPal',
+    quantity: 1,
+    totalPrice: '¥59.99',
+    cardId: 'CM003',
+    cardInfo: 'facebook_user123@example.com|fb_pass123',
+    userEmail: 'user789@example.com',
+    payMethod: 'usdt',
     deliveryMethod: '自动发货',
-    status: '已完成', 
-    accountInfo: 'facebook_user123@example.com|fb_pass123',
+    status: '已完成',
     remark: '客户需要美国地区的账号',
     createTime: '2024-03-15 09:00:00' 
   },
@@ -343,13 +271,14 @@ const orderList = ref([
     orderId: 'DD20240315004', 
     productName: 'Twitter账号', 
     category: 'Twitter账号',
-    price: '¥49.99', 
-    buyer: 'user***101', 
-    contact: '136****3456',
-    payMethod: '支付宝',
+    quantity: 1,
+    totalPrice: '¥49.99',
+    cardId: 'CM004',
+    cardInfo: 'twitter_user@example.com|tw_pass456',
+    userEmail: 'user101@example.com',
+    payMethod: 'other',
     deliveryMethod: '自动发货',
-    status: '已发货', 
-    accountInfo: 'twitter_user@example.com|tw_pass456',
+    status: '已发货',
     remark: '',
     createTime: '2024-03-15 08:30:00' 
   },
@@ -358,13 +287,14 @@ const orderList = ref([
     orderId: 'DD20240315005', 
     productName: 'Instagram账号', 
     category: 'Instagram账号',
-    price: '¥39.99', 
-    buyer: 'user***202', 
-    contact: '135****7890',
-    payMethod: '微信支付',
+    quantity: 1,
+    totalPrice: '¥39.99',
+    cardId: 'CM005',
+    cardInfo: 'instagram_user@example.com|insta_pass789',
+    userEmail: 'user202@example.com',
+    payMethod: 'other',
     deliveryMethod: '手动发货',
-    status: '待发货', 
-    accountInfo: '',
+    status: '待发货',
     remark: '客户要求账号有一定粉丝基础',
     createTime: '2024-03-15 08:00:00' 
   },
@@ -373,13 +303,14 @@ const orderList = ref([
     orderId: 'DD20240315006', 
     productName: 'Gmail邮箱-美国稳定', 
     category: '谷歌邮箱',
-    price: '¥10.00', 
-    buyer: 'user***303', 
-    contact: '134****1234',
-    payMethod: 'USDT',
+    quantity: 1,
+    totalPrice: '¥10.00',
+    cardId: 'CM006',
+    cardInfo: 'gmail_user@example.com|gmail_pass123',
+    userEmail: 'user303@example.com',
+    payMethod: 'usdt',
     deliveryMethod: '自动发货',
-    status: '待发货', 
-    accountInfo: '',
+    status: '待发货',
     remark: '',
     createTime: '2024-03-15 07:30:00' 
   }
@@ -391,25 +322,6 @@ const pageSize = ref(10)
 const total = ref(100)
 const loading = ref(false)
 
-// 对话框相关
-const dialogVisible = ref(false)
-const dialogType = ref<'add' | 'edit'>('add')
-const orderFormRef = ref<FormInstance>()
-const orderForm = reactive({
-  id: 0,
-  orderId: '',
-  productName: '',
-  category: '',
-  price: 0,
-  buyer: '',
-  contact: '',
-  payMethod: '',
-  deliveryMethod: '自动发货',
-  status: '待付款',
-  accountInfo: '',
-  remark: ''
-})
-
 // 发货对话框相关
 const deliverDialogVisible = ref(false)
 const deliverFormRef = ref<FormInstance>()
@@ -417,40 +329,19 @@ const deliverForm = reactive({
   id: 0,
   orderId: '',
   productName: '',
-  buyer: '',
-  accountInfo: '',
+  userEmail: '',
+  cardId: '',
+  cardInfo: '',
   remark: ''
-})
-
-// 表单验证规则
-const rules = reactive<FormRules>({
-  productName: [
-    { required: true, message: '请选择商品', trigger: 'change' }
-  ],
-  category: [
-    { required: true, message: '请选择商品分类', trigger: 'change' }
-  ],
-  price: [
-    { required: true, message: '请输入价格', trigger: 'blur' }
-  ],
-  buyer: [
-    { required: true, message: '请输入买家信息', trigger: 'blur' }
-  ],
-  payMethod: [
-    { required: true, message: '请选择支付方式', trigger: 'change' }
-  ],
-  deliveryMethod: [
-    { required: true, message: '请选择发货方式', trigger: 'change' }
-  ],
-  status: [
-    { required: true, message: '请选择订单状态', trigger: 'change' }
-  ]
 })
 
 // 发货表单验证规则
 const deliverRules = reactive<FormRules>({
-  accountInfo: [
-    { required: true, message: '请输入账号信息', trigger: 'blur' }
+  cardId: [
+    { required: true, message: '请输入卡密ID', trigger: 'blur' }
+  ],
+  cardInfo: [
+    { required: true, message: '请输入卡密信息', trigger: 'blur' }
   ]
 })
 
@@ -467,18 +358,6 @@ const getCategoryTag = (category: string) => {
     '其他账号': 'info'
   }
   return categoryMap[category] || 'info'
-}
-
-// 获取支付方式对应的标签类型
-const getPayMethodTag = (payMethod: string) => {
-  const payMethodMap: Record<string, string> = {
-    '支付宝': 'primary',
-    '微信支付': 'success',
-    '银行卡': 'info',
-    'PayPal': 'warning',
-    'USDT': 'danger'
-  }
-  return payMethodMap[payMethod] || 'info'
 }
 
 // 获取状态对应的标签类型
@@ -513,24 +392,6 @@ const resetSearch = () => {
   searchForm.dateRange = []
 }
 
-// 新增订单
-const handleAddOrder = () => {
-  dialogType.value = 'add'
-  orderForm.id = 0
-  orderForm.orderId = `DD${new Date().getTime().toString().substring(0, 10)}`
-  orderForm.productName = ''
-  orderForm.category = ''
-  orderForm.price = 0
-  orderForm.buyer = ''
-  orderForm.contact = ''
-  orderForm.payMethod = ''
-  orderForm.deliveryMethod = '自动发货'
-  orderForm.status = '待付款'
-  orderForm.accountInfo = ''
-  orderForm.remark = ''
-  dialogVisible.value = true
-}
-
 // 查看
 const handleView = (row: any) => {
   ElMessageBox.alert(
@@ -562,8 +423,12 @@ const handleView = (row: any) => {
           <span><el-tag size="small" :type="getCategoryTag(row.category)">${row.category}</el-tag></span>
         </div>
         <div class="detail-item">
-          <span class="label">价格：</span>
-          <span class="price">¥${row.price}</span>
+          <span class="label">数量：</span>
+          <span>${row.quantity}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">总价：</span>
+          <span class="price">${row.totalPrice}</span>
         </div>
         <div class="detail-item">
           <span class="label">发货方式：</span>
@@ -571,39 +436,31 @@ const handleView = (row: any) => {
         </div>
       </div>
       
-      <h4>买家信息</h4>
+      <h4>卡密信息</h4>
       <div class="detail-section">
         <div class="detail-item">
-          <span class="label">买家：</span>
-          <span>${row.buyer}</span>
+          <span class="label">卡密ID：</span>
+          <span>${row.cardId}</span>
         </div>
+        <div class="detail-item account-info">
+          <span class="label">卡密详情：</span>
+          <pre>${row.cardInfo}</pre>
+        </div>
+      </div>
+      
+      <h4>用户信息</h4>
+      <div class="detail-section">
         <div class="detail-item">
-          <span class="label">联系方式：</span>
-          <span>${row.contact || '无'}</span>
+          <span class="label">用户邮箱：</span>
+          <span>${row.userEmail}</span>
         </div>
         <div class="detail-item">
           <span class="label">支付方式：</span>
-          <span><el-tag size="small" effect="plain" :type="getPayMethodTag(row.payMethod)">${row.payMethod}</el-tag></span>
+          <span><el-tag size="small" effect="plain" :type="row.payMethod === 'usdt' ? 'danger' : 'info'">
+            ${row.payMethod === 'usdt' ? 'USDT' : '其他方式'}
+          </el-tag></span>
         </div>
       </div>
-      
-      ${row.accountInfo ? `
-      <h4>账号信息</h4>
-      <div class="detail-section">
-        <div class="detail-item account-info">
-          <pre>${row.accountInfo}</pre>
-        </div>
-      </div>
-      ` : ''}
-      
-      ${row.remark ? `
-      <h4>备注</h4>
-      <div class="detail-section">
-        <div class="detail-item">
-          <pre>${row.remark}</pre>
-        </div>
-      </div>
-      ` : ''}
     </div>`,
     '订单详情',
     {
@@ -614,31 +471,14 @@ const handleView = (row: any) => {
   )
 }
 
-// 编辑
-const handleEdit = (row: any) => {
-  dialogType.value = 'edit'
-  orderForm.id = row.id
-  orderForm.orderId = row.orderId
-  orderForm.productName = row.productName
-  orderForm.category = row.category
-  orderForm.price = parseFloat(row.price.replace('¥', ''))
-  orderForm.buyer = row.buyer
-  orderForm.contact = row.contact || ''
-  orderForm.payMethod = row.payMethod
-  orderForm.deliveryMethod = row.deliveryMethod
-  orderForm.status = row.status
-  orderForm.accountInfo = row.accountInfo || ''
-  orderForm.remark = row.remark || ''
-  dialogVisible.value = true
-}
-
 // 发货
 const handleDeliver = (row: any) => {
   deliverForm.id = row.id
   deliverForm.orderId = row.orderId
   deliverForm.productName = row.productName
-  deliverForm.buyer = row.buyer
-  deliverForm.accountInfo = ''
+  deliverForm.userEmail = row.userEmail
+  deliverForm.cardId = ''
+  deliverForm.cardInfo = ''
   deliverForm.remark = row.remark || ''
   deliverDialogVisible.value = true
 }
@@ -668,24 +508,6 @@ const handleDelete = (row: any) => {
     })
 }
 
-// 提交订单表单
-const submitForm = async () => {
-  if (!orderFormRef.value) return
-  
-  await orderFormRef.value.validate((valid, fields) => {
-    if (valid) {
-      if (dialogType.value === 'add') {
-        ElMessage.success('新增订单成功')
-      } else {
-        ElMessage.success('编辑订单成功')
-      }
-      dialogVisible.value = false
-    } else {
-      console.log('表单验证失败', fields)
-    }
-  })
-}
-
 // 提交发货表单
 const submitDeliverForm = async () => {
   if (!deliverFormRef.value) return
@@ -696,7 +518,8 @@ const submitDeliverForm = async () => {
       const order = orderList.value.find(item => item.id === deliverForm.id)
       if (order) {
         order.status = '已发货'
-        order.accountInfo = deliverForm.accountInfo
+        order.cardId = deliverForm.cardId
+        order.cardInfo = deliverForm.cardInfo
         if (deliverForm.remark) {
           order.remark = deliverForm.remark
         }
@@ -722,6 +545,13 @@ const handleCurrentChange = (val: number) => {
   currentPage.value = val
   // 重新加载数据
   handleSearch()
+}
+
+// 在script部分添加新的方法
+const viewCardInfo = (row: any) => {
+  ElMessageBox.alert(row.cardInfo, '卡密信息', {
+    confirmButtonText: '确定'
+  })
 }
 
 onMounted(() => {

@@ -4,7 +4,7 @@
       <template #header>
         <div class="card-header">
           <span>角色管理</span>
-          <el-button type="primary" size="small" @click="handleAddRole">新增角色</el-button>
+          <el-button type="primary" @click="handleAddRole">新增角色</el-button>
         </div>
       </template>
       
@@ -15,7 +15,7 @@
             <el-input v-model="searchForm.name" placeholder="请输入角色名称" clearable></el-input>
           </el-form-item>
           <el-form-item label="角色状态">
-            <el-select v-model="searchForm.status" placeholder="请选择" clearable>
+            <el-select v-model="searchForm.status" placeholder="请选择" clearable style="width: 168px;">
               <el-option label="全部" value=""></el-option>
               <el-option label="启用" value="enabled"></el-option>
               <el-option label="禁用" value="disabled"></el-option>
@@ -34,26 +34,30 @@
         <el-table-column prop="roleId" label="角色ID" width="100"></el-table-column>
         <el-table-column prop="name" label="角色名称" width="150"></el-table-column>
         <el-table-column prop="description" label="角色描述" min-width="200"></el-table-column>
-        <el-table-column prop="userCount" label="用户数量" width="100"></el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
             <el-switch
               v-model="scope.row.statusBool"
               :active-value="true"
               :inactive-value="false"
+              :disabled="scope.row.name === '超级管理员'"
               @change="(val: boolean) => handleStatusChange(val, scope.row)"
             ></el-switch>
             <span class="status-text">{{ scope.row.statusBool ? '启用' : '禁用' }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
-              <el-button size="small" @click="handleView(scope.row)">查看</el-button>
               <el-button size="small" type="primary" @click="handleEdit(scope.row)">编辑</el-button>
               <el-button size="small" type="success" @click="handlePermission(scope.row)">权限设置</el-button>
-              <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+              <el-button 
+                size="small" 
+                type="danger" 
+                @click="handleDelete(scope.row)"
+                v-if="scope.row.name !== '超级管理员'"
+              >删除</el-button>
             </div>
           </template>
         </el-table-column>
@@ -144,7 +148,6 @@ const roleList = ref([
     roleId: 'R001',
     name: '超级管理员',
     description: '拥有系统所有权限，可以管理所有功能和数据',
-    userCount: 2,
     status: '启用',
     statusBool: true,
     createTime: '2023-12-01 10:00:00'
@@ -153,7 +156,6 @@ const roleList = ref([
     roleId: 'R002',
     name: '普通管理员',
     description: '拥有部分管理权限，可以管理部分功能和数据',
-    userCount: 5,
     status: '启用',
     statusBool: true,
     createTime: '2023-12-05 14:30:00'
@@ -162,7 +164,6 @@ const roleList = ref([
     roleId: 'R003',
     name: 'VIP用户',
     description: '高级会员，拥有特殊功能和服务',
-    userCount: 28,
     status: '启用',
     statusBool: true,
     createTime: '2023-12-10 09:15:00'
@@ -171,7 +172,6 @@ const roleList = ref([
     roleId: 'R004',
     name: '普通用户',
     description: '基础会员，拥有基本功能和服务',
-    userCount: 156,
     status: '启用',
     statusBool: true,
     createTime: '2023-12-15 16:45:00'
@@ -180,7 +180,6 @@ const roleList = ref([
     roleId: 'R005',
     name: '游客',
     description: '未注册用户，只能浏览部分内容',
-    userCount: 0,
     status: '禁用',
     statusBool: false,
     createTime: '2023-12-20 11:20:00'
@@ -294,15 +293,14 @@ const resetSearch = () => {
 
 // 状态变更
 const handleStatusChange = (val: boolean, row: any) => {
+  if (row.name === '超级管理员') {
+    ElMessage.warning('超级管理员角色不能被禁用')
+    row.statusBool = true
+    return
+  }
   const statusText = val ? '启用' : '禁用'
   ElMessage.success(`角色"${row.name}"已${statusText}`)
   row.status = val ? '启用' : '禁用'
-}
-
-// 查看
-const handleView = (row: any) => {
-  console.log('查看角色', row)
-  ElMessage.info(`查看角色: ${row.name}`)
 }
 
 // 新增角色
@@ -362,6 +360,10 @@ const savePermissions = () => {
 
 // 删除
 const handleDelete = (row: any) => {
+  if (row.name === '超级管理员') {
+    ElMessage.warning('超级管理员角色不能被删除')
+    return
+  }
   ElMessageBox.confirm(
     `确定要删除角色"${row.name}"吗？`,
     '警告',
@@ -457,12 +459,14 @@ onMounted(() => {
 
 .action-buttons {
   display: flex;
-  flex-wrap: wrap;
   gap: 5px;
+  white-space: nowrap;
 }
 
 .action-buttons .el-button {
   margin-left: 0 !important;
   margin-right: 0 !important;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 </style> 

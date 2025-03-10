@@ -4,7 +4,7 @@
       <template #header>
         <div class="card-header">
           <span>账户管理</span>
-          <el-button type="primary" size="small" @click="handleAddAccount">新增账户</el-button>
+          <el-button type="primary" @click="handleAddAccount">新增账户</el-button>
         </div>
       </template>
       
@@ -48,35 +48,38 @@
       
       <!-- 表格区域 -->
       <el-table :data="tableData" style="width: 100%" v-loading="loading" border stripe>
-        <el-table-column type="selection" width="55"></el-table-column>
         <el-table-column prop="accountId" label="账户ID" width="100"></el-table-column>
         <el-table-column prop="username" label="用户名" width="120"></el-table-column>
-        <el-table-column prop="realName" label="真实姓名" width="120"></el-table-column>
         <el-table-column prop="role" label="角色" width="120">
           <template #default="scope">
             <el-tag :type="getRoleType(scope.row.role)">{{ scope.row.role }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="email" label="邮箱" min-width="180"></el-table-column>
-        <el-table-column prop="phone" label="手机号" width="120"></el-table-column>
         <el-table-column prop="lastLoginTime" label="最后登录时间" width="180"></el-table-column>
+        <el-table-column prop="remark" label="备注" min-width="150"></el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
             <el-switch
               v-model="scope.row.statusBool"
               :active-value="true"
               :inactive-value="false"
+              :disabled="scope.row.role === '超级管理员'"
               @change="(val: boolean) => handleStatusChange(val, scope.row)"
             ></el-switch>
             <span class="status-text">{{ scope.row.statusBool ? '正常' : '禁用' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
-              <el-button size="small" @click="handleView(scope.row)">查看</el-button>
               <el-button size="small" type="primary" @click="handleEdit(scope.row)">编辑</el-button>
-              <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+              <el-button 
+                size="small" 
+                type="danger" 
+                @click="handleDelete(scope.row)"
+                v-if="scope.row.role !== '超级管理员'"
+              >删除</el-button>
             </div>
           </template>
         </el-table-column>
@@ -107,17 +110,19 @@
         <el-form-item label="用户名" prop="username">
           <el-input v-model="accountForm.username" placeholder="请输入用户名"></el-input>
         </el-form-item>
-        <el-form-item label="真实姓名" prop="realName">
-          <el-input v-model="accountForm.realName" placeholder="请输入真实姓名"></el-input>
-        </el-form-item>
-        <el-form-item label="密码" prop="password" v-if="dialogType === 'add'">
+        <el-form-item 
+          label="密码" 
+          prop="password" 
+          v-if="dialogType === 'add' || (dialogType === 'edit' && accountForm.role !== '超级管理员')"
+        >
           <el-input v-model="accountForm.password" type="password" placeholder="请输入密码"></el-input>
         </el-form-item>
-        <el-form-item label="确认密码" prop="confirmPassword" v-if="dialogType === 'add'">
+        <el-form-item 
+          label="确认密码" 
+          prop="confirmPassword" 
+          v-if="dialogType === 'add' || (dialogType === 'edit' && accountForm.role !== '超级管理员')"
+        >
           <el-input v-model="accountForm.confirmPassword" type="password" placeholder="请再次输入密码"></el-input>
-        </el-form-item>
-        <el-form-item label="手机号" prop="phone">
-          <el-input v-model="accountForm.phone" placeholder="请输入手机号"></el-input>
         </el-form-item>
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="accountForm.email" placeholder="请输入邮箱"></el-input>
@@ -132,20 +137,11 @@
             ></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="权限设置" prop="permissions">
-          <el-checkbox-group v-model="accountForm.permissions">
-            <el-checkbox label="data">数据概览</el-checkbox>
-            <el-checkbox label="orders">订单管理</el-checkbox>
-            <el-checkbox label="products">商品管理</el-checkbox>
-            <el-checkbox label="categories">分类管理</el-checkbox>
-            <el-checkbox label="users">用户管理</el-checkbox>
-            <el-checkbox label="members">会员设置</el-checkbox>
-            <el-checkbox label="templates">模板设置</el-checkbox>
-            <el-checkbox label="settings">系统设置</el-checkbox>
-          </el-checkbox-group>
-        </el-form-item>
         <el-form-item label="状态">
-          <el-switch v-model="accountForm.statusBool"></el-switch>
+          <el-switch 
+            v-model="accountForm.statusBool"
+            :disabled="accountForm.role === '超级管理员'"
+          ></el-switch>
           <span class="status-text">{{ accountForm.statusBool ? '正常' : '禁用' }}</span>
         </el-form-item>
         <el-form-item label="备注" prop="remark">
@@ -289,6 +285,11 @@ const handleReset = () => {
 
 // 状态变更
 const handleStatusChange = (val: boolean, row: any) => {
+  if (row.role === '超级管理员') {
+    ElMessage.warning('超级管理员账户不能被禁用')
+    row.statusBool = true
+    return
+  }
   const statusText = val ? '启用' : '禁用'
   ElMessage.success(`账户"${row.username}"已${statusText}`)
   row.status = val ? '正常' : '禁用'
@@ -399,18 +400,14 @@ const rules = reactive<FormRules>({
     { required: true, message: '请输入用户名', trigger: 'blur' },
     { min: 3, max: 20, message: '长度在 3 到 20 个字符', trigger: 'blur' }
   ],
-  realName: [
-    { required: true, message: '请输入真实姓名', trigger: 'blur' },
-    { max: 20, message: '长度不能超过 20 个字符', trigger: 'blur' }
-  ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, max: 16, message: '长度在 6 到 16 个字符', trigger: 'blur' }
+    { min: 6, max: 20, message: '长度在 6 到 20 个字符', trigger: 'blur' }
   ],
   confirmPassword: [
     { required: true, message: '请再次输入密码', trigger: 'blur' },
     {
-      validator: (rule: any, value: string, callback: any) => {
+      validator: (rule: any, value: string, callback: Function) => {
         if (value !== accountForm.password) {
           callback(new Error('两次输入密码不一致'))
         } else {
@@ -420,10 +417,6 @@ const rules = reactive<FormRules>({
       trigger: 'blur'
     }
   ],
-  phone: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
-  ],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
@@ -431,9 +424,8 @@ const rules = reactive<FormRules>({
   role: [
     { required: true, message: '请选择角色', trigger: 'change' }
   ],
-  permissions: [
-    { required: true, message: '请选择权限', trigger: 'change' },
-    { type: 'array', min: 1, message: '至少选择一项权限', trigger: 'change' }
+  remark: [
+    { max: 200, message: '长度不能超过 200 个字符', trigger: 'blur' }
   ]
 })
 
@@ -489,6 +481,10 @@ const submitForm = async () => {
 
 // 删除
 const handleDelete = (row: any) => {
+  if (row.role === '超级管理员') {
+    ElMessage.warning('超级管理员账户不能被删除')
+    return
+  }
   ElMessageBox.confirm(
     `确定要删除账户"${row.username}"吗？`,
     '警告',

@@ -4,7 +4,7 @@
       <template #header>
         <div class="card-header">
           <span>商品管理</span>
-          <el-button type="primary" size="small" @click="handleAddProduct">新增商品</el-button>
+          <el-button type="primary" @click="handleAddProduct">新增商品</el-button>
         </div>
       </template>
       
@@ -29,11 +29,6 @@
               <el-option label="其他账号" value="other"></el-option>
             </el-select>
           </el-form-item>
-          <el-form-item label="价格区间">
-            <el-input-number v-model="searchForm.minPrice" :min="0" placeholder="最低价" class="price-input"></el-input-number>
-            <span class="price-separator">-</span>
-            <el-input-number v-model="searchForm.maxPrice" :min="0" placeholder="最高价" class="price-input"></el-input-number>
-          </el-form-item>
           <el-form-item label="发货方式">
             <el-select v-model="searchForm.deliveryMethod" placeholder="请选择" clearable style="width: 168px;">
               <el-option label="全部" value=""></el-option>
@@ -57,7 +52,7 @@
       
       <!-- 表格区域 -->
       <el-table :data="tableData" style="width: 100%" v-loading="loading" border stripe>
-        <el-table-column type="index" label="序号" width="60"></el-table-column>
+        <el-table-column prop="id" label="商品ID" width="80"></el-table-column>
         <el-table-column prop="name" label="商品名称" min-width="180"></el-table-column>
         <el-table-column prop="category" label="商品分类" width="100">
           <template #default="scope">
@@ -109,23 +104,6 @@
             <span v-else class="no-data">无批发价</span>
           </template>
         </el-table-column>
-        <el-table-column prop="feature" label="商品特性" width="120">
-          <template #default="scope">
-            <el-tag v-if="scope.row.feature" size="small" effect="plain">{{ scope.row.feature }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="specialNote" label="特殊说明" width="120">
-          <template #default="scope">
-            <el-tooltip 
-              v-if="scope.row.specialNote" 
-              :content="scope.row.specialNote" 
-              placement="top" 
-              :show-after="500"
-            >
-              <el-tag size="small" type="warning" effect="plain">查看说明</el-tag>
-            </el-tooltip>
-          </template>
-        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
             <el-switch
@@ -137,11 +115,11 @@
             <span class="status-text">{{ scope.row.statusBool ? '上架中' : '已下架' }}</span>
           </template>
         </el-table-column>
+        <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
-              <el-button size="small" @click="handleView(scope.row)">查看</el-button>
               <el-button size="small" type="primary" @click="handleEdit(scope.row)">编辑</el-button>
               <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
             </div>
@@ -189,17 +167,6 @@
             <el-option label="美国AOL邮箱" value="美国AOL邮箱"></el-option>
             <el-option label="ProtonMail邮箱" value="ProtonMail邮箱"></el-option>
             <el-option label="其他账号" value="其他账号"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="商品特性" prop="feature">
-          <el-select v-model="productForm.feature" placeholder="请选择商品特性" style="width: 100%;">
-            <el-option label="稳定可用" value="稳定可用"></el-option>
-            <el-option label="1个月以上" value="1个月以上"></el-option>
-            <el-option label="半年以上" value="半年以上"></el-option>
-            <el-option label="一年以上" value="一年以上"></el-option>
-            <el-option label="美国地区" value="美国地区"></el-option>
-            <el-option label="老号" value="老号"></el-option>
-            <el-option label="新号" value="新号"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="当前价格" prop="currentPrice">
@@ -346,40 +313,122 @@
             <el-radio label="手动发货">手动发货</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="特殊说明" prop="specialNote">
-          <el-input v-model="productForm.specialNote" placeholder="例如：支持自定义密码、支持换绑手机等"></el-input>
-        </el-form-item>
         <el-form-item label="商品详情" prop="description">
           <div class="editor-container">
-            <div class="editor-toolbar">
-              <el-button type="primary" size="small" @click="insertTemplate">插入默认模板</el-button>
-              <el-dropdown @command="handleTemplateSelect" trigger="click">
-                <el-button size="small" type="success">
-                  选择模板 <el-icon class="el-icon--right"><arrow-down /></el-icon>
-                </el-button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item v-for="template in templateList" :key="template.id" :command="template">
-                      {{ template.name }}
-                      <el-tag v-if="template.category" size="small" style="margin-left: 5px;">{{ template.category }}</el-tag>
-                    </el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-              <el-button size="small" @click="previewContent">预览效果</el-button>
-              <el-button size="small" type="info" plain @click="goToTemplateSettings">
-                <el-icon><setting /></el-icon>
-                管理模板
-              </el-button>
+            <div class="editor-header">
+              <el-tabs v-model="productForm.templateMode" @tab-change="handleTemplateModeChange" type="card">
+                <el-tab-pane label="使用模板" name="bind">
+                  <div class="tab-content">
+                    <div class="template-selector">
+                      <el-select 
+                        v-model="productForm.templateId" 
+                        placeholder="请选择模板" 
+                        style="width: 300px;"
+                        @change="handleTemplateIdChange"
+                      >
+                        <el-option
+                          v-for="template in templateList"
+                          :key="template.id"
+                          :label="template.name"
+                          :value="template.id"
+                        >
+                          <div class="template-option">
+                            <span>{{ template.name }}</span>
+                            <el-tag v-if="template.category" size="small" type="info">{{ template.category }}</el-tag>
+                          </div>
+                        </el-option>
+                      </el-select>
+                      
+                      <el-tooltip content="管理模板" placement="top">
+                        <el-button type="primary" circle plain @click="goToTemplateSettings">
+                          <el-icon><setting /></el-icon>
+                        </el-button>
+                      </el-tooltip>
+                    </div>
+                    
+                    <div v-if="productForm.templateId" class="template-info">
+                      <el-tag type="success" effect="dark">
+                        <el-icon><Check /></el-icon>
+                        <span style="margin-left: 5px;">已绑定模板：{{ getSelectedTemplateName() }}</span>
+                      </el-tag>
+                      <span class="template-hint">模板内容将随模板更新而自动更新</span>
+                    </div>
+                    <div v-else class="template-info">
+                      <el-tag type="warning" effect="dark">
+                        <el-icon><Warning /></el-icon>
+                        <span style="margin-left: 5px;">未选择模板</span>
+                      </el-tag>
+                      <span class="template-hint">请从下拉菜单中选择一个模板</span>
+                    </div>
+                  </div>
+                </el-tab-pane>
+                <el-tab-pane label="自定义内容" name="custom">
+                  <div class="tab-content">
+                    <div class="template-actions">
+                      <el-button-group>
+                        <el-button type="primary" @click="insertTemplate">
+                          <el-icon><Document /></el-icon>
+                          插入默认模板
+                        </el-button>
+                        <el-dropdown @command="handleTemplateSelect" trigger="click">
+                          <el-button type="primary">
+                            <el-icon><List /></el-icon>
+                            选择模板 <el-icon class="el-icon--right"><arrow-down /></el-icon>
+                          </el-button>
+                          <template #dropdown>
+                            <el-dropdown-menu>
+                              <el-dropdown-item v-for="template in templateList" :key="template.id" :command="template">
+                                <div class="template-option">
+                                  <span>{{ template.name }}</span>
+                                  <el-tag v-if="template.category" size="small" type="info">{{ template.category }}</el-tag>
+                                </div>
+                              </el-dropdown-item>
+                            </el-dropdown-menu>
+                          </template>
+                        </el-dropdown>
+                      </el-button-group>
+                      
+                      <div class="template-extra-actions">
+                        <el-button @click="previewContent" type="success" plain>
+                          <el-icon><View /></el-icon>
+                          预览效果
+                        </el-button>
+                        <el-tooltip content="管理模板" placement="top">
+                          <el-button type="info" circle plain @click="goToTemplateSettings">
+                            <el-icon><setting /></el-icon>
+                          </el-button>
+                        </el-tooltip>
+                      </div>
+                    </div>
+                    
+                    <div class="template-info">
+                      <el-tag type="info" effect="plain">
+                        <el-icon><InfoFilled /></el-icon>
+                        <span style="margin-left: 5px;">自定义模式</span>
+                      </el-tag>
+                      <span class="template-hint">您可以自由编辑内容，但不会随模板更新而自动更新</span>
+                    </div>
+                  </div>
+                </el-tab-pane>
+              </el-tabs>
             </div>
-            <QuillEditor
-              v-model:content="productForm.description"
-              contentType="html"
-              theme="snow"
-              toolbar="full"
-              :options="editorOptions"
-              style="height: 400px"
-            />
+            
+            <div class="editor-wrapper" :class="{'editor-readonly': productForm.templateMode === 'bind'}">
+              <QuillEditor
+                v-model:content="productForm.description"
+                contentType="html"
+                theme="snow"
+                toolbar="full"
+                :options="editorOptions"
+                style="height: 400px"
+                :readonly="productForm.templateMode === 'bind'"
+              />
+              
+              <div v-if="productForm.templateMode === 'bind'" class="editor-overlay">
+                <el-icon class="lock-icon"><Lock /></el-icon>
+                <p>模板内容由系统管理，如需自定义请切换到"自定义内容"模式</p>
+              </div>
+            </div>
           </div>
         </el-form-item>
         <el-form-item label="状态">
@@ -412,7 +461,7 @@
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { Delete, QuestionFilled, Plus, Setting, ArrowDown } from '@element-plus/icons-vue'
+import { Delete, QuestionFilled, Plus, Setting, ArrowDown, Lock, Check, Warning, Document, List, View, InfoFilled } from '@element-plus/icons-vue'
 import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
 import { useRouter } from 'vue-router'
@@ -421,8 +470,6 @@ import { useRouter } from 'vue-router'
 const searchForm = reactive({
   name: '',
   category: '',
-  minPrice: null as number | null,
-  maxPrice: null as number | null,
   deliveryMethod: '',
   status: ''
 })
@@ -451,7 +498,9 @@ const tableData = ref([
       { quantity: 10, price: 3.90 },
       { quantity: 50, price: 3.70 },
       { quantity: 100, price: 3.50 }
-    ]
+    ],
+    templateMode: 'bind',
+    templateId: 2
   },
   { 
     id: 2,
@@ -475,7 +524,9 @@ const tableData = ref([
       { quantity: 10, price: 2.50 },
       { quantity: 50, price: 2.30 },
       { quantity: 100, price: 2.00 }
-    ]
+    ],
+    templateMode: 'custom',
+    templateId: 0
   },
   { 
     id: 3,
@@ -499,7 +550,9 @@ const tableData = ref([
       { quantity: 10, price: 5.20 },
       { quantity: 50, price: 5.00 },
       { quantity: 100, price: 4.80 }
-    ]
+    ],
+    templateMode: 'bind',
+    templateId: 2
   },
   { 
     id: 4,
@@ -518,7 +571,9 @@ const tableData = ref([
       { quantity: 10, price: 7.35 },
       { quantity: 50, price: 7.05 },
       { quantity: 100, price: 6.75 }
-    ]
+    ],
+    templateMode: 'custom',
+    templateId: 0
   },
   { 
     id: 5,
@@ -532,7 +587,9 @@ const tableData = ref([
     feature: '美国地区',
     status: '上架中',
     statusBool: true,
-    createTime: '2024-03-05 08:00:00' 
+    createTime: '2024-03-05 08:00:00',
+    templateMode: 'custom',
+    templateId: 0
   },
   { 
     id: 6,
@@ -546,7 +603,9 @@ const tableData = ref([
     feature: '一年以上',
     status: '上架中',
     statusBool: true,
-    createTime: '2024-03-06 08:00:00' 
+    createTime: '2024-03-06 08:00:00',
+    templateMode: 'custom',
+    templateId: 0
   },
   { 
     id: 7,
@@ -560,7 +619,9 @@ const tableData = ref([
     feature: '老号',
     status: '上架中',
     statusBool: true,
-    createTime: '2024-03-07 08:00:00' 
+    createTime: '2024-03-07 08:00:00',
+    templateMode: 'custom',
+    templateId: 0
   },
   { 
     id: 8,
@@ -574,7 +635,9 @@ const tableData = ref([
     feature: '老号',
     status: '上架中',
     statusBool: true,
-    createTime: '2024-03-08 08:00:00' 
+    createTime: '2024-03-08 08:00:00',
+    templateMode: 'custom',
+    templateId: 0
   }
 ])
 
@@ -592,15 +655,15 @@ const productForm = reactive({
   id: 0,
   name: '',
   category: '',
-  feature: '',
   currentPrice: 0,
   originalPrice: 0,
   stock: 0,
   deliveryMethod: '自动发货',
-  specialNote: '',
   description: '',
   statusBool: true,
-  wholesalePrices: [] as { quantity: number; price: number }[]
+  wholesalePrices: [] as { quantity: number; price: number }[],
+  templateMode: 'custom',
+  templateId: 0
 })
 
 // 确保productForm.wholesalePrices始终是一个数组
@@ -677,13 +740,6 @@ const getProductList = () => {
           return false
         }
       }
-      // 价格范围筛选
-      if (searchForm.minPrice !== null && item.currentPrice < searchForm.minPrice) {
-        return false
-      }
-      if (searchForm.maxPrice !== null && item.currentPrice > searchForm.maxPrice) {
-        return false
-      }
       // 发货方式筛选
       if (searchForm.deliveryMethod && item.deliveryMethod !== searchForm.deliveryMethod) {
         return false
@@ -722,8 +778,6 @@ const handleSearch = () => {
 const resetSearch = () => {
   searchForm.name = ''
   searchForm.category = ''
-  searchForm.minPrice = null
-  searchForm.maxPrice = null
   searchForm.deliveryMethod = ''
   searchForm.status = ''
   currentPage.value = 1
@@ -787,10 +841,6 @@ const handleView = (row: any) => {
         <span>${row.deliveryMethod}</span>
       </div>
       <div class="detail-item">
-        <span class="label">特殊说明：</span>
-        <span>${row.specialNote || '无'}</span>
-      </div>
-      <div class="detail-item">
         <span class="label">商品描述：</span>
         <div class="detail-content">${row.description || '无'}</div>
       </div>
@@ -829,11 +879,11 @@ const handleAddProduct = () => {
   productForm.originalPrice = 0
   productForm.stock = 0
   productForm.deliveryMethod = '自动发货'
-  productForm.feature = ''
-  productForm.specialNote = ''
   productForm.description = ''
   productForm.statusBool = true
   productForm.wholesalePrices = []
+  productForm.templateMode = 'custom'
+  productForm.templateId = 0
   dialogVisible.value = true
   
   // 确保初始化后wholesalePrices是一个数组
@@ -850,10 +900,12 @@ const handleEdit = (row: any) => {
   productForm.originalPrice = row.originalPrice
   productForm.stock = row.stock
   productForm.deliveryMethod = row.deliveryMethod
-  productForm.feature = row.feature
-  productForm.specialNote = row.specialNote || ''
   productForm.description = row.description || ''
   productForm.statusBool = row.statusBool
+  
+  // 设置模板模式和模板ID
+  productForm.templateMode = row.templateMode || 'custom'
+  productForm.templateId = row.templateId || 0
   
   // 处理批发价格
   if (row.wholesalePrices && Array.isArray(row.wholesalePrices)) {
@@ -899,6 +951,13 @@ const submitForm = async () => {
   
   await productFormRef.value.validate((valid, fields) => {
     if (valid) {
+      // 构建要保存的商品数据
+      const productData = {
+        ...productForm,
+        // 如果是绑定模式，保存模板ID；如果是自定义模式，清空模板ID
+        templateId: productForm.templateMode === 'bind' ? productForm.templateId : 0
+      };
+      
       if (dialogType.value === 'add') {
         ElMessage.success('新增商品成功')
       } else {
@@ -924,8 +983,7 @@ const handleCurrentChange = (val: number) => {
 }
 
 // 监听搜索表单变化，重置分页并重新获取数据
-watch([() => searchForm.name, () => searchForm.category, () => searchForm.minPrice, 
-       () => searchForm.maxPrice, () => searchForm.deliveryMethod, () => searchForm.status], () => {
+watch([() => searchForm.name, () => searchForm.category, () => searchForm.deliveryMethod, () => searchForm.status], () => {
   currentPage.value = 1
   getProductList()
 })
@@ -968,8 +1026,6 @@ const templateList = ref([
 <h2>账号规格</h2>
 <ul>
   <li>账号类型：\${category}</li>
-  <li>注册时间：\${feature}</li>
-  <li>特殊功能：\${specialNote}</li>
 </ul>
 
 <h2>使用说明</h2>
@@ -1009,8 +1065,6 @@ const templateList = ref([
 <h2>账号规格</h2>
 <ul>
   <li>账号类型：谷歌邮箱</li>
-  <li>注册时间：\${feature}</li>
-  <li>特殊功能：\${specialNote}</li>
 </ul>
 
 <h2>使用说明</h2>
@@ -1047,8 +1101,6 @@ const templateList = ref([
 <h2>账号规格</h2>
 <ul>
   <li>账号类型：\${category}</li>
-  <li>账号年龄：\${feature}</li>
-  <li>特殊功能：\${specialNote}</li>
 </ul>
 
 <h2>使用说明</h2>
@@ -1080,31 +1132,44 @@ const previewContent = () => {
   previewVisible.value = true
 }
 
-// 插入默认模板
-const insertTemplate = () => {
-  const defaultTemplate = templateList.value.find(t => t.id === 1) || templateList.value[0]
-  if (defaultTemplate) {
-    applyTemplate(defaultTemplate)
+// 处理模板选择
+const handleTemplateSelect = (template: any) => {
+  if (productForm.templateMode === 'bind') {
+    // 绑定模式下，只保存模板ID，不直接应用内容
+    productForm.templateId = template.id;
+    // 从模板获取内容并显示（只读）
+    applyTemplateContent(template);
+    ElMessage.success(`已绑定"${template.name}"模板，商品详情将随模板更新而更新`);
+  } else {
+    // 自定义模式下，直接应用模板内容
+    applyTemplateContent(template);
+    ElMessage.success(`已应用"${template.name}"模板内容`);
   }
 }
 
-// 处理模板选择
-const handleTemplateSelect = (template: any) => {
-  applyTemplate(template)
-}
-
-// 应用模板
-const applyTemplate = (template: any) => {
+// 应用模板内容
+const applyTemplateContent = (template: any) => {
   // 替换模板中的变量
-  let content = template.content
-  content = content.replace(/\${category}/g, productForm.category || '无')
-  content = content.replace(/\${feature}/g, productForm.feature || '无')
-  content = content.replace(/\${specialNote}/g, productForm.specialNote || '无')
+  let content = template.content;
+  content = content.replace(/\${category}/g, productForm.category || '无');
   
   // 设置商品描述
-  productForm.description = content
-  
-  ElMessage.success(`已应用"${template.name}"模板`)
+  productForm.description = content;
+}
+
+// 插入默认模板
+const insertTemplate = () => {
+  const defaultTemplate = templateList.value.find(t => t.id === 1) || templateList.value[0];
+  if (defaultTemplate) {
+    if (productForm.templateMode === 'bind') {
+      productForm.templateId = defaultTemplate.id;
+      applyTemplateContent(defaultTemplate);
+      ElMessage.success(`已绑定"${defaultTemplate.name}"模板`);
+    } else {
+      applyTemplateContent(defaultTemplate);
+      ElMessage.success(`已插入"${defaultTemplate.name}"模板内容`);
+    }
+  }
 }
 
 // 跳转到模板设置页面
@@ -1230,6 +1295,31 @@ watch(() => productForm.currentPrice, (newVal) => {
     }
   }
 });
+
+// 处理模板模式变化
+const handleTemplateModeChange = () => {
+  // 如果切换到自定义内容模式，清空模板相关信息
+  if (productForm.templateMode === 'custom') {
+    productForm.templateId = 0;
+  }
+}
+
+// 获取选中的模板名称
+const getSelectedTemplateName = () => {
+  const selectedTemplate = templateList.value.find(t => t.id === productForm.templateId)
+  return selectedTemplate ? selectedTemplate.name : '未选择模板'
+}
+
+// 处理模板ID变化
+const handleTemplateIdChange = (templateId: number) => {
+  if (templateId) {
+    const template = templateList.value.find(t => t.id === templateId);
+    if (template) {
+      applyTemplateContent(template);
+      ElMessage.success(`已绑定"${template.name}"模板，商品详情将随模板更新而更新`);
+    }
+  }
+}
 
 // 初始化
 onMounted(() => {
@@ -1373,21 +1463,118 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.editor-toolbar {
-  padding: 8px;
+.editor-header {
+  padding: 0;
   border-bottom: 1px solid #dcdfe6;
   background-color: #f5f7fa;
+}
+
+.tab-content {
+  padding: 15px;
+  background-color: #fff;
+}
+
+.template-selector {
   display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.template-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+
+.template-extra-actions {
+  display: flex;
+  align-items: center;
   gap: 10px;
 }
 
-.preview-container {
-  padding: 20px;
-  max-height: 600px;
-  overflow-y: auto;
-  background-color: #fff;
-  border: 1px solid #ebeef5;
+.template-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
   border-radius: 4px;
+  border-left: 3px solid #409EFF;
+}
+
+.template-hint {
+  color: #606266;
+  font-size: 13px;
+}
+
+.editor-wrapper {
+  position: relative;
+}
+
+.editor-readonly {
+  opacity: 0.9;
+}
+
+.editor-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(245, 247, 250, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  padding: 20px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.lock-icon {
+  font-size: 32px;
+  color: #909399;
+  margin-bottom: 10px;
+}
+
+.template-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.template-option .el-tag {
+  margin-left: 10px;
+}
+
+:deep(.el-tabs__header) {
+  margin-bottom: 0;
+}
+
+:deep(.el-tabs__nav) {
+  border-radius: 4px 4px 0 0;
+}
+
+:deep(.el-tabs__item) {
+  height: 40px;
+  line-height: 40px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+:deep(.el-tabs__item.is-active) {
+  font-weight: bold;
+}
+
+:deep(.el-tabs__content) {
+  overflow: visible;
+}
+
+:deep(.el-select-dropdown__item) {
+  padding: 0 12px;
 }
 
 /* 商品详情预览样式 */
@@ -1606,5 +1793,41 @@ onMounted(() => {
 .no-data {
   color: #909399;
   font-size: 12px;
+}
+
+.template-tip {
+  margin: 5px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+:deep(.el-alert) {
+  margin-bottom: 10px;
+}
+
+:deep(.el-radio-group) {
+  margin-bottom: 10px;
+}
+
+:deep(.el-radio) {
+  margin-right: 15px;
+}
+
+:deep(.ql-container.ql-disabled) {
+  background-color: #f5f7fa;
+  opacity: 0.8;
+}
+
+:deep(.ql-editor.ql-disabled) {
+  cursor: not-allowed;
+}
+
+.preview-container {
+  padding: 20px;
+  max-height: 600px;
+  overflow-y: auto;
+  background-color: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
 }
 </style> 

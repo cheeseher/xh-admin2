@@ -27,11 +27,19 @@
           </el-menu-item>
           <el-menu-item index="/orders">
             <el-icon><ShoppingCart /></el-icon>
-            <template #title>订单管理</template>
+            <template #title>商品订单管理</template>
+          </el-menu-item>
+          <el-menu-item index="/recharge-orders">
+            <el-icon><Money /></el-icon>
+            <template #title>充值订单管理</template>
           </el-menu-item>
           <el-menu-item index="/products">
             <el-icon><Goods /></el-icon>
             <template #title>商品管理</template>
+          </el-menu-item>
+          <el-menu-item index="/inventory">
+            <el-icon><Box /></el-icon>
+            <template #title>库存管理</template>
           </el-menu-item>
           <el-menu-item index="/categories">
             <el-icon><Collection /></el-icon>
@@ -140,7 +148,8 @@ import {
   Monitor, 
   DataLine,
   ShoppingCart, 
-  Goods, 
+  Goods,
+  Box,
   User, 
   Avatar, 
   Setting, 
@@ -157,7 +166,8 @@ import {
   Lock,
   List,
   Message,
-  Bell
+  Bell,
+  Money
 } from '@element-plus/icons-vue'
 import Breadcrumb from '@/components/Breadcrumb.vue'
 
@@ -378,5 +388,25 @@ onMounted(() => {
 :deep(.el-dropdown-menu__item .el-icon) {
   margin-right: 8px;
   font-size: 16px;
+}
+
+.el-menu-vertical {
+  height: calc(100vh - 60px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 自定义滚动条样式 */
+.el-menu-vertical::-webkit-scrollbar {
+  width: 6px;
+}
+
+.el-menu-vertical::-webkit-scrollbar-thumb {
+  background-color: rgba(144, 147, 153, 0.3);
+  border-radius: 3px;
+}
+
+.el-menu-vertical::-webkit-scrollbar-track {
+  background-color: transparent;
 }
 </style> 

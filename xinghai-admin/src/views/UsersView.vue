@@ -4,7 +4,7 @@
       <template #header>
         <div class="card-header">
           <span>用户管理</span>
-          <el-button type="primary" size="small" @click="handleAddUser">新增用户</el-button>
+          <el-button type="primary" @click="handleAddUser">新增用户</el-button>
         </div>
       </template>
       
@@ -58,7 +58,6 @@
       
       <!-- 表格区域 -->
       <el-table :data="tableData" style="width: 100%" v-loading="loading" border stripe>
-        <el-table-column type="selection" width="55"></el-table-column>
         <el-table-column prop="userId" label="用户ID" width="100"></el-table-column>
         <el-table-column prop="email" label="邮箱" min-width="180"></el-table-column>
         <el-table-column prop="nickname" label="用户昵称" width="120"></el-table-column>
@@ -72,7 +71,16 @@
             <span class="balance">¥{{ scope.row.balance }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="orders" label="订单数" width="100"></el-table-column>
+        <el-table-column prop="totalRecharge" label="累计充值" width="120">
+          <template #default="scope">
+            <span class="money">¥{{ scope.row.totalRecharge }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="totalSpent" label="累计消费" width="120">
+          <template #default="scope">
+            <span class="money">¥{{ scope.row.totalSpent }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
             <el-switch
@@ -85,10 +93,9 @@
           </template>
         </el-table-column>
         <el-table-column prop="registerTime" label="注册时间" width="180"></el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
-              <el-button size="small" @click="handleView(scope.row)">查看</el-button>
               <el-button size="small" type="primary" @click="handleEdit(scope.row)">编辑</el-button>
               <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
             </div>
@@ -130,9 +137,6 @@
         <el-form-item label="确认密码" prop="confirmPassword" v-if="dialogType === 'add'">
           <el-input v-model="userForm.confirmPassword" type="password" placeholder="请再次输入密码"></el-input>
         </el-form-item>
-        <el-form-item label="手机号" prop="phone">
-          <el-input v-model="userForm.phone" placeholder="请输入手机号"></el-input>
-        </el-form-item>
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="userForm.email" placeholder="请输入邮箱"></el-input>
         </el-form-item>
@@ -156,19 +160,6 @@
         </el-form-item>
         <el-form-item label="账户余额" prop="balance">
           <el-input-number v-model="userForm.balance" :min="0" :precision="2" :step="10" style="width: 100%;" @change="handleBalanceChange"></el-input-number>
-          <div class="balance-tip" v-if="userForm.balance > 0">
-            <el-alert
-              title="会员等级自动升级提示"
-              type="info"
-              :closable="false"
-              show-icon
-            >
-              <template #default>
-                根据当前账户余额，用户会员等级将自动调整为 
-                <el-tag :type="getVipLevelType(autoVipLevel)">{{ getVipLevelName(autoVipLevel) }}</el-tag>
-              </template>
-            </el-alert>
-          </div>
         </el-form-item>
         <el-form-item label="状态">
           <el-switch v-model="userForm.statusBool"></el-switch>
@@ -215,7 +206,8 @@ const tableData = ref([
     lastLoginTime: '2024-03-15 08:30:00',
     registerIp: '192.168.1.1',
     balance: 100.50,
-    orders: 5
+    totalRecharge: 1000.00,
+    totalSpent: 899.50
   },
   { 
     userId: 'U10002',
@@ -231,7 +223,8 @@ const tableData = ref([
     lastLoginTime: '2024-03-15 09:15:00',
     registerIp: '192.168.1.2',
     balance: 0,
-    orders: 0
+    totalRecharge: 0,
+    totalSpent: 0
   },
   { 
     userId: 'U10003',
@@ -247,7 +240,8 @@ const tableData = ref([
     lastLoginTime: '2024-03-14 18:20:00',
     registerIp: '192.168.1.3',
     balance: 500.75,
-    orders: 12
+    totalRecharge: 5000.00,
+    totalSpent: 4499.25
   },
   { 
     userId: 'U10004',
@@ -263,7 +257,8 @@ const tableData = ref([
     lastLoginTime: '2024-02-28 11:05:00',
     registerIp: '192.168.1.4',
     balance: 50.25,
-    orders: 2
+    totalRecharge: 200.00,
+    totalSpent: 149.75
   },
   { 
     userId: 'U10005',
@@ -279,7 +274,8 @@ const tableData = ref([
     lastLoginTime: '2024-03-15 07:40:00',
     registerIp: '192.168.1.5',
     balance: 0,
-    orders: 0
+    totalRecharge: 0,
+    totalSpent: 0
   }
 ])
 
@@ -421,8 +417,12 @@ const handleView = (row: any) => {
           <span>¥${row.balance}</span>
         </div>
         <div class="detail-item">
-          <span class="label">订单数量：</span>
-          <span>${row.orders}</span>
+          <span class="label">累计充值：</span>
+          <span>¥${row.totalRecharge}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">累计消费：</span>
+          <span>¥${row.totalSpent}</span>
         </div>
       </div>
       
@@ -498,10 +498,6 @@ const rules = reactive<FormRules>({
       trigger: 'blur'
     }
   ],
-  phone: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
-  ],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
@@ -530,7 +526,6 @@ const handleAddUser = () => {
   userForm.nickname = ''
   userForm.password = ''
   userForm.confirmPassword = ''
-  userForm.phone = ''
   userForm.email = ''
   userForm.captcha = ''
   userForm.role = 0
@@ -572,7 +567,6 @@ const handleEdit = (row: any) => {
   userForm.userId = row.userId
   userForm.username = row.username
   userForm.nickname = row.nickname
-  userForm.phone = row.phone
   userForm.email = row.email
   userForm.role = row.role
   userForm.balance = row.balance
@@ -743,6 +737,11 @@ onMounted(() => {
   font-weight: bold;
 }
 
+.money {
+  color: #f56c6c;
+  font-weight: bold;
+}
+
 .pagination-container {
   margin-top: 20px;
   display: flex;
@@ -849,9 +848,5 @@ onMounted(() => {
 .action-buttons .el-button {
   margin-left: 0 !important;
   margin-right: 0 !important;
-}
-
-.balance-tip {
-  margin-top: 10px;
 }
 </style> 

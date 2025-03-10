@@ -60,7 +60,16 @@ const routes: Array<RouteRecordRaw> = [
     name: 'orders',
     component: () => import('../views/OrdersView.vue'),
     meta: {
-      title: '订单管理',
+      title: '商品订单管理',
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/recharge-orders',
+    name: 'rechargeOrders',
+    component: () => import('../views/RechargeOrdersView.vue'),
+    meta: {
+      title: '充值订单管理',
       requiresAuth: true
     }
   },
@@ -70,6 +79,15 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/ProductsView.vue'),
     meta: {
       title: '商品管理',
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/inventory',
+    name: 'inventory',
+    component: () => import('../views/InventoryView.vue'),
+    meta: {
+      title: '库存管理',
       requiresAuth: true
     }
   },
@@ -181,6 +199,15 @@ const routes: Array<RouteRecordRaw> = [
         }
       }
     ]
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('../views/NotFoundView.vue'),
+    meta: {
+      title: '页面不存在',
+      requiresAuth: false
+    }
   }
 ]
 
