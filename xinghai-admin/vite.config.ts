@@ -25,5 +25,7 @@ export default defineConfig({
         drop_debugger: true,
       },
     },
+    reportCompressedSize: false,
+    chunkSizeWarningLimit: 2000,
   },
 }); 
