@@ -116,3 +116,58 @@ xinghai-admin/
 ## 许可证
 
 MIT 
+
+## 项目结构
+
+```
+xinghai/
+├── xinghai-admin/     # 后台管理系统
+│   ├── src/           # 源代码
+│   ├── public/        # 静态资源
+│   └── ...
+├── vercel.json        # Vercel部署配置
+└── .vercelignore      # Vercel忽略文件
+```
+
+## 本地开发
+
+```bash
+# 进入项目目录
+cd xinghai-admin
+
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+```
+
+## 构建生产版本
+
+```bash
+# 进入项目目录
+cd xinghai-admin
+
+# 构建生产版本
+npm run build
+```
+
+## Vercel部署步骤
+
+1. 在GitHub上创建仓库并上传代码
+2. 登录[Vercel](https://vercel.com)
+3. 点击"New Project"
+4. 选择您的GitHub仓库
+5. 配置部署设置：
+   - 框架预设：Vue.js
+   - 构建命令：`cd xinghai-admin && npm run build`
+   - 输出目录：`xinghai-admin/dist`
+6. 点击"Deploy"开始部署
+
+## 自动部署
+
+当您向GitHub仓库推送新代码时，Vercel会自动重新部署您的应用。
+
+## 环境变量
+
+如果您的应用需要环境变量，可以在Vercel项目设置中的"Environment Variables"部分添加。 
