@@ -1,0 +1,753 @@
+<template>
+  <div class="users-container">
+    <el-card class="box-card">
+      <template #header>
+        <div class="card-header">
+          <span>用户管理</span>
+          <el-button type="primary" size="small" @click="handleAddUser">新增用户</el-button>
+        </div>
+      </template>
+      
+      <div class="page-description">
+        <p>管理系统的所有用户账号，包括普通用户、VIP用户、管理员等角色。您可以添加、编辑、删除用户，并设置用户的状态和权限。</p>
+      </div>
+      
+      <!-- 搜索区域 -->
+      <div class="search-area">
+        <el-form :inline="true" :model="searchForm" class="demo-form-inline">
+          <el-form-item label="用户ID">
+            <el-input v-model="searchForm.userId" placeholder="请输入用户ID" clearable></el-input>
+          </el-form-item>
+          <el-form-item label="用户名">
+            <el-input v-model="searchForm.username" placeholder="请输入用户名" clearable></el-input>
+          </el-form-item>
+          <el-form-item label="手机号">
+            <el-input v-model="searchForm.phone" placeholder="请输入手机号" clearable></el-input>
+          </el-form-item>
+          <el-form-item label="用户状态">
+            <el-select v-model="searchForm.status" placeholder="请选择" clearable>
+              <el-option label="全部" value=""></el-option>
+              <el-option label="正常" value="normal"></el-option>
+              <el-option label="禁用" value="disabled"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="注册时间">
+            <el-date-picker
+              v-model="searchForm.dateRange"
+              type="daterange"
+              range-separator="至"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              value-format="YYYY-MM-DD"
+            ></el-date-picker>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="handleSearch">查询</el-button>
+            <el-button @click="handleReset">重置</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+      
+      <!-- 表格区域 -->
+      <el-table :data="tableData" style="width: 100%" v-loading="loading" border stripe>
+        <el-table-column type="selection" width="55"></el-table-column>
+        <el-table-column prop="userId" label="用户ID" width="100"></el-table-column>
+        <el-table-column prop="username" label="用户名" width="120"></el-table-column>
+        <el-table-column prop="nickname" label="昵称" width="120"></el-table-column>
+        <el-table-column prop="avatar" label="头像" width="80">
+          <template #default="scope">
+            <el-avatar :size="40" :src="scope.row.avatar">{{ scope.row.username.charAt(0) }}</el-avatar>
+          </template>
+        </el-table-column>
+        <el-table-column prop="phone" label="手机号" width="120"></el-table-column>
+        <el-table-column prop="email" label="邮箱" width="180"></el-table-column>
+        <el-table-column prop="role" label="角色" width="100">
+          <template #default="scope">
+            <el-tag :type="getRoleType(scope.row.role)">{{ scope.row.role }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="balance" label="账户余额" width="100">
+          <template #default="scope">
+            <span class="balance">¥{{ scope.row.balance }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="orders" label="订单数" width="80"></el-table-column>
+        <el-table-column prop="status" label="状态" width="100">
+          <template #default="scope">
+            <el-switch
+              v-model="scope.row.statusBool"
+              :active-value="true"
+              :inactive-value="false"
+              @change="(val: boolean) => handleStatusChange(val, scope.row)"
+            ></el-switch>
+            <span class="status-text">{{ scope.row.statusBool ? '正常' : '禁用' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="registerTime" label="注册时间" width="180"></el-table-column>
+        <el-table-column prop="lastLoginTime" label="最后登录时间" width="180"></el-table-column>
+        <el-table-column label="操作" width="200" fixed="right">
+          <template #default="scope">
+            <div class="action-buttons">
+              <el-button size="small" @click="handleView(scope.row)">查看</el-button>
+              <el-button size="small" type="primary" @click="handleEdit(scope.row)">编辑</el-button>
+              <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+      
+      <!-- 分页区域 -->
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="total"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+          :background="true"
+        ></el-pagination>
+      </div>
+    </el-card>
+    
+    <!-- 用户表单对话框 -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogType === 'add' ? '新增用户' : '编辑用户'"
+      width="650px"
+    >
+      <el-form :model="userForm" label-width="100px" :rules="rules" ref="userFormRef">
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="userForm.username" placeholder="请输入用户名"></el-input>
+        </el-form-item>
+        <el-form-item label="昵称" prop="nickname">
+          <el-input v-model="userForm.nickname" placeholder="请输入昵称"></el-input>
+        </el-form-item>
+        <el-form-item label="密码" prop="password" v-if="dialogType === 'add'">
+          <el-input v-model="userForm.password" type="password" placeholder="请输入密码"></el-input>
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword" v-if="dialogType === 'add'">
+          <el-input v-model="userForm.confirmPassword" type="password" placeholder="请再次输入密码"></el-input>
+        </el-form-item>
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="userForm.phone" placeholder="请输入手机号"></el-input>
+        </el-form-item>
+        <el-form-item label="邮箱" prop="email">
+          <el-input v-model="userForm.email" placeholder="请输入邮箱"></el-input>
+        </el-form-item>
+        <el-form-item label="图形验证码" prop="captcha" v-if="dialogType === 'add'">
+          <div class="captcha-container">
+            <el-input v-model="userForm.captcha" placeholder="请输入验证码"></el-input>
+            <div class="captcha-image" @click="refreshCaptcha">
+              <img :src="captchaUrl" alt="验证码" />
+            </div>
+          </div>
+        </el-form-item>
+        <el-form-item label="角色" prop="role">
+          <el-select v-model="userForm.role" placeholder="请选择角色" style="width: 100%;">
+            <el-option label="普通用户" value="普通用户"></el-option>
+            <el-option label="VIP用户" value="VIP用户"></el-option>
+            <el-option label="管理员" value="管理员"></el-option>
+            <el-option label="游客" value="游客"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="账户余额" prop="balance">
+          <el-input-number v-model="userForm.balance" :min="0" :precision="2" :step="10" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-switch v-model="userForm.statusBool"></el-switch>
+          <span class="status-text">{{ userForm.statusBool ? '正常' : '禁用' }}</span>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitForm">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, onMounted, watch } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
+
+// 搜索表单
+const searchForm = reactive({
+  userId: '',
+  username: '',
+  phone: '',
+  status: '',
+  dateRange: []
+})
+
+// 表格数据
+const tableData = ref([
+  { 
+    userId: 'U10001',
+    username: 'user123',
+    nickname: '用户一',
+    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
+    phone: '138****1234',
+    email: 'user123@example.com',
+    role: '普通用户',
+    status: '正常',
+    statusBool: true,
+    registerTime: '2024-01-15 10:00:00',
+    lastLoginTime: '2024-03-15 08:30:00',
+    registerIp: '192.168.1.1',
+    balance: 100.50,
+    orders: 5
+  },
+  { 
+    userId: 'U10002',
+    username: 'admin456',
+    nickname: '管理员',
+    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
+    phone: '139****5678',
+    email: 'admin456@example.com',
+    role: '管理员',
+    status: '正常',
+    statusBool: true,
+    registerTime: '2023-12-20 14:30:00',
+    lastLoginTime: '2024-03-15 09:15:00',
+    registerIp: '192.168.1.2',
+    balance: 0,
+    orders: 0
+  },
+  { 
+    userId: 'U10003',
+    username: 'vip789',
+    nickname: 'VIP用户',
+    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
+    phone: '137****9012',
+    email: 'vip789@example.com',
+    role: 'VIP用户',
+    status: '正常',
+    statusBool: true,
+    registerTime: '2024-02-05 16:45:00',
+    lastLoginTime: '2024-03-14 18:20:00',
+    registerIp: '192.168.1.3',
+    balance: 500.75,
+    orders: 12
+  },
+  { 
+    userId: 'U10004',
+    username: 'test321',
+    nickname: '测试用户',
+    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
+    phone: '136****3456',
+    email: 'test321@example.com',
+    role: '普通用户',
+    status: '禁用',
+    statusBool: false,
+    registerTime: '2024-01-30 09:10:00',
+    lastLoginTime: '2024-02-28 11:05:00',
+    registerIp: '192.168.1.4',
+    balance: 50.25,
+    orders: 2
+  },
+  { 
+    userId: 'U10005',
+    username: 'guest555',
+    nickname: '访客',
+    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
+    phone: '135****7890',
+    email: 'guest555@example.com',
+    role: '游客',
+    status: '正常',
+    statusBool: true,
+    registerTime: '2024-03-01 13:25:00',
+    lastLoginTime: '2024-03-15 07:40:00',
+    registerIp: '192.168.1.5',
+    balance: 0,
+    orders: 0
+  }
+])
+
+// 分页相关
+const currentPage = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+const loading = ref(false)
+
+// 获取角色对应的标签类型
+const getRoleType = (role: string) => {
+  const roleMap: Record<string, string> = {
+    '管理员': 'danger',
+    'VIP用户': 'warning',
+    '普通用户': 'success',
+    '游客': 'info'
+  }
+  return roleMap[role] || 'info'
+}
+
+// 查询
+const handleSearch = () => {
+  currentPage.value = 1
+  getUserList()
+}
+
+// 重置搜索
+const handleReset = () => {
+  searchForm.userId = ''
+  searchForm.username = ''
+  searchForm.phone = ''
+  searchForm.status = ''
+  searchForm.dateRange = []
+  currentPage.value = 1
+  getUserList()
+}
+
+// 状态变更
+const handleStatusChange = (val: boolean, row: any) => {
+  const statusText = val ? '启用' : '禁用'
+  ElMessage.success(`用户"${row.username}"已${statusText}`)
+  row.status = val ? '正常' : '禁用'
+}
+
+// 查看
+const handleView = (row: any) => {
+  ElMessageBox.alert(
+    `<div class="user-detail">
+      <div class="user-header">
+        <div class="user-avatar">
+          <img src="${row.avatar}" alt="${row.username}" />
+        </div>
+        <div class="user-info">
+          <h3>${row.username}</h3>
+          <p><el-tag size="small" :type="getRoleType(row.role)">${row.role}</el-tag></p>
+        </div>
+      </div>
+      
+      <div class="detail-section">
+        <h4>基本信息</h4>
+        <div class="detail-item">
+          <span class="label">用户ID：</span>
+          <span>${row.userId}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">昵称：</span>
+          <span>${row.nickname || '未设置'}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">手机号：</span>
+          <span>${row.phone}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">邮箱：</span>
+          <span>${row.email}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">状态：</span>
+          <span>${row.status}</span>
+        </div>
+      </div>
+      
+      <div class="detail-section">
+        <h4>账户信息</h4>
+        <div class="detail-item">
+          <span class="label">账户余额：</span>
+          <span>¥${row.balance}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">订单数量：</span>
+          <span>${row.orders}</span>
+        </div>
+      </div>
+      
+      <div class="detail-section">
+        <h4>其他信息</h4>
+        <div class="detail-item">
+          <span class="label">注册时间：</span>
+          <span>${row.registerTime}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">注册IP：</span>
+          <span>${row.registerIp}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">最后登录：</span>
+          <span>${row.lastLoginTime}</span>
+        </div>
+      </div>
+    </div>`,
+    '用户详情',
+    {
+      dangerouslyUseHTMLString: true,
+      confirmButtonText: '关闭',
+      customClass: 'user-detail-dialog'
+    }
+  )
+}
+
+// 对话框相关
+const dialogVisible = ref(false)
+const dialogType = ref<'add' | 'edit'>('add')
+const userFormRef = ref<FormInstance>()
+const captchaUrl = ref('https://cube.elemecdn.com/9/3f/2c0938b93c591b218c1beaf08de07jpeg.jpeg')
+
+const userForm = reactive({
+  userId: '',
+  username: '',
+  nickname: '',
+  password: '',
+  confirmPassword: '',
+  phone: '',
+  email: '',
+  captcha: '',
+  role: '普通用户',
+  balance: 0,
+  statusBool: true
+})
+
+// 表单验证规则
+const rules = reactive<FormRules>({
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 3, max: 20, message: '长度在 3 到 20 个字符', trigger: 'blur' }
+  ],
+  nickname: [
+    { required: true, message: '请输入昵称', trigger: 'blur' },
+    { max: 20, message: '长度不能超过 20 个字符', trigger: 'blur' }
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, max: 16, message: '长度在 6 到 16 个字符', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入密码', trigger: 'blur' },
+    {
+      validator: (rule: any, value: string, callback: any) => {
+        if (value !== userForm.password) {
+          callback(new Error('两次输入密码不一致'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ],
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+  ],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+  ],
+  captcha: [
+    { required: true, message: '请输入验证码', trigger: 'blur' },
+    { min: 4, max: 6, message: '验证码长度不正确', trigger: 'blur' }
+  ],
+  role: [
+    { required: true, message: '请选择角色', trigger: 'change' }
+  ]
+})
+
+// 刷新验证码
+const refreshCaptcha = () => {
+  // 模拟刷新验证码，实际应该调用后端接口
+  captchaUrl.value = `https://cube.elemecdn.com/9/3f/2c0938b93c591b218c1beaf08de07jpeg.jpeg?t=${Date.now()}`
+  ElMessage.success('验证码已刷新')
+}
+
+// 新增用户
+const handleAddUser = () => {
+  dialogType.value = 'add'
+  userForm.userId = ''
+  userForm.username = ''
+  userForm.nickname = ''
+  userForm.password = ''
+  userForm.confirmPassword = ''
+  userForm.phone = ''
+  userForm.email = ''
+  userForm.captcha = ''
+  userForm.role = '普通用户'
+  userForm.balance = 0
+  userForm.statusBool = true
+  dialogVisible.value = true
+  // 刷新验证码
+  refreshCaptcha()
+}
+
+// 编辑用户
+const handleEdit = (row: any) => {
+  dialogType.value = 'edit'
+  userForm.userId = row.userId
+  userForm.username = row.username
+  userForm.nickname = row.nickname || ''
+  userForm.phone = row.phone
+  userForm.email = row.email
+  userForm.role = row.role
+  userForm.balance = row.balance
+  userForm.statusBool = row.statusBool
+  dialogVisible.value = true
+}
+
+// 提交表单
+const submitForm = async () => {
+  if (!userFormRef.value) return
+  
+  await userFormRef.value.validate((valid, fields) => {
+    if (valid) {
+      if (dialogType.value === 'add') {
+        ElMessage.success('新增用户成功')
+      } else {
+        ElMessage.success('编辑用户成功')
+      }
+      dialogVisible.value = false
+    } else {
+      console.log('表单验证失败', fields)
+    }
+  })
+}
+
+// 删除
+const handleDelete = (row: any) => {
+  ElMessageBox.confirm(
+    `确定要删除用户"${row.username}"吗？`,
+    '警告',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  )
+    .then(() => {
+      ElMessage({
+        type: 'success',
+        message: `用户"${row.username}"已删除`,
+      })
+    })
+    .catch(() => {
+      ElMessage({
+        type: 'info',
+        message: '已取消删除',
+      })
+    })
+}
+
+// 获取用户列表数据
+const getUserList = () => {
+  // 模拟API请求
+  loading.value = true
+  setTimeout(() => {
+    // 根据搜索条件和分页参数获取数据
+    const filteredData = tableData.value.filter((item: any) => {
+      // 用户名筛选
+      if (searchForm.username && !item.username.includes(searchForm.username)) {
+        return false
+      }
+      // 手机号筛选
+      if (searchForm.phone && !item.phone.includes(searchForm.phone)) {
+        return false
+      }
+      // 状态筛选
+      if (searchForm.status) {
+        if (searchForm.status === 'normal' && item.status !== '正常') {
+          return false
+        }
+        if (searchForm.status === 'disabled' && item.status !== '禁用') {
+          return false
+        }
+      }
+      // 日期范围筛选
+      if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+        const startDate = new Date(searchForm.dateRange[0])
+        const endDate = new Date(searchForm.dateRange[1])
+        const registerDate = new Date(item.registerTime)
+        if (registerDate < startDate || registerDate > endDate) {
+          return false
+        }
+      }
+      return true
+    })
+    
+    // 计算总数
+    total.value = filteredData.length
+    
+    // 分页处理
+    const startIndex = (currentPage.value - 1) * pageSize.value
+    const endIndex = startIndex + pageSize.value
+    tableData.value = filteredData.slice(startIndex, endIndex)
+    
+    loading.value = false
+  }, 500)
+}
+
+// 处理每页显示数量变化
+const handleSizeChange = (val: number) => {
+  pageSize.value = val
+  getUserList()
+}
+
+// 处理页码变化
+const handleCurrentChange = (val: number) => {
+  currentPage.value = val
+  getUserList()
+}
+
+// 监听搜索表单变化，重置分页并重新获取数据
+watch([() => searchForm.username, () => searchForm.phone, () => searchForm.status, () => searchForm.dateRange], () => {
+  currentPage.value = 1
+  getUserList()
+})
+
+// 初始化
+onMounted(() => {
+  getUserList()
+})
+</script>
+
+<style scoped>
+.users-container {
+  padding: 20px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-description {
+  margin-bottom: 20px;
+  padding: 10px 15px;
+  background-color: #f0f9eb;
+  border-radius: 4px;
+  border-left: 4px solid #67c23a;
+}
+
+.page-description p {
+  margin: 0;
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.search-area {
+  margin-bottom: 20px;
+}
+
+.status-text {
+  margin-left: 8px;
+  font-size: 14px;
+}
+
+.balance {
+  color: #f56c6c;
+  font-weight: bold;
+}
+
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.user-detail {
+  padding: 20px;
+}
+
+.user-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.user-avatar {
+  margin-right: 20px;
+}
+
+.user-avatar img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+}
+
+.user-info {
+  flex: 1;
+}
+
+.user-info h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #303133;
+  font-size: 18px;
+}
+
+.user-info p {
+  margin: 0;
+}
+
+.detail-section {
+  margin-bottom: 20px;
+  background-color: #f9f9f9;
+  padding: 15px;
+  border-radius: 4px;
+}
+
+.detail-section h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #606266;
+  font-size: 16px;
+  border-left: 3px solid #409EFF;
+  padding-left: 10px;
+}
+
+.detail-item {
+  margin-bottom: 10px;
+}
+
+.detail-item .label {
+  font-weight: bold;
+  color: #606266;
+  display: inline-block;
+  width: 80px;
+}
+
+:deep(.user-detail-dialog .el-message-box__wrapper .el-message-box) {
+  max-width: 600px;
+  width: 100%;
+}
+
+.captcha-container {
+  display: flex;
+  align-items: center;
+}
+
+.captcha-container .el-input {
+  flex: 1;
+  margin-right: 10px;
+}
+
+.captcha-image {
+  width: 120px;
+  height: 40px;
+  cursor: pointer;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.captcha-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.action-buttons .el-button {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+</style> 
