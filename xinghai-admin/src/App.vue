@@ -45,6 +45,10 @@
             <el-icon><Avatar /></el-icon>
             <template #title>角色管理</template>
           </el-menu-item>
+          <el-menu-item index="/templates">
+            <el-icon><Document /></el-icon>
+            <template #title>模板设置</template>
+          </el-menu-item>
           <el-sub-menu index="/info">
             <template #title>
               <el-icon><InfoFilled /></el-icon>

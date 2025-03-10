@@ -110,6 +110,15 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/templates',
+    name: 'templates',
+    component: () => import('../views/TemplateSettingsView.vue'),
+    meta: {
+      title: '模板设置',
+      requiresAuth: true
+    }
+  },
+  {
     path: '/info',
     name: 'info',
     redirect: '/info/faq',

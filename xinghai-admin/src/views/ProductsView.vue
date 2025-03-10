@@ -85,6 +85,30 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="批发价" width="120">
+          <template #default="scope">
+            <el-popover
+              placement="top"
+              :width="200"
+              trigger="hover"
+              v-if="scope.row.wholesalePrices && scope.row.wholesalePrices.length > 0"
+            >
+              <template #default>
+                <div class="wholesale-popover">
+                  <div class="wholesale-popover-title">批发价格设置</div>
+                  <div class="wholesale-popover-item" v-for="(item, index) in scope.row.wholesalePrices" :key="index">
+                    <span class="wholesale-popover-quantity">≥{{ item.quantity }}</span>
+                    <span class="wholesale-popover-price">¥{{ item.price.toFixed(2) }}</span>
+                  </div>
+                </div>
+              </template>
+              <template #reference>
+                <el-tag type="warning" effect="plain">查看批发价</el-tag>
+              </template>
+            </el-popover>
+            <span v-else class="no-data">无批发价</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="feature" label="商品特性" width="120">
           <template #default="scope">
             <el-tag v-if="scope.row.feature" size="small" effect="plain">{{ scope.row.feature }}</el-tag>
@@ -187,6 +211,135 @@
         <el-form-item label="库存" prop="stock">
           <el-input-number v-model="productForm.stock" :min="0" style="width: 100%;"></el-input-number>
         </el-form-item>
+        
+        <!-- 批发价设置 -->
+        <el-form-item label="批发价设置">
+          <el-card shadow="never" class="wholesale-card">
+            <template #header>
+              <div class="wholesale-header">
+                <div class="wholesale-header-left">
+                  <span class="wholesale-title">批发价格区间设置</span>
+                  <el-tooltip content="设置不同数量区间的批发价格，客户购买数量达到要求时将自动享受优惠" placement="top">
+                    <el-icon class="wholesale-help-icon"><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                </div>
+                <el-button type="primary" size="small" @click.prevent="addWholesalePrice">
+                  <el-icon><Plus /></el-icon>添加区间
+                </el-button>
+              </div>
+            </template>
+            
+            <!-- 批发价说明 -->
+            <div class="wholesale-description" v-if="productForm.wholesalePrices && productForm.wholesalePrices.length > 0">
+              <el-alert
+                type="info"
+                :closable="false"
+                show-icon
+              >
+                <template #title>
+                  <span>当前单价: <span class="current-price-text">¥{{ productForm.currentPrice.toFixed(2) }}</span></span>
+                </template>
+                <template #default>
+                  <p class="wholesale-tip">设置批发价格区间，当客户购买数量达到要求时将自动享受优惠价格。请确保批发价低于单价，且数量越多价格越优惠。</p>
+                </template>
+              </el-alert>
+            </div>
+            
+            <!-- 批发价表格 -->
+            <div v-if="productForm.wholesalePrices && productForm.wholesalePrices.length > 0" class="wholesale-table-container">
+              <el-table :data="productForm.wholesalePrices" border stripe size="small" class="wholesale-table">
+                <el-table-column label="序号" type="index" width="60" align="center"></el-table-column>
+                <el-table-column label="起批数量" width="180">
+                  <template #default="scope">
+                    <div class="wholesale-input-group">
+                      <span class="wholesale-prefix">≥</span>
+                      <el-input-number 
+                        v-model="scope.row.quantity" 
+                        :min="1" 
+                        :precision="0" 
+                        size="small"
+                        class="wholesale-quantity-input"
+                        placeholder="数量"
+                        controls-position="right"
+                        @change="validateWholesalePrices"
+                      ></el-input-number>
+                      <span class="wholesale-unit">件</span>
+                    </div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="批发单价" width="180">
+                  <template #default="scope">
+                    <div class="wholesale-input-group">
+                      <span class="wholesale-prefix">¥</span>
+                      <el-input-number 
+                        v-model="scope.row.price" 
+                        :min="0.01" 
+                        :precision="2" 
+                        :step="0.01" 
+                        size="small"
+                        class="wholesale-price-input"
+                        placeholder="价格"
+                        controls-position="right"
+                        @change="validateWholesalePrices"
+                      ></el-input-number>
+                      <span class="wholesale-unit">/件</span>
+                    </div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="优惠" width="120">
+                  <template #default="scope">
+                    <span class="discount-text" :class="{'discount-invalid': scope.row.price >= productForm.currentPrice}">
+                      {{ calculateDiscount(scope.row.price) }}
+                    </span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="100" align="center">
+                  <template #default="scope">
+                    <el-button 
+                      type="danger" 
+                      size="small" 
+                      circle 
+                      @click="removeWholesalePrice(scope.$index)"
+                      class="wholesale-delete"
+                    >
+                      <el-icon><Delete /></el-icon>
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+              
+              <!-- 批发价预览 -->
+              <div class="wholesale-preview">
+                <div class="wholesale-preview-title">批发价格预览</div>
+                <div class="wholesale-preview-content">
+                  <el-tag 
+                    v-for="(item, index) in sortedWholesalePrices" 
+                    :key="index"
+                    size="large" 
+                    type="danger" 
+                    effect="plain" 
+                    class="wholesale-preview-tag"
+                  >
+                    ≥{{ item.quantity }}/¥{{ item.price.toFixed(2) }}
+                  </el-tag>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 空状态 -->
+            <div v-else class="wholesale-empty">
+              <el-empty description="暂无批发价设置" :image-size="60">
+                <template #description>
+                  <p>设置批发价可以鼓励客户批量购买，提高销售额</p>
+                </template>
+                <el-button type="primary" @click.prevent="addWholesalePrice">
+                  <el-icon><Plus /></el-icon>添加批发价区间
+                </el-button>
+              </el-empty>
+            </div>
+          </el-card>
+        </el-form-item>
+        
         <el-form-item label="发货方式" prop="deliveryMethod">
           <el-radio-group v-model="productForm.deliveryMethod">
             <el-radio label="自动发货">自动发货</el-radio>
@@ -196,23 +349,55 @@
         <el-form-item label="特殊说明" prop="specialNote">
           <el-input v-model="productForm.specialNote" placeholder="例如：支持自定义密码、支持换绑手机等"></el-input>
         </el-form-item>
-        <el-form-item label="商品描述" prop="description">
-          <el-input v-model="productForm.description" type="textarea" :rows="4" placeholder="请输入商品描述"></el-input>
-        </el-form-item>
-        <el-form-item label="使用说明" prop="instructions">
-          <el-input v-model="productForm.instructions" type="textarea" :rows="4" placeholder="请输入使用说明，如登录步骤、注意事项等"></el-input>
-        </el-form-item>
-        <el-form-item label="售后说明" prop="afterSaleInfo">
-          <el-input v-model="productForm.afterSaleInfo" type="textarea" :rows="3" placeholder="请输入售后说明，如保障时间、换号政策等"></el-input>
-        </el-form-item>
-        <el-form-item label="免责声明" prop="disclaimer">
-          <el-input v-model="productForm.disclaimer" type="textarea" :rows="3" placeholder="请输入免责声明"></el-input>
+        <el-form-item label="商品详情" prop="description">
+          <div class="editor-container">
+            <div class="editor-toolbar">
+              <el-button type="primary" size="small" @click="insertTemplate">插入默认模板</el-button>
+              <el-dropdown @command="handleTemplateSelect" trigger="click">
+                <el-button size="small" type="success">
+                  选择模板 <el-icon class="el-icon--right"><arrow-down /></el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item v-for="template in templateList" :key="template.id" :command="template">
+                      {{ template.name }}
+                      <el-tag v-if="template.category" size="small" style="margin-left: 5px;">{{ template.category }}</el-tag>
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+              <el-button size="small" @click="previewContent">预览效果</el-button>
+              <el-button size="small" type="info" plain @click="goToTemplateSettings">
+                <el-icon><setting /></el-icon>
+                管理模板
+              </el-button>
+            </div>
+            <QuillEditor
+              v-model:content="productForm.description"
+              contentType="html"
+              theme="snow"
+              toolbar="full"
+              :options="editorOptions"
+              style="height: 400px"
+            />
+          </div>
         </el-form-item>
         <el-form-item label="状态">
           <el-switch v-model="productForm.statusBool"></el-switch>
           <span class="status-text">{{ productForm.statusBool ? '上架' : '下架' }}</span>
         </el-form-item>
       </el-form>
+      
+      <!-- 预览对话框 -->
+      <el-dialog
+        v-model="previewVisible"
+        title="内容预览"
+        width="70%"
+        destroy-on-close
+      >
+        <div class="preview-container" v-html="productForm.description"></div>
+      </el-dialog>
+      
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="dialogVisible = false">取消</el-button>
@@ -224,9 +409,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
+import { Delete, QuestionFilled, Plus, Setting, ArrowDown } from '@element-plus/icons-vue'
+import { QuillEditor } from '@vueup/vue-quill'
+import '@vueup/vue-quill/dist/vue-quill.snow.css'
+import { useRouter } from 'vue-router'
 
 // 搜索表单
 const searchForm = reactive({
@@ -257,7 +446,12 @@ const tableData = ref([
     disclaimer: '请勿将账号用于非法用途，账号被封禁概不负责。',
     status: '上架中',
     statusBool: true,
-    createTime: '2024-03-01 10:00:00' 
+    createTime: '2024-03-01 10:00:00',
+    wholesalePrices: [
+      { quantity: 10, price: 3.90 },
+      { quantity: 50, price: 3.70 },
+      { quantity: 100, price: 3.50 }
+    ]
   },
   { 
     id: 2,
@@ -276,7 +470,12 @@ const tableData = ref([
     disclaimer: '请勿将账号用于非法用途，账号被封禁概不负责。',
     status: '上架中',
     statusBool: true,
-    createTime: '2024-03-02 09:30:00' 
+    createTime: '2024-03-02 09:30:00',
+    wholesalePrices: [
+      { quantity: 10, price: 2.50 },
+      { quantity: 50, price: 2.30 },
+      { quantity: 100, price: 2.00 }
+    ]
   },
   { 
     id: 3,
@@ -295,7 +494,12 @@ const tableData = ref([
     disclaimer: '请勿将账号用于非法用途，账号被封禁概不负责。',
     status: '上架中',
     statusBool: true,
-    createTime: '2024-03-03 09:00:00' 
+    createTime: '2024-03-03 09:00:00',
+    wholesalePrices: [
+      { quantity: 10, price: 5.20 },
+      { quantity: 50, price: 5.00 },
+      { quantity: 100, price: 4.80 }
+    ]
   },
   { 
     id: 4,
@@ -309,7 +513,12 @@ const tableData = ref([
     feature: '半年以上',
     status: '上架中',
     statusBool: true,
-    createTime: '2024-03-04 08:30:00' 
+    createTime: '2024-03-04 08:30:00',
+    wholesalePrices: [
+      { quantity: 10, price: 7.35 },
+      { quantity: 50, price: 7.05 },
+      { quantity: 100, price: 6.75 }
+    ]
   },
   { 
     id: 5,
@@ -383,19 +592,23 @@ const productForm = reactive({
   id: 0,
   name: '',
   category: '',
+  feature: '',
   currentPrice: 0,
   originalPrice: 0,
   stock: 0,
-  sales: 0,
   deliveryMethod: '自动发货',
-  feature: '',
   specialNote: '',
   description: '',
-  instructions: '',
-  afterSaleInfo: '',
-  disclaimer: '',
-  statusBool: true
+  statusBool: true,
+  wholesalePrices: [] as { quantity: number; price: number }[]
 })
+
+// 确保productForm.wholesalePrices始终是一个数组
+watch(() => productForm, () => {
+  if (!Array.isArray(productForm.wholesalePrices)) {
+    productForm.wholesalePrices = [];
+  }
+}, { deep: true, immediate: true });
 
 // 表单验证规则
 const rules = reactive<FormRules>({
@@ -416,10 +629,7 @@ const rules = reactive<FormRules>({
     { required: true, message: '请选择发货方式', trigger: 'change' }
   ],
   description: [
-    { required: true, message: '请输入商品描述', trigger: 'blur' }
-  ],
-  instructions: [
-    { required: true, message: '请输入使用说明', trigger: 'blur' }
+    { required: true, message: '请输入商品详情', trigger: 'blur' }
   ]
 })
 
@@ -529,6 +739,21 @@ const handleStatusChange = (val: boolean, row: any) => {
 
 // 查看商品
 const handleView = (row: any) => {
+  // 构建批发价格HTML
+  let wholesalePricesHtml = '<div class="no-wholesale">暂无批发价设置</div>'
+  if (row.wholesalePrices && row.wholesalePrices.length > 0) {
+    wholesalePricesHtml = '<div class="wholesale-list">'
+    row.wholesalePrices.forEach((item: any) => {
+      wholesalePricesHtml += `
+        <div class="wholesale-view-item">
+          <span class="wholesale-badge">≥${item.quantity}</span>
+          <span class="wholesale-price">¥${item.price.toFixed(2)}</span>
+        </div>
+      `
+    })
+    wholesalePricesHtml += '</div>'
+  }
+
   ElMessageBox.alert(
     `<div class="product-detail">
       <h3>${row.name}</h3>
@@ -544,6 +769,10 @@ const handleView = (row: any) => {
         <span class="label">价格：</span>
         <span class="price">¥${row.currentPrice}</span>
         ${row.originalPrice ? `<span class="original-price">¥${row.originalPrice}</span>` : ''}
+      </div>
+      <div class="detail-item">
+        <span class="label">批发价格：</span>
+        ${wholesalePricesHtml}
       </div>
       <div class="detail-item">
         <span class="label">库存：</span>
@@ -603,11 +832,12 @@ const handleAddProduct = () => {
   productForm.feature = ''
   productForm.specialNote = ''
   productForm.description = ''
-  productForm.instructions = ''
-  productForm.afterSaleInfo = ''
-  productForm.disclaimer = ''
   productForm.statusBool = true
+  productForm.wholesalePrices = []
   dialogVisible.value = true
+  
+  // 确保初始化后wholesalePrices是一个数组
+  console.log('新增商品初始化wholesalePrices:', productForm.wholesalePrices);
 }
 
 // 编辑
@@ -623,11 +853,19 @@ const handleEdit = (row: any) => {
   productForm.feature = row.feature
   productForm.specialNote = row.specialNote || ''
   productForm.description = row.description || ''
-  productForm.instructions = row.instructions || ''
-  productForm.afterSaleInfo = row.afterSaleInfo || ''
-  productForm.disclaimer = row.disclaimer || ''
   productForm.statusBool = row.statusBool
+  
+  // 处理批发价格
+  if (row.wholesalePrices && Array.isArray(row.wholesalePrices)) {
+    productForm.wholesalePrices = [...row.wholesalePrices]
+  } else {
+    productForm.wholesalePrices = []
+  }
+  
   dialogVisible.value = true
+  
+  // 确保初始化后wholesalePrices是一个数组
+  console.log('编辑商品初始化wholesalePrices:', productForm.wholesalePrices);
 }
 
 // 删除
@@ -692,6 +930,307 @@ watch([() => searchForm.name, () => searchForm.category, () => searchForm.minPri
   getProductList()
 })
 
+// 富文本编辑器相关
+const previewVisible = ref(false)
+const editorOptions = {
+  modules: {
+    toolbar: [
+      ['bold', 'italic', 'underline', 'strike'],
+      ['blockquote', 'code-block'],
+      [{ 'header': 1 }, { 'header': 2 }],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      [{ 'script': 'sub' }, { 'script': 'super' }],
+      [{ 'indent': '-1' }, { 'indent': '+1' }],
+      [{ 'direction': 'rtl' }],
+      [{ 'size': ['small', false, 'large', 'huge'] }],
+      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'font': [] }],
+      [{ 'align': [] }],
+      ['clean'],
+      ['link', 'image']
+    ]
+  },
+  placeholder: '请输入商品详情...'
+}
+
+// 模板相关
+const router = useRouter()
+const templateList = ref([
+  {
+    id: 1,
+    name: '通用商品模板',
+    category: '',
+    content: `
+<h2>商品介绍</h2>
+<p>这是一个高质量的账号，具有以下特点...</p>
+
+<h2>账号规格</h2>
+<ul>
+  <li>账号类型：\${category}</li>
+  <li>注册时间：\${feature}</li>
+  <li>特殊功能：\${specialNote}</li>
+</ul>
+
+<h2>使用说明</h2>
+<ol>
+  <li>购买成功后，系统将自动发送账号信息到您的邮箱</li>
+  <li>收到账号后请立即修改密码</li>
+  <li>请勿在账号中存储重要个人信息</li>
+  <li>如有登录问题，请及时联系客服</li>
+</ol>
+
+<h2>售后说明</h2>
+<p>1. 售后保障期：自购买之日起30天内</p>
+<p>2. 售后范围：账号无法登录、功能与描述不符</p>
+<p>3. 售后流程：请通过"我的订单"-"申请售后"提交申请</p>
+<p>4. 不支持售后的情况：</p>
+<ul>
+  <li>超出保障期的账号问题</li>
+  <li>因用户操作不当导致的账号问题</li>
+  <li>账号被用于违规用途</li>
+</ul>
+
+<h2>免责声明</h2>
+<p>1. 本平台仅提供账号交易服务，不对账号的后续使用负责</p>
+<p>2. 请遵守相关法律法规和平台规则使用账号</p>
+<p>3. 禁止将账号用于任何违法违规活动</p>
+<p>4. 平台保留对违规用户追究法律责任的权利</p>
+`
+  },
+  {
+    id: 2,
+    name: 'Gmail邮箱模板',
+    category: '谷歌邮箱',
+    content: `
+<h2>Gmail邮箱介绍</h2>
+<p>Gmail是Google提供的免费电子邮件服务，以下是使用Gmail账号的基本说明...</p>
+
+<h2>账号规格</h2>
+<ul>
+  <li>账号类型：谷歌邮箱</li>
+  <li>注册时间：\${feature}</li>
+  <li>特殊功能：\${specialNote}</li>
+</ul>
+
+<h2>使用说明</h2>
+<ol>
+  <li>购买成功后，系统将自动发送账号信息到您的邮箱</li>
+  <li>收到账号后请立即修改密码</li>
+  <li>请勿在账号中存储重要个人信息</li>
+  <li>如有登录问题，请及时联系客服</li>
+</ol>
+
+<h2>登录步骤</h2>
+<ol>
+  <li>访问 https://mail.google.com</li>
+  <li>输入您购买的Gmail账号</li>
+  <li>输入对应的密码</li>
+  <li>如果提示需要验证，请按照提示完成验证步骤</li>
+</ol>
+
+<h2>售后说明</h2>
+<p>本店所售Gmail账号均为稳定可用账号，购买后7天内提供更换服务。</p>
+
+<h2>免责声明</h2>
+<p>请勿将账号用于非法用途，账号被封禁概不负责。</p>
+`
+  },
+  {
+    id: 3,
+    name: '社交媒体账号模板',
+    category: 'Instagram账号',
+    content: `
+<h2>社交媒体账号介绍</h2>
+<p>这是一个高质量的社交媒体账号，具有以下特点...</p>
+
+<h2>账号规格</h2>
+<ul>
+  <li>账号类型：\${category}</li>
+  <li>账号年龄：\${feature}</li>
+  <li>特殊功能：\${specialNote}</li>
+</ul>
+
+<h2>使用说明</h2>
+<ol>
+  <li>购买成功后，系统将自动发送账号信息到您的邮箱</li>
+  <li>收到账号后请立即修改密码和邮箱</li>
+  <li>请勿在账号中存储重要个人信息</li>
+  <li>如有登录问题，请及时联系客服</li>
+</ol>
+
+<h2>注意事项</h2>
+<ul>
+  <li>请勿短时间内频繁登录或修改账号信息，以免触发安全机制</li>
+  <li>建议使用代理IP登录，避免账号异常</li>
+  <li>请勿发布违规内容，以免账号被封</li>
+</ul>
+
+<h2>售后说明</h2>
+<p>本店所售社交媒体账号均为真实账号，购买后3天内提供更换服务。</p>
+
+<h2>免责声明</h2>
+<p>请勿将账号用于非法用途，账号被封禁概不负责。</p>
+`
+  }
+])
+
+// 预览内容
+const previewContent = () => {
+  previewVisible.value = true
+}
+
+// 插入默认模板
+const insertTemplate = () => {
+  const defaultTemplate = templateList.value.find(t => t.id === 1) || templateList.value[0]
+  if (defaultTemplate) {
+    applyTemplate(defaultTemplate)
+  }
+}
+
+// 处理模板选择
+const handleTemplateSelect = (template: any) => {
+  applyTemplate(template)
+}
+
+// 应用模板
+const applyTemplate = (template: any) => {
+  // 替换模板中的变量
+  let content = template.content
+  content = content.replace(/\${category}/g, productForm.category || '无')
+  content = content.replace(/\${feature}/g, productForm.feature || '无')
+  content = content.replace(/\${specialNote}/g, productForm.specialNote || '无')
+  
+  // 设置商品描述
+  productForm.description = content
+  
+  ElMessage.success(`已应用"${template.name}"模板`)
+}
+
+// 跳转到模板设置页面
+const goToTemplateSettings = () => {
+  router.push('/templates')
+}
+
+// 添加批发价
+const addWholesalePrice = () => {
+  // 设置默认值为当前价格的95%
+  const defaultPrice = productForm.currentPrice > 0 ? 
+    Math.round(productForm.currentPrice * 0.95 * 100) / 100 : 0;
+  
+  // 设置默认数量为10或者比最大数量多10
+  let defaultQuantity = 10;
+  if (productForm.wholesalePrices && productForm.wholesalePrices.length > 0) {
+    const maxQuantity = Math.max(...productForm.wholesalePrices.map(item => item.quantity));
+    defaultQuantity = maxQuantity + 10;
+  }
+  
+  // 确保wholesalePrices是一个数组
+  if (!Array.isArray(productForm.wholesalePrices)) {
+    productForm.wholesalePrices = [];
+  }
+  
+  productForm.wholesalePrices.push({ 
+    quantity: defaultQuantity, 
+    price: defaultPrice 
+  });
+  
+  // 验证并排序批发价
+  validateWholesalePrices();
+  
+  // 添加调试信息
+  console.log('添加批发价区间', productForm.wholesalePrices);
+  
+  // 显示成功提示
+  ElMessage.success('已添加新的批发价区间');
+}
+
+// 移除批发价
+const removeWholesalePrice = (index: number) => {
+  productForm.wholesalePrices.splice(index, 1);
+}
+
+// 验证批发价格设置
+const validateWholesalePrices = () => {
+  // 确保wholesalePrices是一个数组
+  if (!Array.isArray(productForm.wholesalePrices)) {
+    productForm.wholesalePrices = [];
+    return;
+  }
+  
+  // 过滤掉无效的批发价（数量或价格为0的）
+  productForm.wholesalePrices = productForm.wholesalePrices.filter(
+    item => item && item.quantity > 0 && item.price > 0
+  );
+  
+  // 检查是否有重复的数量
+  const quantities = productForm.wholesalePrices.map(item => item.quantity);
+  const hasDuplicates = quantities.length !== new Set(quantities).size;
+  
+  if (hasDuplicates) {
+    ElMessage.warning('批发价设置中存在重复的数量，请修正');
+  }
+  
+  // 检查是否有批发价高于单价的情况
+  const hasInvalidPrice = productForm.wholesalePrices.some(
+    item => item.price >= productForm.currentPrice
+  );
+  
+  if (hasInvalidPrice && productForm.currentPrice > 0) {
+    ElMessage.warning('批发价应低于商品单价，请修正');
+  }
+  
+  // 按数量从小到大排序
+  productForm.wholesalePrices.sort((a, b) => a.quantity - b.quantity);
+  
+  // 检查是否符合数量越多价格越低的原则
+  let isValid = true;
+  for (let i = 1; i < productForm.wholesalePrices.length; i++) {
+    if (productForm.wholesalePrices[i].price > productForm.wholesalePrices[i-1].price) {
+      isValid = false;
+      break;
+    }
+  }
+  
+  if (!isValid) {
+    ElMessage.warning('批发价应遵循"数量越多价格越低"的原则，请修正');
+  }
+}
+
+// 计算折扣
+const calculateDiscount = (price: number) => {
+  if (!price || price <= 0) return '无折扣';
+  if (!productForm.currentPrice || productForm.currentPrice <= 0) return '无折扣';
+  
+  if (price >= productForm.currentPrice) {
+    return '无折扣';
+  }
+  
+  const discount = (price / productForm.currentPrice * 10).toFixed(1);
+  return `${discount}折`;
+}
+
+// 排序后的批发价格，用于预览
+const sortedWholesalePrices = computed(() => {
+  if (!productForm.wholesalePrices || !Array.isArray(productForm.wholesalePrices) || productForm.wholesalePrices.length === 0) {
+    return [];
+  }
+  
+  return [...productForm.wholesalePrices]
+    .filter(item => item && item.quantity > 0 && item.price > 0)
+    .sort((a, b) => a.quantity - b.quantity);
+});
+
+// 监听当前价格变化，提示用户检查批发价
+watch(() => productForm.currentPrice, (newVal) => {
+  if (newVal > 0 && productForm.wholesalePrices && productForm.wholesalePrices.length > 0) {
+    const hasInvalidPrice = productForm.wholesalePrices.some(item => item.price >= newVal);
+    if (hasInvalidPrice) {
+      ElMessage.warning('当前价格已变更，请检查批发价设置');
+    }
+  }
+});
+
 // 初始化
 onMounted(() => {
   getProductList()
@@ -711,10 +1250,10 @@ onMounted(() => {
 
 .page-description {
   margin-bottom: 20px;
-  padding: 10px 15px;
-  background-color: #f0f9eb;
+  padding: 10px;
+  background-color: #ecf8ff;
   border-radius: 4px;
-  border-left: 4px solid #67c23a;
+  border-left: 5px solid #50bfff;
 }
 
 .page-description p {
@@ -726,6 +1265,9 @@ onMounted(() => {
 
 .search-area {
   margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
 }
 
 .price-input {
@@ -757,8 +1299,7 @@ onMounted(() => {
 }
 
 .status-text {
-  margin-left: 8px;
-  font-size: 14px;
+  margin-left: 10px;
 }
 
 .pagination-container {
@@ -817,12 +1358,253 @@ onMounted(() => {
 
 .action-buttons {
   display: flex;
-  flex-wrap: wrap;
   gap: 5px;
 }
 
 .action-buttons .el-button {
   margin-left: 0 !important;
   margin-right: 0 !important;
+}
+
+/* 富文本编辑器样式 */
+.editor-container {
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.editor-toolbar {
+  padding: 8px;
+  border-bottom: 1px solid #dcdfe6;
+  background-color: #f5f7fa;
+  display: flex;
+  gap: 10px;
+}
+
+.preview-container {
+  padding: 20px;
+  max-height: 600px;
+  overflow-y: auto;
+  background-color: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+}
+
+/* 商品详情预览样式 */
+:deep(.preview-container h2),
+:deep(.ql-editor h2) {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #ebeef5;
+  color: #303133;
+}
+
+:deep(.preview-container ul),
+:deep(.preview-container ol),
+:deep(.ql-editor ul),
+:deep(.ql-editor ol) {
+  padding-left: 20px;
+  margin-bottom: 15px;
+}
+
+:deep(.preview-container li),
+:deep(.ql-editor li) {
+  margin-bottom: 5px;
+}
+
+:deep(.preview-container p),
+:deep(.ql-editor p) {
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+
+/* 批发价设置样式 */
+.wholesale-card {
+  margin-bottom: 20px;
+}
+
+.wholesale-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wholesale-header-left {
+  display: flex;
+  align-items: center;
+}
+
+.wholesale-title {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.wholesale-help-icon {
+  margin-left: 5px;
+  color: #909399;
+  cursor: help;
+}
+
+.wholesale-description {
+  margin-bottom: 15px;
+}
+
+.current-price-text {
+  color: #f56c6c;
+  font-weight: bold;
+}
+
+.wholesale-tip {
+  margin: 5px 0 0;
+  font-size: 12px;
+  color: #606266;
+  line-height: 1.5;
+}
+
+.wholesale-table-container {
+  margin-bottom: 15px;
+}
+
+.wholesale-table {
+  margin-bottom: 15px;
+}
+
+.wholesale-input-group {
+  display: flex;
+  align-items: center;
+}
+
+.wholesale-prefix {
+  margin-right: 5px;
+  color: #606266;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.wholesale-quantity-input,
+.wholesale-price-input {
+  width: 100px;
+}
+
+.wholesale-unit {
+  margin-left: 5px;
+  color: #606266;
+  font-size: 12px;
+}
+
+.discount-text {
+  color: #67c23a;
+  font-weight: bold;
+}
+
+.discount-invalid {
+  color: #f56c6c;
+}
+
+.wholesale-preview {
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  padding: 15px;
+  margin-top: 15px;
+}
+
+.wholesale-preview-title {
+  font-weight: bold;
+  margin-bottom: 15px;
+  color: #303133;
+  font-size: 14px;
+}
+
+.wholesale-preview-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.wholesale-preview-tag {
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  background-color: #fff1f0;
+  border-color: #ffa39e;
+  color: #f5222d;
+}
+
+/* 移除不再使用的样式 */
+.wholesale-preview-price,
+.wholesale-preview-discount {
+  display: none;
+}
+
+.wholesale-empty {
+  padding: 20px 0;
+  text-align: center;
+}
+
+/* 批发价格查看样式 */
+:deep(.wholesale-list) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+:deep(.wholesale-view-item) {
+  display: flex;
+  align-items: center;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  padding: 5px 10px;
+}
+
+:deep(.wholesale-badge) {
+  font-weight: bold;
+  margin-right: 5px;
+}
+
+:deep(.wholesale-price) {
+  color: #f56c6c;
+}
+
+:deep(.no-wholesale) {
+  color: #909399;
+  font-style: italic;
+}
+
+/* 批发价格弹出框样式 */
+.wholesale-popover {
+  padding: 5px 0;
+}
+
+.wholesale-popover-title {
+  font-weight: bold;
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #ebeef5;
+  color: #303133;
+}
+
+.wholesale-popover-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 5px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+.wholesale-popover-quantity {
+  font-weight: bold;
+}
+
+.wholesale-popover-price {
+  color: #f56c6c;
+}
+
+.no-data {
+  color: #909399;
+  font-size: 12px;
 }
 </style> 
