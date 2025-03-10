@@ -45,6 +45,22 @@
             <el-icon><Avatar /></el-icon>
             <template #title>角色管理</template>
           </el-menu-item>
+          <el-menu-item index="/accounts">
+            <el-icon><Lock /></el-icon>
+            <template #title>账户管理</template>
+          </el-menu-item>
+          <el-menu-item index="/logs">
+            <el-icon><List /></el-icon>
+            <template #title>操作日志</template>
+          </el-menu-item>
+          <el-menu-item index="/messages">
+            <el-icon><Message /></el-icon>
+            <template #title>站内信</template>
+          </el-menu-item>
+          <el-menu-item index="/members">
+            <el-icon><UserFilled /></el-icon>
+            <template #title>会员设置</template>
+          </el-menu-item>
           <el-menu-item index="/templates">
             <el-icon><Document /></el-icon>
             <template #title>模板设置</template>
@@ -78,6 +94,11 @@
             </div>
           </div>
           <div class="header-right">
+            <div class="notification-icon" @click="goToMessages">
+              <el-badge :value="pendingMessages" :max="99" :hidden="pendingMessages === 0" class="notification-badge">
+                <el-icon><Bell /></el-icon>
+              </el-badge>
+            </div>
             <el-dropdown trigger="click" @command="handleCommand">
               <div class="user-info">
                 <el-avatar :size="32" :src="userAvatar"></el-avatar>
@@ -112,7 +133,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { 
@@ -132,7 +153,11 @@ import {
   Collection,
   QuestionFilled,
   InfoFilled,
-  Document
+  Document,
+  Lock,
+  List,
+  Message,
+  Bell
 } from '@element-plus/icons-vue'
 import Breadcrumb from '@/components/Breadcrumb.vue'
 
@@ -191,6 +216,31 @@ const handleCommand = (command: string) => {
     router.push('/user/reset-password')
   }
 }
+
+// 未解决的补货提醒数量
+const pendingMessages = ref(0)
+
+// 跳转到站内信页面
+const goToMessages = () => {
+  router.push('/messages')
+}
+
+// 获取未解决的补货提醒数量
+const fetchPendingMessages = () => {
+  // 实际项目中应该调用API获取未解决的补货提醒数量
+  // 这里模拟一个随机数
+  pendingMessages.value = Math.floor(Math.random() * 10)
+}
+
+onMounted(() => {
+  // 获取未解决的补货提醒数量
+  fetchPendingMessages()
+  
+  // 每隔5分钟刷新一次未解决的补货提醒数量
+  setInterval(() => {
+    fetchPendingMessages()
+  }, 5 * 60 * 1000)
+})
 </script>
 
 <style scoped>
@@ -272,6 +322,31 @@ const handleCommand = (command: string) => {
   display: flex;
   align-items: center;
   height: 100%;
+}
+
+.notification-icon {
+  margin-right: 20px;
+  cursor: pointer;
+  position: relative;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.notification-icon .el-icon {
+  font-size: 20px;
+  color: #606266;
+}
+
+.notification-icon:hover .el-icon {
+  color: #409EFF;
+}
+
+:deep(.notification-badge .el-badge__content) {
+  position: static;
+  transform: none;
+  margin-left: 5px;
+  background-color: #f56c6c;
 }
 
 .user-info {

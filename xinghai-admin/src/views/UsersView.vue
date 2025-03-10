@@ -9,7 +9,7 @@
       </template>
       
       <div class="page-description">
-        <p>管理系统的所有用户账号，包括普通用户、VIP用户、管理员等角色。您可以添加、编辑、删除用户，并设置用户的状态和权限。</p>
+        <p>管理系统的所有用户账号，包括普通用户和各等级VIP会员。用户的会员等级会根据累计充值金额自动调整，您也可以手动设置用户的会员等级和账户余额。</p>
       </div>
       
       <!-- 搜索区域 -->
@@ -18,14 +18,22 @@
           <el-form-item label="用户ID">
             <el-input v-model="searchForm.userId" placeholder="请输入用户ID" clearable></el-input>
           </el-form-item>
-          <el-form-item label="用户名">
-            <el-input v-model="searchForm.username" placeholder="请输入用户名" clearable></el-input>
+          <el-form-item label="邮箱">
+            <el-input v-model="searchForm.email" placeholder="请输入邮箱" clearable></el-input>
           </el-form-item>
-          <el-form-item label="手机号">
-            <el-input v-model="searchForm.phone" placeholder="请输入手机号" clearable></el-input>
+          <el-form-item label="会员等级">
+            <el-select v-model="searchForm.vipLevel" placeholder="请选择" clearable style="width: 168px;">
+              <el-option label="全部" value=""></el-option>
+              <el-option 
+                v-for="level in vipLevels" 
+                :key="level.level" 
+                :label="level.name" 
+                :value="level.level"
+              ></el-option>
+            </el-select>
           </el-form-item>
           <el-form-item label="用户状态">
-            <el-select v-model="searchForm.status" placeholder="请选择" clearable>
+            <el-select v-model="searchForm.status" placeholder="请选择" clearable style="width: 168px;">
               <el-option label="全部" value=""></el-option>
               <el-option label="正常" value="normal"></el-option>
               <el-option label="禁用" value="disabled"></el-option>
@@ -52,26 +60,19 @@
       <el-table :data="tableData" style="width: 100%" v-loading="loading" border stripe>
         <el-table-column type="selection" width="55"></el-table-column>
         <el-table-column prop="userId" label="用户ID" width="100"></el-table-column>
-        <el-table-column prop="username" label="用户名" width="120"></el-table-column>
-        <el-table-column prop="nickname" label="昵称" width="120"></el-table-column>
-        <el-table-column prop="avatar" label="头像" width="80">
+        <el-table-column prop="email" label="邮箱" min-width="180"></el-table-column>
+        <el-table-column prop="nickname" label="用户昵称" width="120"></el-table-column>
+        <el-table-column prop="role" label="会员等级" width="120">
           <template #default="scope">
-            <el-avatar :size="40" :src="scope.row.avatar">{{ scope.row.username.charAt(0) }}</el-avatar>
+            <el-tag :type="getVipLevelType(scope.row.role)">{{ getVipLevelName(scope.row.role) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="phone" label="手机号" width="120"></el-table-column>
-        <el-table-column prop="email" label="邮箱" width="180"></el-table-column>
-        <el-table-column prop="role" label="角色" width="100">
-          <template #default="scope">
-            <el-tag :type="getRoleType(scope.row.role)">{{ scope.row.role }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="balance" label="账户余额" width="100">
+        <el-table-column prop="balance" label="账户余额" width="120">
           <template #default="scope">
             <span class="balance">¥{{ scope.row.balance }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="orders" label="订单数" width="80"></el-table-column>
+        <el-table-column prop="orders" label="订单数" width="100"></el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
             <el-switch
@@ -84,7 +85,6 @@
           </template>
         </el-table-column>
         <el-table-column prop="registerTime" label="注册时间" width="180"></el-table-column>
-        <el-table-column prop="lastLoginTime" label="最后登录时间" width="180"></el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
@@ -144,16 +144,31 @@
             </div>
           </div>
         </el-form-item>
-        <el-form-item label="角色" prop="role">
-          <el-select v-model="userForm.role" placeholder="请选择角色" style="width: 100%;">
-            <el-option label="普通用户" value="普通用户"></el-option>
-            <el-option label="VIP用户" value="VIP用户"></el-option>
-            <el-option label="管理员" value="管理员"></el-option>
-            <el-option label="游客" value="游客"></el-option>
+        <el-form-item label="会员等级" prop="role">
+          <el-select v-model="userForm.role" placeholder="请选择会员等级" style="width: 168px;">
+            <el-option 
+              v-for="level in vipLevels" 
+              :key="level.level" 
+              :label="level.name" 
+              :value="level.level"
+            ></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="账户余额" prop="balance">
-          <el-input-number v-model="userForm.balance" :min="0" :precision="2" :step="10" style="width: 100%;"></el-input-number>
+          <el-input-number v-model="userForm.balance" :min="0" :precision="2" :step="10" style="width: 100%;" @change="handleBalanceChange"></el-input-number>
+          <div class="balance-tip" v-if="userForm.balance > 0">
+            <el-alert
+              title="会员等级自动升级提示"
+              type="info"
+              :closable="false"
+              show-icon
+            >
+              <template #default>
+                根据当前账户余额，用户会员等级将自动调整为 
+                <el-tag :type="getVipLevelType(autoVipLevel)">{{ getVipLevelName(autoVipLevel) }}</el-tag>
+              </template>
+            </el-alert>
+          </div>
         </el-form-item>
         <el-form-item label="状态">
           <el-switch v-model="userForm.statusBool"></el-switch>
@@ -178,8 +193,8 @@ import type { FormInstance, FormRules } from 'element-plus'
 // 搜索表单
 const searchForm = reactive({
   userId: '',
-  username: '',
-  phone: '',
+  email: '',
+  vipLevel: '',
   status: '',
   dateRange: []
 })
@@ -189,11 +204,11 @@ const tableData = ref([
   { 
     userId: 'U10001',
     username: 'user123',
-    nickname: '用户一',
+    nickname: '张小明',
     avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
     phone: '138****1234',
     email: 'user123@example.com',
-    role: '普通用户',
+    role: 0,
     status: '正常',
     statusBool: true,
     registerTime: '2024-01-15 10:00:00',
@@ -205,11 +220,11 @@ const tableData = ref([
   { 
     userId: 'U10002',
     username: 'admin456',
-    nickname: '管理员',
+    nickname: '李管理',
     avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
     phone: '139****5678',
     email: 'admin456@example.com',
-    role: '管理员',
+    role: 3,
     status: '正常',
     statusBool: true,
     registerTime: '2023-12-20 14:30:00',
@@ -221,11 +236,11 @@ const tableData = ref([
   { 
     userId: 'U10003',
     username: 'vip789',
-    nickname: 'VIP用户',
+    nickname: '王大富',
     avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
     phone: '137****9012',
     email: 'vip789@example.com',
-    role: 'VIP用户',
+    role: 2,
     status: '正常',
     statusBool: true,
     registerTime: '2024-02-05 16:45:00',
@@ -237,11 +252,11 @@ const tableData = ref([
   { 
     userId: 'U10004',
     username: 'test321',
-    nickname: '测试用户',
+    nickname: '赵测试',
     avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
     phone: '136****3456',
     email: 'test321@example.com',
-    role: '普通用户',
+    role: 0,
     status: '禁用',
     statusBool: false,
     registerTime: '2024-01-30 09:10:00',
@@ -253,11 +268,11 @@ const tableData = ref([
   { 
     userId: 'U10005',
     username: 'guest555',
-    nickname: '访客',
+    nickname: '陈访客',
     avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
     phone: '135****7890',
     email: 'guest555@example.com',
-    role: '游客',
+    role: 1,
     status: '正常',
     statusBool: true,
     registerTime: '2024-03-01 13:25:00',
@@ -268,13 +283,65 @@ const tableData = ref([
   }
 ])
 
+// VIP等级数据
+const vipLevels = ref([
+  {
+    id: 1,
+    name: '普通用户',
+    level: 0,
+    condition: '默认等级',
+    minRecharge: 0,
+    discount: 100,
+    description: '所有用户的默认等级'
+  },
+  {
+    id: 2,
+    name: 'VIP1',
+    level: 1,
+    condition: '累计充值满100元',
+    minRecharge: 100,
+    discount: 95,
+    description: '储值用户享受95折优惠'
+  },
+  {
+    id: 3,
+    name: 'VIP2',
+    level: 2,
+    condition: '累计充值满1000元',
+    minRecharge: 1000,
+    discount: 90,
+    description: '稳定用户、活跃用户享受9折优惠'
+  },
+  {
+    id: 4,
+    name: 'VIP3',
+    level: 3,
+    condition: '累计充值满5000元',
+    minRecharge: 5000,
+    discount: 85,
+    description: '大客户，可定期回访与商务交流'
+  }
+])
+
 // 分页相关
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const loading = ref(false)
 
-// 获取角色对应的标签类型
+// 获取VIP等级对应的标签类型
+const getVipLevelType = (level: number) => {
+  const types = ['', 'success', 'warning', 'danger']
+  return types[level] || ''
+}
+
+// 获取VIP等级名称
+const getVipLevelName = (level: number) => {
+  const vipLevel = vipLevels.value.find(item => item.level === level)
+  return vipLevel ? vipLevel.name : '未知等级'
+}
+
+// 原有的角色类型函数可以保留，但不再使用
 const getRoleType = (role: string) => {
   const roleMap: Record<string, string> = {
     '管理员': 'danger',
@@ -294,8 +361,8 @@ const handleSearch = () => {
 // 重置搜索
 const handleReset = () => {
   searchForm.userId = ''
-  searchForm.username = ''
-  searchForm.phone = ''
+  searchForm.email = ''
+  searchForm.vipLevel = ''
   searchForm.status = ''
   searchForm.dateRange = []
   currentPage.value = 1
@@ -399,7 +466,7 @@ const userForm = reactive({
   phone: '',
   email: '',
   captcha: '',
-  role: '普通用户',
+  role: 0,
   balance: 0,
   statusBool: true
 })
@@ -444,7 +511,7 @@ const rules = reactive<FormRules>({
     { min: 4, max: 6, message: '验证码长度不正确', trigger: 'blur' }
   ],
   role: [
-    { required: true, message: '请选择角色', trigger: 'change' }
+    { required: true, message: '请选择会员等级', trigger: 'change' }
   ]
 })
 
@@ -466,7 +533,7 @@ const handleAddUser = () => {
   userForm.phone = ''
   userForm.email = ''
   userForm.captcha = ''
-  userForm.role = '普通用户'
+  userForm.role = 0
   userForm.balance = 0
   userForm.statusBool = true
   dialogVisible.value = true
@@ -474,17 +541,46 @@ const handleAddUser = () => {
   refreshCaptcha()
 }
 
+// 自动计算的会员等级
+const autoVipLevel = ref(0)
+
+// 处理余额变化，自动计算会员等级
+const handleBalanceChange = (value: number) => {
+  // 根据余额自动计算会员等级
+  const level = calculateVipLevel(value)
+  autoVipLevel.value = level
+  
+  // 自动更新表单中的会员等级
+  userForm.role = level
+}
+
+// 根据充值金额计算会员等级
+const calculateVipLevel = (balance: number) => {
+  // 从高到低遍历会员等级，找到第一个满足条件的等级
+  for (let i = vipLevels.value.length - 1; i >= 0; i--) {
+    const level = vipLevels.value[i]
+    if (balance >= level.minRecharge) {
+      return level.level
+    }
+  }
+  return 0 // 默认为普通用户
+}
+
 // 编辑用户
 const handleEdit = (row: any) => {
   dialogType.value = 'edit'
   userForm.userId = row.userId
   userForm.username = row.username
-  userForm.nickname = row.nickname || ''
+  userForm.nickname = row.nickname
   userForm.phone = row.phone
   userForm.email = row.email
   userForm.role = row.role
   userForm.balance = row.balance
   userForm.statusBool = row.statusBool
+  
+  // 设置自动计算的会员等级
+  autoVipLevel.value = calculateVipLevel(row.balance)
+  
   dialogVisible.value = true
 }
 
@@ -538,12 +634,16 @@ const getUserList = () => {
   setTimeout(() => {
     // 根据搜索条件和分页参数获取数据
     const filteredData = tableData.value.filter((item: any) => {
-      // 用户名筛选
-      if (searchForm.username && !item.username.includes(searchForm.username)) {
+      // 用户ID筛选
+      if (searchForm.userId && !item.userId.includes(searchForm.userId)) {
         return false
       }
-      // 手机号筛选
-      if (searchForm.phone && !item.phone.includes(searchForm.phone)) {
+      // 邮箱筛选
+      if (searchForm.email && !item.email.includes(searchForm.email)) {
+        return false
+      }
+      // 会员等级筛选
+      if (searchForm.vipLevel !== '' && item.role !== Number(searchForm.vipLevel)) {
         return false
       }
       // 状态筛选
@@ -592,7 +692,7 @@ const handleCurrentChange = (val: number) => {
 }
 
 // 监听搜索表单变化，重置分页并重新获取数据
-watch([() => searchForm.username, () => searchForm.phone, () => searchForm.status, () => searchForm.dateRange], () => {
+watch([() => searchForm.userId, () => searchForm.email, () => searchForm.vipLevel, () => searchForm.status, () => searchForm.dateRange], () => {
   currentPage.value = 1
   getUserList()
 })
@@ -749,5 +849,9 @@ onMounted(() => {
 .action-buttons .el-button {
   margin-left: 0 !important;
   margin-right: 0 !important;
+}
+
+.balance-tip {
+  margin-top: 10px;
 }
 </style> 

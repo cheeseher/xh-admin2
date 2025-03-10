@@ -101,6 +101,33 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/accounts',
+    name: 'accounts',
+    component: () => import('../views/AccountsView.vue'),
+    meta: {
+      title: '账户管理',
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/logs',
+    name: 'logs',
+    component: () => import('../views/LogsView.vue'),
+    meta: {
+      title: '操作日志',
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/messages',
+    name: 'messages',
+    component: () => import('../views/MessagesView.vue'),
+    meta: {
+      title: '站内信',
+      requiresAuth: true
+    }
+  },
+  {
     path: '/settings',
     name: 'settings',
     component: () => import('../views/SettingsView.vue'),
@@ -115,6 +142,15 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/TemplateSettingsView.vue'),
     meta: {
       title: '模板设置',
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/members',
+    name: 'members',
+    component: () => import('../views/MemberSettingsView.vue'),
+    meta: {
+      title: '会员设置',
       requiresAuth: true
     }
   },

@@ -46,10 +46,6 @@
               <el-input v-model="userForm.nickname" placeholder="请输入昵称"></el-input>
             </el-form-item>
             
-            <el-form-item label="手机号码" prop="phone">
-              <el-input v-model="userForm.phone" placeholder="请输入手机号码"></el-input>
-            </el-form-item>
-            
             <el-form-item label="邮箱" prop="email">
               <el-input v-model="userForm.email" placeholder="请输入邮箱"></el-input>
             </el-form-item>
@@ -84,16 +80,6 @@
             <p>定期更改密码可以保护您的账户安全</p>
           </div>
           <el-button type="primary" plain @click="goToResetPassword">修改密码</el-button>
-        </div>
-        
-        <el-divider></el-divider>
-        
-        <div class="security-item">
-          <div class="security-info">
-            <h4>绑定手机</h4>
-            <p>已绑定手机：{{ maskPhone(userForm.phone) }}</p>
-          </div>
-          <el-button plain @click="handleBindPhone" :disabled="!isPhoneBindable">{{ isPhoneBindable ? '更换手机' : '已绑定' }}</el-button>
         </div>
         
         <el-divider></el-divider>
@@ -152,9 +138,8 @@ const logsDialogVisible = ref(false)
 const userForm = reactive({
   username: 'admin',
   nickname: '管理员',
-  phone: '13800138000',
   email: 'admin@xinghai.com',
-  role: '管理员',
+  role: '超级管理员',
   avatar: 'https://picsum.photos/200',
   registerTime: '2023-01-01 10:00:00',
   lastLoginTime: '2023-03-09 08:30:00'
@@ -169,10 +154,6 @@ const rules = reactive<FormRules>({
   nickname: [
     { required: true, message: '请输入昵称', trigger: 'blur' },
     { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
-  ],
-  phone: [
-    { required: true, message: '请输入手机号码', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号码', trigger: 'blur' }
   ],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
@@ -218,11 +199,6 @@ const loginLogs = ref([
     status: '成功'
   }
 ])
-
-// 计算属性：是否可以绑定手机
-const isPhoneBindable = computed(() => {
-  return !!userForm.phone
-})
 
 // 计算属性：是否可以绑定邮箱
 const isEmailBindable = computed(() => {
@@ -304,11 +280,6 @@ const goToResetPassword = () => {
   router.push('/user/reset-password')
 }
 
-// 处理绑定手机
-const handleBindPhone = () => {
-  ElMessage.info('功能开发中，敬请期待')
-}
-
 // 处理绑定邮箱
 const handleBindEmail = () => {
   ElMessage.info('功能开发中，敬请期待')
@@ -317,12 +288,6 @@ const handleBindEmail = () => {
 // 查看登录日志
 const handleViewLogs = () => {
   logsDialogVisible.value = true
-}
-
-// 手机号码脱敏
-const maskPhone = (phone: string) => {
-  if (!phone) return ''
-  return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
 }
 
 // 邮箱脱敏
@@ -351,7 +316,7 @@ const getUserInfo = () => {
   if (userInfoStr) {
     const userInfo = JSON.parse(userInfoStr)
     userForm.username = userInfo.username || 'admin'
-    userForm.role = userInfo.role || '管理员'
+    userForm.role = userInfo.role || '超级管理员'
     userForm.avatar = userInfo.avatar || 'https://picsum.photos/200'
   }
 }
