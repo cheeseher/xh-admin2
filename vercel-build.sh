@@ -14,4 +14,8 @@ npm install terser --save-dev
 echo "Building project..."
 npm run build
 
+# 复制dist目录到根目录
+echo "Copying dist directory to root..."
+cp -r dist ../
+
 echo "Build completed successfully!" 
