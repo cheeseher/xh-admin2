@@ -7,7 +7,7 @@
     "build": "cd xinghai-admin && npm run build",
     "preview": "cd xinghai-admin && npm run preview",
     "install": "cd xinghai-admin && npm install",
-    "vercel-build": "npm install && npm run build"
+    "vercel-build": "cd xinghai-admin && npm install && npm run build && cp -r dist ../"
   },
   "keywords": [
     "vue",
