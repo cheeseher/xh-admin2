@@ -1,10 +1,13 @@
 # 依赖包
 node_modules/
+*/node_modules/
+xinghai-admin/node_modules/
 .DS_Store
 
 # 编译输出
 /dist
-/build
+*/dist
+xinghai-admin/dist
 
 # 本地环境文件
 .env.local
@@ -27,4 +30,8 @@ pnpm-debug.log*
 
 # 缓存文件
 .cache/
-.temp/ 
+.temp/
+.vite/
+*/.vite/
+xinghai-admin/.vite/
+xinghai-admin/node_modules/.vite/ 

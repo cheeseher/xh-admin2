@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "cd xinghai-admin && npm install && npm install terser --save-dev && npm run build",
-  "outputDirectory": "xinghai-admin/dist",
   "framework": "vite",
+  "buildCommand": "cd xinghai-admin && npm install && npm run build",
+  "outputDirectory": "xinghai-admin/dist",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
