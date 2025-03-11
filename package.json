@@ -1,0 +1,19 @@
+{
+  "name": "xinghai-admin",
+  "version": "1.0.0",
+  "description": "星海后台管理系统",
+  "scripts": {
+    "dev": "cd xinghai-admin && npm run dev",
+    "build": "cd xinghai-admin && npm run build",
+    "preview": "cd xinghai-admin && npm run preview",
+    "install": "cd xinghai-admin && npm install"
+  },
+  "keywords": [
+    "vue",
+    "element-plus",
+    "admin",
+    "dashboard"
+  ],
+  "author": "",
+  "license": "ISC"
+} 
