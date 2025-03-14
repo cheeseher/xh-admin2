@@ -26,6 +26,7 @@
               <el-option label="待支付" value="pending"></el-option>
               <el-option label="已支付" value="paid"></el-option>
               <el-option label="已取消" value="cancelled"></el-option>
+              <el-option label="已退款" value="refunded"></el-option>
             </el-select>
           </el-form-item>
           <el-form-item label="支付方式">
@@ -78,7 +79,8 @@
         <el-table-column prop="status" label="订单状态" min-width="120">
           <template #default="scope">
             <el-tag v-if="scope.row.status === 'pending'" type="warning">待支付</el-tag>
-            <el-tag v-else-if="scope.row.status === 'paid'" type="success">已支付</el-tag>
+            <el-tag v-else-if="scope.row.status === 'paid' && !scope.row.refunded" type="success">已支付</el-tag>
+            <el-tag v-else-if="scope.row.status === 'cancelled' && scope.row.refunded" type="danger">已退款</el-tag>
             <el-tag v-else-if="scope.row.status === 'cancelled'" type="info">已取消</el-tag>
           </template>
         </el-table-column>
@@ -94,6 +96,12 @@
                 type="success" 
                 @click="confirmPayment(scope.row)"
               >确认支付</el-button>
+              <el-button 
+                v-if="scope.row.status === 'paid'" 
+                size="small" 
+                type="warning" 
+                @click="handleRefund(scope.row)"
+              >退款</el-button>
             </div>
           </template>
         </el-table-column>
@@ -128,7 +136,8 @@
           <el-descriptions-item label="充值金额">¥{{ currentOrder.amount.toFixed(2) }}</el-descriptions-item>
           <el-descriptions-item label="订单状态">
             <el-tag v-if="currentOrder.status === 'pending'" type="warning">待支付</el-tag>
-            <el-tag v-else-if="currentOrder.status === 'paid'" type="success">已支付</el-tag>
+            <el-tag v-else-if="currentOrder.status === 'paid' && !currentOrder.refunded" type="success">已支付</el-tag>
+            <el-tag v-else-if="currentOrder.status === 'cancelled' && currentOrder.refunded" type="danger">已退款</el-tag>
             <el-tag v-else-if="currentOrder.status === 'cancelled'" type="info">已取消</el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="支付方式">
@@ -166,12 +175,71 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 退款对话框 -->
+    <el-dialog
+      v-model="refundDialogVisible"
+      title="充值订单退款"
+      width="550px"
+    >
+      <el-form :model="refundForm" label-width="100px" :rules="refundRules" ref="refundFormRef">
+        <el-form-item label="订单号">
+          <el-input v-model="refundForm.orderNo" disabled></el-input>
+        </el-form-item>
+        <el-form-item label="用户邮箱">
+          <el-input v-model="refundForm.userEmail" disabled></el-input>
+        </el-form-item>
+        <el-form-item label="充值金额">
+          <el-input v-model="refundForm.amount" disabled>
+            <template #prepend>¥</template>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="退款金额" prop="refundAmount">
+          <el-input-number 
+            v-model="refundForm.refundAmount" 
+            :min="0" 
+            :max="refundForm.amount" 
+            :precision="2" 
+            :step="0.01"
+            style="width: 100%;"
+          ></el-input-number>
+          <div class="form-tip">最大可退金额: ¥{{ refundForm.amount }}</div>
+        </el-form-item>
+        <el-form-item label="退款原因" prop="refundReason">
+          <el-select v-model="refundForm.refundReason" placeholder="请选择退款原因" style="width: 100%;">
+            <el-option label="客户申请退款" value="客户申请退款"></el-option>
+            <el-option label="充值金额错误" value="充值金额错误"></el-option>
+            <el-option label="系统错误" value="系统错误"></el-option>
+            <el-option label="其他原因" value="其他原因"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="退款说明" prop="refundRemark">
+          <el-input 
+            v-model="refundForm.refundRemark" 
+            type="textarea" 
+            :rows="3" 
+            placeholder="请输入退款说明"
+          ></el-input>
+        </el-form-item>
+        <el-form-item label="扣除余额" prop="deductBalance">
+          <el-switch v-model="refundForm.deductBalance"></el-switch>
+          <div class="form-tip">开启后将从用户账户余额中扣除相应金额，请确保用户余额充足</div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="refundDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitRefundForm">确认退款</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
 
 // 定义充值订单类型
 interface RechargeOrder {
@@ -190,6 +258,7 @@ interface RechargeOrder {
     action: string
     operator: string
   }>
+  refunded?: boolean
 }
 
 // 搜索表单
@@ -209,6 +278,32 @@ const pageSize = ref(10)
 const total = ref(0)
 const dialogVisible = ref(false)
 const currentOrder = ref<RechargeOrder | null>(null)
+
+// 退款对话框相关
+const refundDialogVisible = ref(false)
+const refundFormRef = ref<FormInstance>()
+const refundForm = reactive({
+  orderNo: '',
+  userEmail: '',
+  amount: 0,
+  refundAmount: 0,
+  refundReason: '',
+  refundRemark: '',
+  deductBalance: true
+})
+
+// 退款表单验证规则
+const refundRules = reactive<FormRules>({
+  refundAmount: [
+    { required: true, message: '请输入退款金额', trigger: 'blur' }
+  ],
+  refundReason: [
+    { required: true, message: '请选择退款原因', trigger: 'change' }
+  ],
+  refundRemark: [
+    { max: 200, message: '退款说明不能超过200个字符', trigger: 'blur' }
+  ]
+})
 
 // 获取订单列表
 const fetchOrders = async () => {
@@ -293,8 +388,52 @@ const fetchOrders = async () => {
 
 // 搜索
 const handleSearch = () => {
-  currentPage.value = 1
-  fetchOrders()
+  loading.value = true
+  
+  // 模拟搜索操作
+  setTimeout(() => {
+    let filteredList = [...orderList.value]
+    
+    if (searchForm.orderNo) {
+      filteredList = filteredList.filter(item => item.orderNo.includes(searchForm.orderNo))
+    }
+    
+    if (searchForm.userEmail) {
+      filteredList = filteredList.filter(item => item.userEmail.includes(searchForm.userEmail))
+    }
+    
+    if (searchForm.status) {
+      if (searchForm.status === 'refunded') {
+        // 处理已退款状态的特殊搜索
+        filteredList = filteredList.filter(item => item.status === 'cancelled' && item.refunded === true)
+      } else {
+        filteredList = filteredList.filter(item => item.status === searchForm.status)
+        // 如果搜索已支付状态，排除已退款的订单
+        if (searchForm.status === 'paid') {
+          filteredList = filteredList.filter(item => !item.refunded)
+        }
+      }
+    }
+    
+    if (searchForm.paymentMethod) {
+      filteredList = filteredList.filter(item => item.paymentMethod === searchForm.paymentMethod)
+    }
+    
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      const startDate = new Date(searchForm.dateRange[0])
+      const endDate = new Date(searchForm.dateRange[1])
+      endDate.setHours(23, 59, 59, 999) // 设置为当天结束时间
+      
+      filteredList = filteredList.filter(item => {
+        const createTime = new Date(item.createTime)
+        return createTime >= startDate && createTime <= endDate
+      })
+    }
+    
+    orderList.value = filteredList
+    total.value = filteredList.length
+    loading.value = false
+  }, 500)
 }
 
 // 重置搜索
@@ -370,6 +509,77 @@ const getLogType = (action: string) => {
   if (action.includes('支付') || action.includes('确认')) return 'success'
   if (action.includes('取消')) return 'info'
   return 'info'
+}
+
+// 处理退款
+const handleRefund = (row: any) => {
+  refundForm.orderNo = row.orderNo
+  refundForm.userEmail = row.userEmail
+  refundForm.amount = row.amount
+  refundForm.refundAmount = row.amount
+  refundForm.refundReason = ''
+  refundForm.refundRemark = ''
+  refundForm.deductBalance = true
+  refundDialogVisible.value = true
+}
+
+// 提交退款表单
+const submitRefundForm = async () => {
+  if (!refundFormRef.value) return
+  
+  await refundFormRef.value.validate((valid: boolean, fields: any) => {
+    if (valid) {
+      let confirmMessage = `确定要退款 ¥${refundForm.refundAmount.toFixed(2)} 吗？`
+      if (refundForm.deductBalance) {
+        confirmMessage += '将从用户余额中扣除相应金额。'
+      }
+      confirmMessage += '此操作不可逆。'
+      
+      ElMessageBox.confirm(
+        confirmMessage,
+        '确认退款',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning',
+        }
+      )
+        .then(() => {
+          // 模拟退款操作
+          const index = orderList.value.findIndex(item => item.orderNo === refundForm.orderNo)
+          if (index !== -1) {
+            // 将状态改为已退款
+            orderList.value[index].status = 'cancelled' // 使用已取消状态表示已退款
+            // 添加退款标记
+            orderList.value[index].refunded = true
+            
+            // 添加退款记录到日志
+            if (!orderList.value[index].logs) {
+              orderList.value[index].logs = []
+            }
+            
+            orderList.value[index].logs.push({
+              time: new Date().toLocaleString(),
+              action: `退款 ¥${refundForm.refundAmount.toFixed(2)} - ${refundForm.refundReason}`,
+              operator: '管理员'
+            })
+            
+            // 如果当前正在查看该订单的详情，更新当前订单信息
+            if (currentOrder.value && currentOrder.value.orderNo === refundForm.orderNo) {
+              currentOrder.value = { ...orderList.value[index] }
+            }
+          }
+          
+          ElMessage.success('退款操作成功')
+          refundDialogVisible.value = false
+        })
+        .catch(() => {
+          ElMessage.info('已取消退款操作')
+        })
+    } else {
+      console.log('表单验证失败', fields)
+    }
+  })
 }
 
 onMounted(() => {

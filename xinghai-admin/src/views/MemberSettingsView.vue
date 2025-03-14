@@ -9,7 +9,7 @@
       </template>
       
       <div class="page-description">
-        <p>管理会员等级和充值折扣设置，会员等级折扣仅适用于用户充值余额。用户累计充值金额达到设定条件时，系统将自动升级用户的会员等级。</p>
+        <p>管理会员等级和充值折扣设置，会员等级折扣仅适用于用户充值余额。用户累计充值金额达到设定条件时，系统将自动升级用户的会员等级。同时支持月消费系统（三月一核验），用户连续三个月达到月消费标准也可升级对应会员等级，与累充不对冲。</p>
       </div>
       
       <!-- 会员等级表格 -->
@@ -28,7 +28,13 @@
           </template>
         </el-table-column>
         <el-table-column prop="level" label="等级" width="80"></el-table-column>
-        <el-table-column prop="condition" label="升级条件" min-width="180"></el-table-column>
+        <el-table-column prop="condition" label="累充升级条件" min-width="150"></el-table-column>
+        <el-table-column prop="monthlyConsumption" label="月消费升级条件" min-width="180">
+          <template #default="scope">
+            <span v-if="scope.row.monthlyConsumption > 0">连续三个月每月消费 {{ scope.row.monthlyConsumption }}元</span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="minRecharge" label="最低充值金额" width="120">
           <template #default="scope">
             <span>{{ scope.row.minRecharge }}元</span>
@@ -55,6 +61,16 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 月消费系统说明 -->
+      <div class="system-description">
+        <h3>月消费系统说明（三月一核验）</h3>
+        <p>1. 月消费系统与累计充值系统并行，两者不对冲，用户可通过任一方式达到升级条件。</p>
+        <p>2. 月消费系统要求用户连续三个月每月消费达到指定金额，系统每月1日进行核验。</p>
+        <p>3. 若用户某月消费未达标，连续计数将重置为0，需重新开始累计。</p>
+        <p>4. 用户达到月消费升级条件后，系统将自动升级用户会员等级，并发送升级通知。</p>
+        <p>5. 若用户当前等级已高于月消费可升级的等级，则不会降级。</p>
+      </div>
     </el-card>
     
     <!-- 会员等级表单对话框 -->
@@ -84,8 +100,18 @@
           <el-input-number v-model="levelForm.level" :min="0" :max="10" :disabled="dialogType === 'edit'"></el-input-number>
           <span class="form-tip">0表示普通用户，数字越大等级越高</span>
         </el-form-item>
-        <el-form-item label="升级条件" prop="condition">
-          <el-input v-model="levelForm.condition" placeholder="请输入升级条件"></el-input>
+        <el-form-item label="累充升级条件" prop="condition">
+          <el-input v-model="levelForm.condition" placeholder="请输入累计充值升级条件"></el-input>
+        </el-form-item>
+        <el-form-item label="月消费升级条件" prop="monthlyConsumption">
+          <el-input-number 
+            v-model="levelForm.monthlyConsumption" 
+            :min="0" 
+            :precision="0" 
+            :step="100"
+            style="width: 180px;"
+          ></el-input-number>
+          <span class="form-tip">元（用户连续三个月每月消费达到此金额时自动升级）</span>
         </el-form-item>
         <el-form-item label="最低充值金额" prop="minRecharge">
           <el-input-number 
@@ -151,36 +177,48 @@ const memberLevels = ref([
     name: '普通用户',
     level: 0,
     condition: '默认等级',
+    monthlyConsumption: 0,
     minRecharge: 0,
     discount: 100,
-    description: '所有用户的默认等级'
+    description: '所有用户的默认等级',
+    icon: 'https://element-plus.org/images/element-plus-logo.svg',
+    introduction: '普通用户无特殊权益'
   },
   {
     id: 2,
     name: 'VIP1',
     level: 1,
     condition: '累计充值满100元',
+    monthlyConsumption: 100,
     minRecharge: 100,
     discount: 95,
-    description: '储值用户享受95折优惠'
+    description: '储值用户享受95折优惠',
+    icon: 'https://element-plus.org/images/element-plus-logo.svg',
+    introduction: 'VIP1用户享受充值95折优惠'
   },
   {
     id: 3,
     name: 'VIP2',
     level: 2,
     condition: '累计充值满1000元',
+    monthlyConsumption: 500,
     minRecharge: 1000,
     discount: 90,
-    description: '稳定用户、活跃用户享受9折优惠'
+    description: '稳定用户、活跃用户享受9折优惠',
+    icon: 'https://element-plus.org/images/element-plus-logo.svg',
+    introduction: 'VIP2用户享受充值9折优惠'
   },
   {
     id: 4,
     name: 'VIP3',
     level: 3,
     condition: '累计充值满5000元',
+    monthlyConsumption: 1000,
     minRecharge: 5000,
     discount: 85,
-    description: '大客户，可定期回访与商务交流'
+    description: '大客户，可定期回访与商务交流',
+    icon: 'https://element-plus.org/images/element-plus-logo.svg',
+    introduction: 'VIP3用户享受充值85折优惠及专属客服'
   }
 ])
 
@@ -197,6 +235,7 @@ const levelForm = reactive({
   icon: '',
   level: 0,
   condition: '',
+  monthlyConsumption: 0,
   minRecharge: 0,
   discount: 100,
   description: '',
@@ -216,7 +255,10 @@ const levelRules = reactive<FormRules>({
     { required: true, message: '请输入等级', trigger: 'blur' }
   ],
   condition: [
-    { required: true, message: '请输入升级条件', trigger: 'blur' }
+    { required: true, message: '请输入累计充值升级条件', trigger: 'blur' }
+  ],
+  monthlyConsumption: [
+    { required: true, message: '请输入月消费升级条件', trigger: 'blur' }
   ],
   minRecharge: [
     { required: true, message: '请输入最低充值金额', trigger: 'blur' }
@@ -249,6 +291,7 @@ const handleAddLevel = () => {
   levelForm.name = ''
   levelForm.level = memberLevels.value.length > 0 ? Math.max(...memberLevels.value.map(item => item.level)) + 1 : 1
   levelForm.condition = ''
+  levelForm.monthlyConsumption = 0
   levelForm.minRecharge = 0
   levelForm.discount = 100
   levelForm.description = ''
@@ -263,6 +306,7 @@ const handleEditLevel = (row: any) => {
   levelForm.name = row.name
   levelForm.level = row.level
   levelForm.condition = row.condition
+  levelForm.monthlyConsumption = row.monthlyConsumption
   levelForm.minRecharge = row.minRecharge
   levelForm.discount = row.discount
   levelForm.description = row.description
@@ -317,6 +361,7 @@ const submitLevelForm = async () => {
           name: levelForm.name,
           level: levelForm.level,
           condition: levelForm.condition,
+          monthlyConsumption: levelForm.monthlyConsumption,
           minRecharge: levelForm.minRecharge,
           discount: levelForm.discount,
           description: levelForm.description,
@@ -332,6 +377,7 @@ const submitLevelForm = async () => {
             ...memberLevels.value[index],
             name: levelForm.name,
             condition: levelForm.condition,
+            monthlyConsumption: levelForm.monthlyConsumption,
             minRecharge: levelForm.minRecharge,
             discount: levelForm.discount,
             description: levelForm.description,
@@ -399,6 +445,28 @@ onMounted(() => {
 
 .page-description p {
   margin: 0;
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.system-description {
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #f6ffed;
+  border-radius: 4px;
+  border-left: 5px solid #52c41a;
+}
+
+.system-description h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #52c41a;
+  font-size: 16px;
+}
+
+.system-description p {
+  margin: 5px 0;
   color: #606266;
   font-size: 14px;
   line-height: 1.6;

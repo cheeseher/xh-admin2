@@ -201,7 +201,7 @@ import {
   Wallet,
   Management
 } from '@element-plus/icons-vue'
-import Breadcrumb from '@/components/Breadcrumb.vue'
+import Breadcrumb from './components/Breadcrumb.vue'
 
 const router = useRouter()
 const route = useRoute()

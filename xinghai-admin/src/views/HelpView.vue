@@ -336,6 +336,105 @@
             </div>
           </div>
         </el-tab-pane>
+
+        <el-tab-pane label="文档设置" name="settings">
+          <div class="tab-content">
+            <h2>文档设置</h2>
+            <p>在这里您可以管理帮助文档的分类和内容设置。</p>
+            
+            <el-divider content-position="left">文档分类设置</el-divider>
+            
+            <div class="category-settings">
+              <el-form :model="categoryForm" label-width="120px" ref="categoryFormRef">
+                <el-form-item label="启用分类">
+                  <el-switch v-model="categoryForm.enableCategories"></el-switch>
+                </el-form-item>
+                
+                <template v-if="categoryForm.enableCategories">
+                  <el-form-item label="文档分类">
+                    <el-table :data="categoryForm.categories" style="width: 100%">
+                      <el-table-column label="分类名称" width="180">
+                        <template #default="scope">
+                          <el-input v-model="scope.row.name" placeholder="请输入分类名称"></el-input>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="分类代码" width="180">
+                        <template #default="scope">
+                          <el-input v-model="scope.row.code" placeholder="请输入分类代码"></el-input>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="排序" width="100">
+                        <template #default="scope">
+                          <el-input-number v-model="scope.row.sort" :min="1" :max="99" controls-position="right"></el-input-number>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="状态" width="100">
+                        <template #default="scope">
+                          <el-switch v-model="scope.row.status"></el-switch>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="操作">
+                        <template #default="scope">
+                          <el-button 
+                            type="danger" 
+                            size="small" 
+                            @click="removeCategory(scope.$index)"
+                            :disabled="categoryForm.categories.length <= 3"
+                          >
+                            删除
+                          </el-button>
+                        </template>
+                      </el-table-column>
+                    </el-table>
+                    
+                    <div class="table-footer">
+                      <el-button type="primary" @click="addCategory">添加分类</el-button>
+                      <div class="table-tip">注意：系统默认包含三个基础分类，不可删除</div>
+                    </div>
+                  </el-form-item>
+                  
+                  <el-form-item label="显示位置">
+                    <el-radio-group v-model="categoryForm.displayPosition">
+                      <el-radio label="top">顶部</el-radio>
+                      <el-radio label="left">左侧</el-radio>
+                    </el-radio-group>
+                  </el-form-item>
+                </template>
+                
+                <el-form-item>
+                  <el-button type="primary" @click="saveCategorySettings">保存设置</el-button>
+                  <el-button @click="resetCategoryForm">重置</el-button>
+                </el-form-item>
+              </el-form>
+            </div>
+            
+            <el-divider content-position="left">文档内容设置</el-divider>
+            
+            <div class="content-settings">
+              <el-form :model="contentForm" label-width="120px" ref="contentFormRef">
+                <el-form-item label="每页显示数量">
+                  <el-input-number v-model="contentForm.pageSize" :min="5" :max="50" controls-position="right"></el-input-number>
+                </el-form-item>
+                
+                <el-form-item label="默认排序">
+                  <el-select v-model="contentForm.defaultSort" placeholder="请选择默认排序方式" style="width: 100%;">
+                    <el-option label="创建时间（降序）" value="createTime_desc"></el-option>
+                    <el-option label="创建时间（升序）" value="createTime_asc"></el-option>
+                    <el-option label="更新时间（降序）" value="updateTime_desc"></el-option>
+                    <el-option label="更新时间（升序）" value="updateTime_asc"></el-option>
+                    <el-option label="阅读量（降序）" value="views_desc"></el-option>
+                    <el-option label="阅读量（升序）" value="views_asc"></el-option>
+                  </el-select>
+                </el-form-item>
+                
+                <el-form-item>
+                  <el-button type="primary" @click="saveContentSettings">保存设置</el-button>
+                  <el-button @click="resetContentForm">重置</el-button>
+                </el-form-item>
+              </el-form>
+            </div>
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </el-card>
   </div>
@@ -395,6 +494,84 @@ const resetContactForm = () => {
   if (!contactFormRef.value) return
   contactFormRef.value.resetFields()
 }
+
+// 文档分类表单
+const categoryFormRef = ref<FormInstance>()
+const categoryForm = reactive({
+  enableCategories: true,
+  displayPosition: 'top',
+  categories: [
+    { name: '账号相关', code: 'account', sort: 1, status: true },
+    { name: '服务相关', code: 'service', sort: 2, status: true },
+    { name: '教程指南', code: 'tutorial', sort: 3, status: true }
+  ]
+})
+
+// 添加分类
+const addCategory = () => {
+  categoryForm.categories.push({
+    name: '',
+    code: '',
+    sort: categoryForm.categories.length + 1,
+    status: true
+  })
+}
+
+// 删除分类
+const removeCategory = (index: number) => {
+  // 不允许删除前三个默认分类
+  if (index < 3) {
+    ElMessage.warning('默认分类不可删除')
+    return
+  }
+  categoryForm.categories.splice(index, 1)
+}
+
+// 保存分类设置
+const saveCategorySettings = () => {
+  // 验证分类名称和代码不能为空
+  for (const category of categoryForm.categories) {
+    if (!category.name || !category.code) {
+      ElMessage.warning('分类名称和代码不能为空')
+      return
+    }
+  }
+  
+  ElMessage.success('文档分类设置保存成功')
+}
+
+// 重置分类表单
+const resetCategoryForm = () => {
+  categoryForm.enableCategories = true
+  categoryForm.displayPosition = 'top'
+  categoryForm.categories = [
+    { name: '账号相关', code: 'account', sort: 1, status: true },
+    { name: '服务相关', code: 'service', sort: 2, status: true },
+    { name: '教程指南', code: 'tutorial', sort: 3, status: true }
+  ]
+  
+  ElMessage.info('已重置为默认设置')
+}
+
+// 文档内容表单
+const contentFormRef = ref<FormInstance>()
+const contentForm = reactive({
+  pageSize: 10,
+  defaultSort: 'createTime_desc'
+})
+
+// 保存内容设置
+const saveContentSettings = () => {
+  ElMessage.success('文档内容设置保存成功')
+}
+
+// 重置内容表单
+const resetContentForm = () => {
+  contentForm.pageSize = 10
+  contentForm.defaultSort = 'createTime_desc'
+  
+  ElMessage.info('已重置为默认设置')
+}
 </script>
 
 <style scoped>
@@ -447,5 +624,22 @@ li {
 .contact-form {
   margin-top: 30px;
   max-width: 600px;
+}
+
+.category-settings, .content-settings {
+  margin-top: 20px;
+  max-width: 800px;
+}
+
+.table-footer {
+  margin-top: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.table-tip {
+  font-size: 12px;
+  color: #909399;
 }
 </style> 

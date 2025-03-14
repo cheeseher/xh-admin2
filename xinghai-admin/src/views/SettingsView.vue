@@ -78,25 +78,32 @@
             <el-form-item label="SMTP服务器" prop="smtpServer">
               <el-input v-model="emailForm.smtpServer" placeholder="请输入SMTP服务器地址"></el-input>
             </el-form-item>
-            <el-form-item label="SMTP端口" prop="smtpPort">
-              <el-input-number v-model="emailForm.smtpPort" :min="1" :max="65535" placeholder="请输入SMTP端口"></el-input-number>
+            <el-form-item label="端口" prop="smtpPort">
+              <el-input v-model="emailForm.smtpPort" placeholder="请输入端口"></el-input>
             </el-form-item>
-            <el-form-item label="发件人邮箱" prop="senderEmail">
-              <el-input v-model="emailForm.senderEmail" placeholder="请输入发件人邮箱"></el-input>
+            <el-form-item label="安全协议">
+              <el-radio-group v-model="emailForm.securityProtocol">
+                <el-radio label="SSL">SSL</el-radio>
+                <el-radio label="TLS">TLS</el-radio>
+                <el-radio label="none">不加密</el-radio>
+              </el-radio-group>
             </el-form-item>
-            <el-form-item label="发件人名称" prop="senderName">
-              <el-input v-model="emailForm.senderName" placeholder="请输入发件人名称"></el-input>
+            <el-form-item label="用户名" prop="username">
+              <el-input v-model="emailForm.username" placeholder="请输入用户名"></el-input>
             </el-form-item>
-            <el-form-item label="邮箱密码" prop="password">
-              <el-input v-model="emailForm.password" type="password" placeholder="请输入邮箱密码" show-password></el-input>
+            <el-form-item label="发件人" prop="senderEmail">
+              <el-input v-model="emailForm.senderEmail" placeholder="请输入发件人邮箱地址"></el-input>
             </el-form-item>
-            <el-form-item label="SSL加密">
-              <el-switch v-model="emailForm.ssl"></el-switch>
+            <el-form-item label="称呼" prop="senderName">
+              <el-input v-model="emailForm.senderName" placeholder="请输入您的称呼，可以是您的网站简称"></el-input>
+            </el-form-item>
+            <el-form-item label="授权码/密码" prop="password">
+              <el-input v-model="emailForm.password" type="password" placeholder="请输入授权码/密码" show-password></el-input>
             </el-form-item>
             <el-form-item>
-              <el-button type="primary" @click="saveEmailSettings">保存设置</el-button>
-              <el-button @click="resetEmailForm">重置</el-button>
-              <el-button type="success" @click="testEmailSettings">测试连接</el-button>
+              <el-button type="primary" @click="saveEmailSettings">保存</el-button>
+              <el-button @click="resetEmailForm">取消</el-button>
+              <el-button type="success" @click="testEmailSettings">发信测试</el-button>
             </el-form-item>
           </el-form>
         </el-tab-pane>
@@ -332,12 +339,13 @@ const serviceRules = reactive<FormRules>({
 // 邮件设置表单
 const emailFormRef = ref<FormInstance>()
 const emailForm = reactive({
-  smtpServer: 'smtp.example.com',
-  smtpPort: 465,
-  senderEmail: 'admin@example.com',
-  senderName: '星海管理系统',
-  password: '********',
-  ssl: true
+  smtpServer: '',
+  smtpPort: '',
+  securityProtocol: 'SSL',
+  username: '',
+  senderEmail: '',
+  senderName: '',
+  password: ''
 })
 
 // 邮件设置表单验证规则
@@ -346,17 +354,20 @@ const emailRules = reactive<FormRules>({
     { required: true, message: '请输入SMTP服务器地址', trigger: 'blur' }
   ],
   smtpPort: [
-    { required: true, message: '请输入SMTP端口', trigger: 'blur' }
+    { required: true, message: '请输入端口', trigger: 'blur' }
+  ],
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' }
   ],
   senderEmail: [
     { required: true, message: '请输入发件人邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
   ],
   senderName: [
-    { required: true, message: '请输入发件人名称', trigger: 'blur' }
+    { required: true, message: '请输入称呼', trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入邮箱密码', trigger: 'blur' }
+    { required: true, message: '请输入授权码/密码', trigger: 'blur' }
   ]
 })
 
