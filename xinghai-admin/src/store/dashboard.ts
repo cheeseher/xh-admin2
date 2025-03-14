@@ -84,11 +84,74 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   ])
   
+  // 库存预警数据
+  const inventoryAlerts = ref([
+    {
+      id: 1,
+      productName: 'Gmail邮箱-美国稳定',
+      currentStock: 5,
+      alertThreshold: 10,
+      updateTime: '2024-03-15 08:30:00'
+    },
+    {
+      id: 2,
+      productName: 'Twitter账号',
+      currentStock: 3,
+      alertThreshold: 15,
+      updateTime: '2024-03-15 09:15:00'
+    },
+    {
+      id: 3,
+      productName: 'ChatGPT账号',
+      currentStock: 2,
+      alertThreshold: 5,
+      updateTime: '2024-03-15 10:20:00'
+    }
+  ])
+  
+  // 补货提醒数据
+  const restockRequests = ref([
+    {
+      id: 1,
+      productName: '美国号码',
+      email: 'newshengao@gmail.com',
+      quantity: 10,
+      description: '需要更多号码，越快越好',
+      createTime: '2024-03-10 10:30:45'
+    },
+    {
+      id: 2,
+      productName: '美国号码',
+      email: 'agent001@example.com',
+      quantity: 50,
+      description: '客户需要美国号码，急需补货',
+      createTime: '2024-03-07 16:45:10'
+    }
+  ])
+  
   // 模拟获取数据的方法
   const fetchDashboardData = () => {
     // 在实际项目中，这里会调用API获取数据
     console.log('获取仪表盘数据')
     // 这里只是模拟，实际项目中会从API获取数据并更新上面的状态
+    
+    // 模拟获取库存预警和补货提醒数据
+    fetchInventoryAlerts()
+    fetchRestockRequests()
+  }
+  
+  // 获取库存预警数据
+  const fetchInventoryAlerts = () => {
+    // 实际项目中，这里会调用API获取库存预警数据
+    console.log('获取库存预警数据')
+    // 这里只是模拟，实际项目中会从API获取数据并更新状态
+  }
+  
+  // 获取补货提醒数据
+  const fetchRestockRequests = () => {
+    // 实际项目中，这里会调用API获取补货提醒数据
+    console.log('获取补货提醒数据')
+    // 这里只是模拟，实际项目中会从API获取数据并更新状态
   }
   
   return {
@@ -101,6 +164,10 @@ export const useDashboardStore = defineStore('dashboard', () => {
     orderStatusDistribution,
     userGrowthTrend,
     recentOrders,
-    fetchDashboardData
+    inventoryAlerts,
+    restockRequests,
+    fetchDashboardData,
+    fetchInventoryAlerts,
+    fetchRestockRequests
   }
 }) 

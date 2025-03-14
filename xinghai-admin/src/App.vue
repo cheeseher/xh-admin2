@@ -136,11 +136,70 @@
             </div>
           </div>
           <div class="header-right">
-            <div class="notification-icon" @click="goToMessages">
-              <el-badge :value="pendingMessages" :max="99" :hidden="pendingMessages === 0" class="notification-badge">
-                <el-icon><Bell /></el-icon>
-              </el-badge>
-            </div>
+            <el-dropdown trigger="click" @command="handleNotificationCommand" class="notification-dropdown">
+              <div class="notification-icon">
+                <el-badge :value="totalAlerts" :max="99" :hidden="totalAlerts === 0" class="notification-badge">
+                  <el-icon><Bell /></el-icon>
+                </el-badge>
+              </div>
+              <template #dropdown>
+                <el-dropdown-menu class="notification-menu">
+                  <div class="notification-header">
+                    <span class="notification-title">通知中心</span>
+                    <el-button type="text" @click="markAllAsRead">全部已读</el-button>
+                  </div>
+                  <div class="notification-tabs">
+                    <div 
+                      class="tab-item" 
+                      :class="{ active: activeTab === 'inventory' }"
+                      @click="activeTab = 'inventory'"
+                    >
+                      库存预警 <el-badge :value="inventoryAlerts.length" :hidden="inventoryAlerts.length === 0" />
+                    </div>
+                    <div 
+                      class="tab-item" 
+                      :class="{ active: activeTab === 'restock' }"
+                      @click="activeTab = 'restock'"
+                    >
+                      补货提醒 <el-badge :value="restockRequests.length" :hidden="restockRequests.length === 0" />
+                    </div>
+                  </div>
+                  <div class="notification-content">
+                    <!-- 库存预警列表 -->
+                    <div v-if="activeTab === 'inventory'" class="notification-list">
+                      <el-empty v-if="inventoryAlerts.length === 0" description="暂无库存预警" />
+                      <div v-else v-for="(item, index) in inventoryAlerts" :key="index" class="notification-item">
+                        <el-tag type="danger" size="small" effect="dark" class="notification-tag">库存不足</el-tag>
+                        <div class="notification-item-content">
+                          <div class="notification-item-title">{{ item.productName }}</div>
+                          <div class="notification-item-desc">当前库存: {{ item.currentStock }}，低于预警值: {{ item.alertThreshold }}</div>
+                          <div class="notification-item-time">{{ item.updateTime }}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- 补货提醒列表 -->
+                    <div v-if="activeTab === 'restock'" class="notification-list">
+                      <el-empty v-if="restockRequests.length === 0" description="暂无补货提醒" />
+                      <div v-else v-for="(item, index) in restockRequests" :key="index" class="notification-item">
+                        <el-tag type="warning" size="small" effect="dark" class="notification-tag">待处理</el-tag>
+                        <div class="notification-item-content">
+                          <div class="notification-item-title">{{ item.productName }}</div>
+                          <div class="notification-item-desc">用户 {{ item.email }} 请求数量: {{ item.quantity }}</div>
+                          <div class="notification-item-time">{{ item.createTime }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="notification-footer">
+                    <el-button 
+                      type="primary" 
+                      link 
+                      @click.stop="viewAllNotifications"
+                    >查看全部</el-button>
+                  </div>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
             <el-dropdown trigger="click" @command="handleCommand">
               <div class="user-info">
                 <el-avatar :size="32" :src="userAvatar"></el-avatar>
@@ -202,9 +261,11 @@ import {
   Management
 } from '@element-plus/icons-vue'
 import Breadcrumb from './components/Breadcrumb.vue'
+import { useDashboardStore } from './store/dashboard'
 
 const router = useRouter()
 const route = useRoute()
+const dashboardStore = useDashboardStore()
 
 // 判断当前是否为登录页面
 const isLoginPage = computed(() => {
@@ -262,6 +323,32 @@ const handleCommand = (command: string) => {
 // 未解决的补货提醒数量
 const pendingMessages = ref(0)
 
+// 通知中心相关
+const activeTab = ref('inventory')
+const inventoryAlerts = computed(() => dashboardStore.inventoryAlerts)
+const restockRequests = computed(() => dashboardStore.restockRequests)
+const totalAlerts = computed(() => inventoryAlerts.value.length + restockRequests.value.length)
+
+// 处理通知菜单命令
+const handleNotificationCommand = (command: string) => {
+  console.log('通知命令:', command)
+}
+
+// 标记所有通知为已读
+const markAllAsRead = () => {
+  // 实际项目中应该调用API标记所有通知为已读
+  console.log('标记所有通知为已读')
+}
+
+// 查看所有通知
+const viewAllNotifications = () => {
+  if (activeTab.value === 'inventory') {
+    router.push('/inventory')
+  } else {
+    router.push('/messages')
+  }
+}
+
 // 跳转到站内信页面
 const goToMessages = () => {
   router.push('/messages')
@@ -275,6 +362,9 @@ const fetchPendingMessages = () => {
 }
 
 onMounted(() => {
+  // 获取仪表盘数据
+  dashboardStore.fetchDashboardData()
+  
   // 获取未解决的补货提醒数量
   fetchPendingMessages()
   
@@ -422,6 +512,151 @@ onMounted(() => {
   font-size: 16px;
 }
 
+/* 通知下拉菜单样式 */
+:deep(.notification-menu) {
+  width: 380px !important;
+  padding: 0 !important;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #ebeef5;
+  background-color: #f8f9fb;
+}
+
+.notification-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.notification-tabs {
+  display: flex;
+  border-bottom: 1px solid #ebeef5;
+  background-color: #fff;
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 12px 0;
+  cursor: pointer;
+  font-size: 14px;
+  color: #606266;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.tab-item:hover {
+  color: #409EFF;
+}
+
+.tab-item.active {
+  color: #409EFF;
+  font-weight: bold;
+}
+
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40%;
+  height: 2px;
+  background-color: #409EFF;
+}
+
+.notification-content {
+  height: 350px;
+  min-height: 350px;
+  max-height: 350px;
+  overflow-y: auto;
+  background-color: #fff;
+}
+
+.notification-list {
+  padding: 0;
+  min-height: 350px;
+}
+
+.notification-item {
+  display: flex;
+  padding: 15px 20px;
+  border-bottom: 1px solid #f0f2f5;
+  cursor: pointer;
+  transition: all 0.3s;
+  align-items: flex-start;
+}
+
+.notification-item:hover {
+  background-color: #f5f7fa;
+}
+
+.notification-tag {
+  margin-right: 12px;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.notification-item-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.notification-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notification-item-desc {
+  font-size: 13px;
+  color: #606266;
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.notification-item-time {
+  font-size: 12px;
+  color: #909399;
+}
+
+.notification-footer {
+  padding: 12px 20px;
+  text-align: center;
+  border-top: 1px solid #ebeef5;
+  background-color: #f8f9fb;
+}
+
+.notification-footer .el-button {
+  font-size: 14px;
+}
+
+/* 通知内容滚动条样式 */
+.notification-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.notification-content::-webkit-scrollbar-thumb {
+  background-color: #dcdfe6;
+  border-radius: 3px;
+}
+
+.notification-content::-webkit-scrollbar-track {
+  background-color: #f5f7fa;
+}
+
 .el-menu-vertical {
   height: calc(100vh - 60px);
   overflow-y: auto;
@@ -440,5 +675,9 @@ onMounted(() => {
 
 .el-menu-vertical::-webkit-scrollbar-track {
   background-color: transparent;
+}
+
+:deep(.el-empty) {
+  padding: 40px 0;
 }
 </style> 

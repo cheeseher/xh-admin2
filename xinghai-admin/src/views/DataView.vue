@@ -170,9 +170,11 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { Money, List, User, ShoppingBag, ArrowRight } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import { useDashboardStore } from '@/store/dashboard'
+import { useRouter } from 'vue-router'
 
 // 获取仪表盘数据
 const dashboardStore = useDashboardStore()
+const router = useRouter()
 
 // 时间范围选择
 const timeRange = ref('week')
@@ -643,4 +645,5 @@ onUnmounted(() => {
 .rank-list::-webkit-scrollbar-track {
   background-color: #f5f7fa;
 }
+
 </style> 
