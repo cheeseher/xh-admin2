@@ -168,7 +168,13 @@
                     <!-- 库存预警列表 -->
                     <div v-if="activeTab === 'inventory'" class="notification-list">
                       <el-empty v-if="inventoryAlerts.length === 0" description="暂无库存预警" />
-                      <div v-else v-for="(item, index) in inventoryAlerts" :key="index" class="notification-item">
+                      <div 
+                        v-else 
+                        v-for="(item, index) in inventoryAlerts" 
+                        :key="index" 
+                        class="notification-item"
+                        @click="navigateToProduct(item.productId, item.productName)"
+                      >
                         <el-tag type="danger" size="small" effect="dark" class="notification-tag">库存不足</el-tag>
                         <div class="notification-item-content">
                           <div class="notification-item-title">{{ item.productName }}</div>
@@ -325,7 +331,32 @@ const pendingMessages = ref(0)
 
 // 通知中心相关
 const activeTab = ref('inventory')
-const inventoryAlerts = computed(() => dashboardStore.inventoryAlerts)
+const inventoryAlerts = ref([
+  {
+    id: 1,
+    productId: 'P10001',
+    productName: 'Gmail邮箱-稳定可用 (手工)',
+    currentStock: 5,
+    alertThreshold: 10,
+    updateTime: '2024-03-15 10:30:00'
+  },
+  {
+    id: 2,
+    productId: 'P10002',
+    productName: 'Instagram账号-高质量 (自动发货)',
+    currentStock: 3,
+    alertThreshold: 20,
+    updateTime: '2024-03-15 09:15:00'
+  },
+  {
+    id: 3,
+    productId: 'P10003',
+    productName: 'Twitter账号-纯手工养号 (自动发货)',
+    currentStock: 0,
+    alertThreshold: 5,
+    updateTime: '2024-03-14 16:45:00'
+  }
+])
 const restockRequests = computed(() => dashboardStore.restockRequests)
 const totalAlerts = computed(() => inventoryAlerts.value.length + restockRequests.value.length)
 
@@ -359,6 +390,17 @@ const fetchPendingMessages = () => {
   // 实际项目中应该调用API获取未解决的补货提醒数量
   // 这里模拟一个随机数
   pendingMessages.value = Math.floor(Math.random() * 10)
+}
+
+// 跳转到商品管理页面并筛选对应商品
+const navigateToProduct = (productId: string, productName: string) => {
+  router.push({
+    path: '/products',
+    query: {
+      id: productId,
+      name: productName
+    }
+  })
 }
 
 onMounted(() => {

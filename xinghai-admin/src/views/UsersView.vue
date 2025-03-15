@@ -64,6 +64,9 @@
         <el-table-column prop="role" label="会员等级" width="120">
           <template #default="scope">
             <el-tag :type="getVipLevelType(scope.row.role)">{{ getVipLevelName(scope.row.role) }}</el-tag>
+            <div v-if="scope.row.role === 4 && scope.row.customDiscount" class="custom-discount">
+              折扣: {{ scope.row.customDiscount }}%
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="balance" label="账户余额" width="120">
@@ -148,16 +151,59 @@
             </div>
           </div>
         </el-form-item>
+        
+        <!-- 新增：超级VIP功能开关 -->
+        <el-form-item label="超级VIP功能">
+          <el-switch v-model="isSuperVipEnabled" @change="handleSuperVipChange"></el-switch>
+          <span class="status-text">{{ isSuperVipEnabled ? '已启用' : '已禁用' }}</span>
+          <div class="form-tip">{{ isSuperVipEnabled ? '启用后只能选择超级VIP' : '禁用后可选择VIP1/2/3' }}</div>
+        </el-form-item>
+        
+        <!-- 新增：超级VIP充值折扣 -->
+        <el-form-item label="充值折扣" v-if="isSuperVipEnabled">
+          <el-input-number 
+            v-model="userForm.rechargeDiscount" 
+            :min="0" 
+            :max="100" 
+            :precision="1" 
+            :step="0.1"
+            style="width: 168px;"
+          ></el-input-number>
+          <span class="form-tip">%（百分比，可设置0%-100%之间的充值折扣）</span>
+        </el-form-item>
+        
         <el-form-item label="会员等级" prop="role">
-          <el-select v-model="userForm.role" placeholder="请选择会员等级" style="width: 168px;">
+          <el-select 
+            v-model="userForm.role" 
+            placeholder="请选择会员等级" 
+            style="width: 168px;" 
+            @change="handleRoleChange"
+            :disabled="isSuperVipEnabled"
+          >
             <el-option 
-              v-for="level in vipLevels" 
+              v-for="level in filteredVipLevels" 
               :key="level.level" 
               :label="level.name" 
               :value="level.level"
             ></el-option>
           </el-select>
+          <span v-if="isSuperVipEnabled" class="info-text">超级VIP功能已启用，只能选择超级VIP</span>
+          <span v-if="!isSuperVipEnabled && userForm.role === 4" class="warning-text">超级VIP功能已禁用</span>
         </el-form-item>
+        
+        <!-- 超级VIP自定义折扣 -->
+        <el-form-item label="自定义折扣" v-if="userForm.role === 4 && isSuperVipEnabled">
+          <el-input-number 
+            v-model="userForm.customDiscount" 
+            :min="0" 
+            :max="100" 
+            :precision="1" 
+            :step="0.1"
+            style="width: 168px;"
+          ></el-input-number>
+          <span class="form-tip">%（百分比，可设置0%-100%之间的折扣）</span>
+        </el-form-item>
+        
         <el-form-item label="账户余额" prop="balance">
           <el-input-number v-model="userForm.balance" :min="0" :precision="2" :step="10" style="width: 100%;" @change="handleBalanceChange"></el-input-number>
         </el-form-item>
@@ -177,7 +223,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 
@@ -276,6 +322,24 @@ const tableData = ref([
     balance: 0,
     totalRecharge: 0,
     totalSpent: 0
+  },
+  { 
+    userId: 'U10006',
+    username: 'supervip',
+    nickname: '刘总',
+    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
+    phone: '133****6666',
+    email: 'supervip@example.com',
+    role: 4,
+    status: '正常',
+    statusBool: true,
+    registerTime: '2024-03-10 09:30:00',
+    lastLoginTime: '2024-03-16 10:20:00',
+    registerIp: '192.168.1.6',
+    balance: 10000.00,
+    totalRecharge: 50000.00,
+    totalSpent: 40000.00,
+    customDiscount: 65.5
   }
 ])
 
@@ -316,6 +380,17 @@ const vipLevels = ref([
     minRecharge: 5000,
     discount: 85,
     description: '大客户，可定期回访与商务交流'
+  },
+  {
+    id: 5,
+    name: '超级VIP',
+    level: 4,
+    condition: '经理指定',
+    minRecharge: 0,
+    discount: 0,
+    description: '特殊客户，经理可调整折扣（0-100%）',
+    isCustomDiscount: true,
+    isEnabled: true
   }
 ])
 
@@ -327,6 +402,9 @@ const loading = ref(false)
 
 // 获取VIP等级对应的标签类型
 const getVipLevelType = (level: number) => {
+  if (level === 4) {
+    return 'danger'
+  }
   const types = ['', 'success', 'warning', 'danger']
   return types[level] || ''
 }
@@ -457,6 +535,18 @@ const dialogType = ref<'add' | 'edit'>('add')
 const userFormRef = ref<FormInstance>()
 const captchaUrl = ref('https://cube.elemecdn.com/9/3f/2c0938b93c591b218c1beaf08de07jpeg.jpeg')
 
+// 超级VIP功能是否启用
+const isSuperVipEnabled = ref(true)
+
+// 过滤后的VIP等级列表（根据超级VIP启用状态过滤）
+const filteredVipLevels = computed(() => {
+  if (isSuperVipEnabled.value) {
+    return [vipLevels.value.find(level => level.level === 4)!]
+  } else {
+    return vipLevels.value.filter(level => level.level !== 4)
+  }
+})
+
 const userForm = reactive({
   userId: '',
   username: '',
@@ -468,7 +558,9 @@ const userForm = reactive({
   captcha: '',
   role: 0,
   balance: 0,
-  statusBool: true
+  statusBool: true,
+  customDiscount: 50, // 超级VIP自定义折扣
+  rechargeDiscount: 0 // 新增充值折扣
 })
 
 // 表单验证规则
@@ -541,12 +633,12 @@ const autoVipLevel = ref(0)
 
 // 处理余额变化，自动计算会员等级
 const handleBalanceChange = (value: number) => {
-  // 根据余额自动计算会员等级
+  // 仅计算会员等级，但不自动更新表单中的会员等级
   const level = calculateVipLevel(value)
   autoVipLevel.value = level
   
-  // 自动更新表单中的会员等级
-  userForm.role = level
+  // 不再自动更新表单中的会员等级
+  // userForm.role = level
 }
 
 // 根据充值金额计算会员等级
@@ -561,6 +653,43 @@ const calculateVipLevel = (balance: number) => {
   return 0 // 默认为普通用户
 }
 
+// 处理会员等级变化
+const handleRoleChange = (value: number) => {
+  // 如果超级VIP功能已启用，只能选择超级VIP
+  if (isSuperVipEnabled.value && value !== 4) {
+    ElMessage.warning('超级VIP功能已启用，只能选择超级VIP')
+    userForm.role = 4
+    return
+  }
+  
+  // 如果选择了超级VIP但功能已禁用，显示警告
+  if (value === 4 && !isSuperVipEnabled.value) {
+    ElMessage.warning('超级VIP功能已禁用，请选择其他会员等级')
+    // 可以选择自动切换到VIP3
+    userForm.role = 3
+  }
+  
+  // 如果选择了超级VIP，设置默认折扣
+  if (value === 4) {
+    userForm.customDiscount = 0
+  }
+}
+
+// 处理超级VIP功能开关变化
+const handleSuperVipChange = (value: boolean) => {
+  if (value) {
+    // 启用超级VIP功能，自动设置会员等级为超级VIP
+    userForm.role = 4
+    userForm.customDiscount = 0
+    userForm.rechargeDiscount = 0 // 设置默认充值折扣
+    ElMessage.success('超级VIP功能已启用，会员等级已设置为超级VIP')
+  } else {
+    // 禁用超级VIP功能，自动设置会员等级为VIP3
+    userForm.role = 3
+    ElMessage.success('超级VIP功能已禁用，可选择VIP1/2/3等级')
+  }
+}
+
 // 编辑用户
 const handleEdit = (row: any) => {
   dialogType.value = 'edit'
@@ -571,6 +700,8 @@ const handleEdit = (row: any) => {
   userForm.role = row.role
   userForm.balance = row.balance
   userForm.statusBool = row.statusBool
+  userForm.customDiscount = row.customDiscount || 50
+  userForm.rechargeDiscount = row.rechargeDiscount || 0 // 设置充值折扣
   
   // 设置自动计算的会员等级
   autoVipLevel.value = calculateVipLevel(row.balance)
@@ -584,6 +715,13 @@ const submitForm = async () => {
   
   await userFormRef.value.validate((valid, fields) => {
     if (valid) {
+      // 如果是超级VIP，保存自定义折扣和充值折扣
+      if (userForm.role === 4 && isSuperVipEnabled.value) {
+        // 在实际应用中，这里应该将自定义折扣和充值折扣保存到用户数据中
+        console.log('超级VIP自定义折扣:', userForm.customDiscount)
+        console.log('超级VIP充值折扣:', userForm.rechargeDiscount)
+      }
+      
       if (dialogType.value === 'add') {
         ElMessage.success('新增用户成功')
       } else {
@@ -848,5 +986,58 @@ onMounted(() => {
 .action-buttons .el-button {
   margin-left: 0 !important;
   margin-right: 0 !important;
+}
+
+.warning-text {
+  margin-left: 10px;
+  color: #e6a23c;
+  font-size: 12px;
+}
+
+.info-text {
+  margin-left: 10px;
+  color: #409EFF;
+  font-size: 12px;
+}
+
+.form-tip {
+  margin-left: 10px;
+  color: #909399;
+  font-size: 12px;
+}
+
+/* 超级VIP样式 */
+:deep(.el-tag.el-tag--info) {
+  background-color: #fdf2ff;
+  border-color: #eb2f96;
+  color: #eb2f96;
+}
+
+:deep(.el-select-dropdown__item.selected.is-super-vip) {
+  color: #eb2f96;
+  font-weight: bold;
+}
+
+:deep(.el-select-dropdown__item.is-super-vip) {
+  position: relative;
+}
+
+:deep(.el-select-dropdown__item.is-super-vip::after) {
+  content: '经理指定';
+  position: absolute;
+  right: 15px;
+  font-size: 12px;
+  color: #eb2f96;
+}
+
+.custom-discount {
+  font-size: 12px;
+  color: #eb2f96;
+  margin-top: 4px;
+  background-color: #fff0f6;
+  border-radius: 2px;
+  padding: 2px 4px;
+  display: inline-block;
+  margin-left: 5px;
 }
 </style> 

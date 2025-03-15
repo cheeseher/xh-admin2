@@ -49,9 +49,10 @@
               <el-option label="全部" value=""></el-option>
               <el-option label="待付款" value="待付款"></el-option>
               <el-option label="待发货" value="待发货"></el-option>
-              <el-option label="已发货" value="已发货"></el-option>
               <el-option label="已完成" value="已完成"></el-option>
               <el-option label="已取消" value="已取消"></el-option>
+              <el-option label="已退款" value="已退款"></el-option>
+              <el-option label="申请退款中" value="申请退款中"></el-option>
             </el-select>
           </el-form-item>
           <el-form-item label="下单时间">
@@ -124,11 +125,17 @@
                 @click="handleDeliver(scope.row)"
               >发货</el-button>
               <el-button 
-                v-if="['已付款', '待发货', '已发货'].includes(scope.row.status)" 
+                v-if="['待付款', '待发货'].includes(scope.row.status)" 
                 size="small" 
                 type="warning" 
                 @click="handleRefund(scope.row)"
               >退款</el-button>
+              <el-button 
+                v-if="scope.row.status === '申请退款中'" 
+                size="small" 
+                type="danger" 
+                @click="handleApproveRefund(scope.row)"
+              >审核退款</el-button>
               <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
             </div>
           </template>
@@ -332,10 +339,15 @@ const orderList = ref<OrderItem[]>([
     userEmail: 'user456@example.com',
     payMethod: 'usdt',
     deliveryMethod: '手动发货',
-    status: '已发货',
+    status: '申请退款中',
     remark: '客户需要美国地区的账号',
     createTime: '2024-03-15 11:30:00',
-    refundInfo: null
+    refundInfo: {
+      refundAmount: 199.99,
+      refundReason: '商品质量问题',
+      refundRemark: '账号无法正常登录',
+      refundTime: '2024-03-16 09:15:00'
+    }
   },
   { 
     id: 3,
@@ -383,10 +395,15 @@ const orderList = ref<OrderItem[]>([
     userEmail: 'user202@example.com',
     payMethod: 'usdt',
     deliveryMethod: '手动发货',
-    status: '已取消',
-    remark: '客户取消订单',
+    status: '已退款',
+    remark: '客户申请退款',
     createTime: '2024-03-15 09:15:00',
-    refundInfo: null
+    refundInfo: {
+      refundAmount: 49.99,
+      refundReason: '客户申请退款',
+      refundRemark: '客户不需要此账号',
+      refundTime: '2024-03-15 10:30:00'
+    }
   },
   { 
     id: 6,
@@ -483,14 +500,14 @@ const getStatusType = (status: string) => {
       return 'warning'
     case '待发货':
       return 'primary'
-    case '已发货':
-      return 'success'
     case '已完成':
       return 'success'
     case '已取消':
       return 'info'
     case '已退款':
       return 'danger'
+    case '申请退款中':
+      return 'warning'
     default:
       return 'info'
   }
@@ -736,7 +753,15 @@ const submitRefundForm = async () => {
           const index = orderList.value.findIndex(item => item.id === refundForm.id)
           if (index !== -1) {
             // 更新订单状态
-            orderList.value[index].status = '已退款'
+            // 如果是管理员直接退款，状态为"已退款"
+            // 如果是用户申请退款，状态为"申请退款中"
+            const isAdminDirectRefund = true; // 这里可以根据实际情况判断
+            
+            if (isAdminDirectRefund) {
+              orderList.value[index].status = '已退款'
+            } else {
+              orderList.value[index].status = '申请退款中'
+            }
             
             // 记录退款信息
             orderList.value[index].refundInfo = {
@@ -744,12 +769,6 @@ const submitRefundForm = async () => {
               refundReason: refundForm.refundReason,
               refundRemark: refundForm.refundRemark,
               refundTime: new Date().toLocaleString()
-            }
-            
-            // 如果是已发货的订单，可能需要处理账号回收逻辑
-            if (orderList.value[index].status === '已发货') {
-              // 这里可以添加账号回收的逻辑
-              console.log('账号需要回收:', orderList.value[index].cardInfo)
             }
           }
           
@@ -763,6 +782,37 @@ const submitRefundForm = async () => {
       console.log('表单验证失败', fields)
     }
   })
+}
+
+// 处理审核退款
+const handleApproveRefund = (row: any) => {
+  ElMessageBox.confirm(
+    `确定要审核通过订单 ${row.orderId} 的退款申请吗？`,
+    '审核退款',
+    {
+      confirmButtonText: '通过',
+      cancelButtonText: '拒绝',
+      type: 'warning',
+      distinguishCancelAndClose: true,
+      callback: (action: string) => {
+        if (action === 'confirm') {
+          // 通过退款
+          const index = orderList.value.findIndex(item => item.id === row.id)
+          if (index !== -1) {
+            orderList.value[index].status = '已退款'
+            ElMessage.success(`订单 ${row.orderId} 的退款申请已通过`)
+          }
+        } else if (action === 'cancel') {
+          // 拒绝退款
+          const index = orderList.value.findIndex(item => item.id === row.id)
+          if (index !== -1) {
+            orderList.value[index].status = '已完成'
+            ElMessage.info(`订单 ${row.orderId} 的退款申请已拒绝`)
+          }
+        }
+      }
+    }
+  )
 }
 
 onMounted(() => {

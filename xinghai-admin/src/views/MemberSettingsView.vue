@@ -4,7 +4,7 @@
       <template #header>
         <div class="card-header">
           <span>会员等级设置</span>
-          <el-button type="primary" @click="handleAddLevel">新增等级</el-button>
+          <el-button type="primary" @click="handleAddLevel">新增会员</el-button>
         </div>
       </template>
       
@@ -24,25 +24,35 @@
                 style="width: 24px; height: 24px; margin-right: 8px;"
               ></el-image>
               <el-tag :type="getLevelTagType(scope.row.level)">{{ scope.row.name }}</el-tag>
+              <el-tag v-if="scope.row.level === 999 && !scope.row.isEnabled" type="info" size="small" effect="plain" style="margin-left: 5px;">已禁用</el-tag>
             </div>
           </template>
         </el-table-column>
         <el-table-column prop="level" label="等级" width="80"></el-table-column>
-        <el-table-column prop="condition" label="累充升级条件" min-width="150"></el-table-column>
+        <el-table-column prop="condition" label="累充升级条件" min-width="150">
+          <template #default="scope">
+            <span v-if="scope.row.level === 999">欢迎洽谈</span>
+            <span v-else>{{ scope.row.condition }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="monthlyConsumption" label="月消费升级条件" min-width="180">
           <template #default="scope">
-            <span v-if="scope.row.monthlyConsumption > 0">连续三个月每月消费 {{ scope.row.monthlyConsumption }}元</span>
+            <span v-if="scope.row.level === 999">欢迎洽谈</span>
+            <span v-else-if="scope.row.monthlyConsumption > 0">连续三个月每月消费 {{ scope.row.monthlyConsumption }}元</span>
             <span v-else>-</span>
           </template>
         </el-table-column>
         <el-table-column prop="minRecharge" label="最低充值金额" width="120">
           <template #default="scope">
-            <span>{{ scope.row.minRecharge }}元</span>
+            <span v-if="scope.row.level === 999">欢迎洽谈</span>
+            <span v-else>{{ scope.row.minRecharge }}元</span>
           </template>
         </el-table-column>
         <el-table-column prop="discount" label="充值折扣" width="120">
           <template #default="scope">
-            <span>{{ scope.row.discount }}%</span>
+            <span v-if="scope.row.level === 999">欢迎洽谈</span>
+            <span v-else>{{ scope.row.discount }}%</span>
+            <span v-if="scope.row.isCustomDiscount && scope.row.level !== 999">(可调整)</span>
           </template>
         </el-table-column>
         <el-table-column prop="description" label="备注" min-width="200"></el-table-column>
@@ -55,7 +65,7 @@
                 size="small" 
                 type="danger" 
                 @click="handleDeleteLevel(scope.row)"
-                :disabled="scope.row.level === 0"
+                :disabled="scope.row.level === 0 || scope.row.level === 999 || scope.row.isSystemDefault"
               >删除</el-button>
             </div>
           </template>
@@ -71,6 +81,15 @@
         <p>4. 用户达到月消费升级条件后，系统将自动升级用户会员等级，并发送升级通知。</p>
         <p>5. 若用户当前等级已高于月消费可升级的等级，则不会降级。</p>
       </div>
+      
+      <!-- 超级VIP说明 -->
+      <div class="system-description super-vip-description">
+        <h3>超级VIP说明</h3>
+        <p>1. 超级VIP为特殊会员等级，仅限经理手动指定用户。</p>
+        <p>2. 经理可在用户管理页面为每个超级VIP用户单独设置自定义折扣和充值折扣。</p>
+        <p>3. 超级VIP功能可在系统设置中开启或关闭，关闭状态下后台可选择用户为VIP1/2/3。</p>
+        <p>4. 超级VIP用户享受最高级别的服务和权益，包括专属客服、优先处理等特权。</p>
+      </div>
     </el-card>
     
     <!-- 会员等级表单对话框 -->
@@ -80,76 +99,132 @@
       width="600px"
     >
       <el-form :model="levelForm" label-width="100px" :rules="levelRules" ref="levelFormRef">
-        <el-form-item label="等级名称" prop="name">
-          <el-input v-model="levelForm.name" placeholder="请输入等级名称"></el-input>
-        </el-form-item>
-        <el-form-item label="等级图标" prop="icon">
-          <el-upload
-            class="avatar-uploader"
-            action="/api/upload"
-            :show-file-list="false"
-            :on-success="handleIconSuccess"
-            :before-upload="beforeIconUpload"
-          >
-            <img v-if="levelForm.icon" :src="levelForm.icon" class="avatar" />
-            <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-          </el-upload>
-          <div class="form-tip">建议上传正方形图片，大小不超过200KB</div>
-        </el-form-item>
-        <el-form-item label="等级" prop="level">
-          <el-input-number v-model="levelForm.level" :min="0" :max="10" :disabled="dialogType === 'edit'"></el-input-number>
-          <span class="form-tip">0表示普通用户，数字越大等级越高</span>
-        </el-form-item>
-        <el-form-item label="累充升级条件" prop="condition">
-          <el-input v-model="levelForm.condition" placeholder="请输入累计充值升级条件"></el-input>
-        </el-form-item>
-        <el-form-item label="月消费升级条件" prop="monthlyConsumption">
-          <el-input-number 
-            v-model="levelForm.monthlyConsumption" 
-            :min="0" 
-            :precision="0" 
-            :step="100"
-            style="width: 180px;"
-          ></el-input-number>
-          <span class="form-tip">元（用户连续三个月每月消费达到此金额时自动升级）</span>
-        </el-form-item>
-        <el-form-item label="最低充值金额" prop="minRecharge">
-          <el-input-number 
-            v-model="levelForm.minRecharge" 
-            :min="0" 
-            :precision="0" 
-            :step="100"
-            style="width: 180px;"
-          ></el-input-number>
-          <span class="form-tip">元（用户累计充值达到此金额时自动升级）</span>
-        </el-form-item>
-        <el-form-item label="充值折扣" prop="discount">
-          <el-input-number 
-            v-model="levelForm.discount" 
-            :min="0" 
-            :max="100" 
-            :precision="1" 
-            :step="0.1"
-            style="width: 180px;"
-          ></el-input-number>
-          <span class="form-tip">%（百分比，例如：95表示95折，即9.5折）</span>
-        </el-form-item>
-        <el-form-item label="备注" prop="description">
-          <el-input 
-            v-model="levelForm.description" 
-            type="textarea" 
-            :rows="2" 
-            placeholder="请输入备注说明"
-          ></el-input>
-        </el-form-item>
-        <el-form-item label="会员介绍" prop="introduction">
-          <el-input 
-            v-model="levelForm.introduction" 
-            type="textarea" 
-            :rows="3" 
-            placeholder="请输入会员等级权益介绍"
-          ></el-input>
-        </el-form-item>
+        <!-- 超级VIP特有设置 -->
+        <template v-if="levelForm.level === 999 || levelForm.name === '超级VIP'">
+          <el-form-item label="等级名称" prop="name">
+            <el-input v-model="levelForm.name" placeholder="请输入等级名称"></el-input>
+          </el-form-item>
+          <el-form-item label="等级图标" prop="icon">
+            <el-upload
+              class="avatar-uploader"
+              action="/api/upload"
+              :show-file-list="false"
+              :on-success="handleIconSuccess"
+              :before-upload="beforeIconUpload"
+            >
+              <img v-if="levelForm.icon" :src="levelForm.icon" class="avatar" />
+              <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+            </el-upload>
+            <div class="form-tip">建议上传正方形图片，大小不超过200KB</div>
+          </el-form-item>
+          <el-form-item label="备注" prop="description">
+            <el-input 
+              v-model="levelForm.description" 
+              type="textarea" 
+              :rows="2" 
+              placeholder="请输入备注说明"
+            ></el-input>
+          </el-form-item>
+          <el-form-item label="会员介绍" prop="introduction">
+            <el-input 
+              v-model="levelForm.introduction" 
+              type="textarea" 
+              :rows="3" 
+              placeholder="请输入会员等级权益介绍"
+            ></el-input>
+          </el-form-item>
+          <el-form-item label="启用状态">
+            <el-switch v-model="levelForm.isEnabled"></el-switch>
+            <span class="form-tip">关闭后，超级VIP功能将被禁用，后台可选择用户为VIP1/2/3</span>
+          </el-form-item>
+        </template>
+        
+        <!-- 普通会员等级设置 -->
+        <template v-else>
+          <el-form-item label="等级名称" prop="name">
+            <el-input v-model="levelForm.name" placeholder="请输入等级名称"></el-input>
+          </el-form-item>
+          <el-form-item label="等级图标" prop="icon">
+            <el-upload
+              class="avatar-uploader"
+              action="/api/upload"
+              :show-file-list="false"
+              :on-success="handleIconSuccess"
+              :before-upload="beforeIconUpload"
+            >
+              <img v-if="levelForm.icon" :src="levelForm.icon" class="avatar" />
+              <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+            </el-upload>
+            <div class="form-tip">建议上传正方形图片，大小不超过200KB</div>
+          </el-form-item>
+          <el-form-item label="等级" prop="level">
+            <el-input-number 
+              v-model="levelForm.level" 
+              :min="1" 
+              :max="10" 
+              :disabled="true"
+              :controls="false"
+            ></el-input-number>
+            <span class="form-tip">系统自动生成，无需填写</span>
+          </el-form-item>
+          <el-form-item label="累充升级条件" prop="minRechargeTotal">
+            <el-input-number 
+              v-model="levelForm.minRechargeTotal" 
+              :min="0" 
+              :precision="0" 
+              :step="100"
+              style="width: 180px;"
+            ></el-input-number>
+            <span class="form-tip">元（用户累计充值达到此金额时自动升级）</span>
+          </el-form-item>
+          <el-form-item label="月消费升级条件" prop="monthlyConsumption">
+            <el-input-number 
+              v-model="levelForm.monthlyConsumption" 
+              :min="0" 
+              :precision="0" 
+              :step="100"
+              style="width: 180px;"
+            ></el-input-number>
+            <span class="form-tip">元（用户连续三个月每月消费达到此金额时自动升级）</span>
+          </el-form-item>
+          <el-form-item label="最低充值金额" prop="minRecharge">
+            <el-input-number 
+              v-model="levelForm.minRecharge" 
+              :min="0" 
+              :precision="0" 
+              :step="100"
+              style="width: 180px;"
+            ></el-input-number>
+            <span class="form-tip">元（用户单次最低充值金额）</span>
+          </el-form-item>
+          <el-form-item label="充值折扣" prop="discount">
+            <el-input-number 
+              v-model="levelForm.discount" 
+              :min="0" 
+              :max="100" 
+              :precision="1" 
+              :step="0.1"
+              style="width: 180px;"
+            ></el-input-number>
+            <span class="form-tip">%（百分比，例如：50表示5折，即0.5折）</span>
+          </el-form-item>
+          <el-form-item label="备注" prop="description">
+            <el-input 
+              v-model="levelForm.description" 
+              type="textarea" 
+              :rows="2" 
+              placeholder="请输入备注说明"
+            ></el-input>
+          </el-form-item>
+          <el-form-item label="会员介绍" prop="introduction">
+            <el-input 
+              v-model="levelForm.introduction" 
+              type="textarea" 
+              :rows="3" 
+              placeholder="请输入会员等级权益介绍"
+            ></el-input>
+          </el-form-item>
+        </template>
       </el-form>
       
       <template #footer>
@@ -173,22 +248,25 @@ const loading = ref(false)
 // 会员等级相关
 const memberLevels = ref([
   {
-    id: 1,
+    id: 5,
     name: '普通用户',
     level: 0,
     condition: '默认等级',
+    minRechargeTotal: 0,
     monthlyConsumption: 0,
     minRecharge: 0,
     discount: 100,
     description: '所有用户的默认等级',
     icon: 'https://element-plus.org/images/element-plus-logo.svg',
-    introduction: '普通用户无特殊权益'
+    introduction: '普通用户无特殊权益',
+    isSystemDefault: true // 标记为系统默认
   },
   {
     id: 2,
     name: 'VIP1',
     level: 1,
     condition: '累计充值满100元',
+    minRechargeTotal: 100,
     monthlyConsumption: 100,
     minRecharge: 100,
     discount: 95,
@@ -201,6 +279,7 @@ const memberLevels = ref([
     name: 'VIP2',
     level: 2,
     condition: '累计充值满1000元',
+    minRechargeTotal: 1000,
     monthlyConsumption: 500,
     minRecharge: 1000,
     discount: 90,
@@ -213,12 +292,29 @@ const memberLevels = ref([
     name: 'VIP3',
     level: 3,
     condition: '累计充值满5000元',
+    minRechargeTotal: 5000,
     monthlyConsumption: 1000,
     minRecharge: 5000,
     discount: 85,
     description: '大客户，可定期回访与商务交流',
     icon: 'https://element-plus.org/images/element-plus-logo.svg',
     introduction: 'VIP3用户享受充值85折优惠及专属客服'
+  },
+  {
+    id: 1,
+    name: '超级VIP',
+    level: 999,
+    condition: '欢迎洽谈',
+    minRechargeTotal: 0,
+    monthlyConsumption: 0,
+    minRecharge: 0,
+    discount: 0,
+    description: '特殊客户，经理可为每位超级VIP用户单独设置折扣',
+    icon: 'https://element-plus.org/images/element-plus-logo.svg',
+    introduction: '超级VIP用户享受定制折扣优惠及最高级别服务',
+    isCustomDiscount: true,
+    isEnabled: true,
+    isSystemDefault: true // 标记为系统默认
   }
 ])
 
@@ -235,11 +331,15 @@ const levelForm = reactive({
   icon: '',
   level: 0,
   condition: '',
+  minRechargeTotal: 0, // 累计充值金额
   monthlyConsumption: 0,
   minRecharge: 0,
   discount: 100,
   description: '',
-  introduction: ''
+  introduction: '',
+  isCustomDiscount: false,
+  isEnabled: true,
+  isSystemDefault: false
 })
 
 // 表单验证规则
@@ -251,10 +351,7 @@ const levelRules = reactive<FormRules>({
   icon: [
     { required: true, message: '请上传等级图标', trigger: 'change' }
   ],
-  level: [
-    { required: true, message: '请输入等级', trigger: 'blur' }
-  ],
-  condition: [
+  minRechargeTotal: [
     { required: true, message: '请输入累计充值升级条件', trigger: 'blur' }
   ],
   monthlyConsumption: [
@@ -280,6 +377,9 @@ const rechargePreviewData = computed(() => {
 
 // 获取等级标签类型
 const getLevelTagType = (level: number) => {
+  if (level === 999) {
+    return 'danger'
+  }
   const types = ['', 'success', 'warning', 'danger']
   return types[level] || ''
 }
@@ -289,13 +389,18 @@ const handleAddLevel = () => {
   dialogType.value = 'add'
   levelForm.id = 0
   levelForm.name = ''
-  levelForm.level = memberLevels.value.length > 0 ? Math.max(...memberLevels.value.map(item => item.level)) + 1 : 1
+  levelForm.level = memberLevels.value.length > 0 ? Math.max(...memberLevels.value.map(item => item.level < 100 ? item.level : 0)) + 1 : 1
   levelForm.condition = ''
+  levelForm.minRechargeTotal = 0
   levelForm.monthlyConsumption = 0
   levelForm.minRecharge = 0
   levelForm.discount = 100
   levelForm.description = ''
   levelForm.introduction = ''
+  levelForm.icon = ''
+  levelForm.isCustomDiscount = false
+  levelForm.isEnabled = true
+  levelForm.isSystemDefault = false
   levelDialogVisible.value = true
 }
 
@@ -306,19 +411,24 @@ const handleEditLevel = (row: any) => {
   levelForm.name = row.name
   levelForm.level = row.level
   levelForm.condition = row.condition
+  levelForm.minRechargeTotal = row.minRechargeTotal
   levelForm.monthlyConsumption = row.monthlyConsumption
   levelForm.minRecharge = row.minRecharge
   levelForm.discount = row.discount
   levelForm.description = row.description
   levelForm.introduction = row.introduction
   levelForm.icon = row.icon
+  levelForm.isCustomDiscount = row.isCustomDiscount
+  levelForm.isEnabled = row.isEnabled
+  levelForm.isSystemDefault = row.isSystemDefault
+  
   levelDialogVisible.value = true
 }
 
 // 删除会员等级
 const handleDeleteLevel = (row: any) => {
-  if (row.level === 0) {
-    ElMessage.warning('普通用户等级不能删除')
+  if (row.level === 0 || row.level === 999 || row.isSystemDefault) {
+    ElMessage.warning('系统默认等级不能删除')
     return
   }
   
@@ -353,7 +463,37 @@ const submitLevelForm = async () => {
       // 获取当前时间
       const now = new Date()
       
+      // 禁止新增超级会员
+      if (dialogType.value === 'add' && (levelForm.level === 999 || levelForm.name === '超级VIP')) {
+        ElMessage.error('不允许新增超级会员')
+        return
+      }
+      
+      // 如果是超级VIP，设置特殊属性
+      if (levelForm.level === 999 || levelForm.name === '超级VIP') {
+        levelForm.level = 999
+        levelForm.name = '超级VIP'
+        levelForm.condition = '欢迎洽谈'
+        levelForm.minRechargeTotal = 0
+        levelForm.monthlyConsumption = 0
+        levelForm.minRecharge = 0
+        levelForm.isCustomDiscount = true
+        levelForm.isSystemDefault = true
+        // 超级VIP不设置统一折扣，由用户管理页面单独设置
+        levelForm.discount = 0
+      } else {
+        // 根据minRechargeTotal更新condition字段
+        levelForm.condition = `累计充值满${levelForm.minRechargeTotal}元`
+      }
+      
       if (dialogType.value === 'add') {
+        // 检查等级是否已存在
+        const existingLevel = memberLevels.value.find(item => item.level === levelForm.level)
+        if (existingLevel) {
+          ElMessage.error(`等级 ${levelForm.level} 已存在，请选择其他等级`)
+          return
+        }
+        
         // 模拟添加操作
         const newId = Math.max(...memberLevels.value.map(item => item.id), 0) + 1
         memberLevels.value.push({
@@ -361,12 +501,16 @@ const submitLevelForm = async () => {
           name: levelForm.name,
           level: levelForm.level,
           condition: levelForm.condition,
+          minRechargeTotal: levelForm.minRechargeTotal,
           monthlyConsumption: levelForm.monthlyConsumption,
           minRecharge: levelForm.minRecharge,
           discount: levelForm.discount,
           description: levelForm.description,
           introduction: levelForm.introduction,
-          icon: levelForm.icon
+          icon: levelForm.icon,
+          isCustomDiscount: levelForm.isCustomDiscount,
+          isEnabled: levelForm.isEnabled,
+          isSystemDefault: levelForm.isSystemDefault
         })
         ElMessage.success('新增会员等级成功')
       } else {
@@ -377,12 +521,16 @@ const submitLevelForm = async () => {
             ...memberLevels.value[index],
             name: levelForm.name,
             condition: levelForm.condition,
+            minRechargeTotal: levelForm.minRechargeTotal,
             monthlyConsumption: levelForm.monthlyConsumption,
             minRecharge: levelForm.minRecharge,
             discount: levelForm.discount,
             description: levelForm.description,
             introduction: levelForm.introduction,
-            icon: levelForm.icon
+            icon: levelForm.icon,
+            isCustomDiscount: levelForm.isCustomDiscount,
+            isEnabled: levelForm.isEnabled,
+            isSystemDefault: levelForm.isSystemDefault
           }
         }
         ElMessage.success('编辑会员等级成功')
@@ -456,6 +604,15 @@ onMounted(() => {
   background-color: #f6ffed;
   border-radius: 4px;
   border-left: 5px solid #52c41a;
+}
+
+.super-vip-description {
+  background-color: #fff0f6;
+  border-left: 5px solid #eb2f96;
+}
+
+.super-vip-description h3 {
+  color: #eb2f96;
 }
 
 .system-description h3 {
