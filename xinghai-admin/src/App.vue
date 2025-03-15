@@ -183,10 +183,9 @@
                         </div>
                       </div>
                     </div>
-                    <!-- 补货提醒列表 -->
-                    <div v-if="activeTab === 'restock'" class="notification-list">
-                      <el-empty v-if="restockRequests.length === 0" description="暂无补货提醒" />
-                      <div v-else v-for="(item, index) in restockRequests" :key="index" class="notification-item">
+                    <!-- 补货提醒列表 --> <div v-if="activeTab === 'restock'" class="notification-list">
+                  <el-empty v-if="restockRequests.length === 0" description="暂无补货提醒" />
+                      <div v-else v-for="(item, index) in restockRequests" :key="index" class="notification-item" @click="router.push({ path: '/messages', query: { status: 'pending' } })">
                         <el-tag type="warning" size="small" effect="dark" class="notification-tag">待处理</el-tag>
                         <div class="notification-item-content">
                           <div class="notification-item-title">{{ item.productName }}</div>
@@ -728,4 +727,4 @@ onMounted(() => {
 :deep(.el-empty) {
   padding: 40px 0;
 }
-</style> 
+</style>

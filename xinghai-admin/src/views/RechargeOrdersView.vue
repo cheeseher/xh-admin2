@@ -326,7 +326,35 @@ const searchForm = reactive({
 
 // 表格数据
 const loading = ref(false)
-const orderList = ref<RechargeOrder[]>([])
+const orderList = ref<RechargeOrder[]>([
+  {
+    id: '2001',
+    orderNo: 'RO20230901001',
+    userId: 1001,
+    userEmail: 'user1@example.com',
+    amount: 1000.00,
+    fee: 10.00,
+    status: 'pending',
+    paymentMethod: 'usdt',
+    createTime: '2023-09-01 09:00:00',
+    withdrawalStatus: 'not_withdrawn'
+  },
+  {
+    id: '2002',
+    orderNo: 'RO20230901002',
+    userId: 1002,
+    userEmail: 'user2@example.com',
+    amount: 2000.00,
+    fee: 20.00,
+    status: 'paid',
+    paymentMethod: 'usdt',
+    transactionId: 'TX001',
+    createTime: '2023-09-01 10:00:00',
+    payTime: '2023-09-01 10:05:00',
+    withdrawalStatus: 'not_withdrawn',
+    refunded: false
+  }
+])
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)

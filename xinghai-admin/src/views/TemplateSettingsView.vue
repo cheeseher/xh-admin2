@@ -338,6 +338,12 @@ const handlePreview = (row: any) => {
 
 // 删除模板
 const handleDelete = (row: any) => {
+  // 判断是否为通用商品模板
+  if (row.id === 1 && row.name === '通用商品模板') {
+    ElMessage.warning('通用商品模板不可删除')
+    return
+  }
+
   ElMessageBox.confirm(
     `确定要删除模板"${row.name}"吗？`,
     '警告',
@@ -519,4 +525,4 @@ onMounted(() => {
   margin-bottom: 10px;
   line-height: 1.6;
 }
-</style> 
+</style>
