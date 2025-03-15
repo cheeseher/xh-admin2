@@ -46,22 +46,35 @@
               value-format="YYYY-MM-DD"
             ></el-date-picker>
           </el-form-item>
+          <el-form-item label="提款状态">
+            <el-select v-model="searchForm.withdrawalStatus" placeholder="请选择" clearable style="width: 168px;">
+              <el-option label="全部" value=""></el-option>
+              <el-option label="已提款" value="withdrawn"></el-option>
+              <el-option label="未提款" value="not_withdrawn"></el-option>
+            </el-select>
+          </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetSearch">重置</el-button>
+            <el-button type="success" @click="handleWithdrawal">
+              总提款
+            </el-button>
           </el-form-item>
         </el-form>
         
         <!-- 添加总充值金额和导出按钮 -->
-        <div class="search-summary" v-if="showTotalAmount">
+        <div class="search-summary">
           <div class="total-amount">
             <span>筛选结果总充值金额：</span>
             <span class="amount-value">¥{{ totalAmount.toFixed(2) }}</span>
           </div>
-          <el-button type="success" @click="exportOrders">
-            <el-icon><Download /></el-icon>
-            导出订单
-          </el-button>
+          <div class="action-btns">
+            <el-button type="success" @click="handleWithdrawal">提款</el-button>
+            <el-button type="success" @click="exportOrders">
+              <el-icon><Download /></el-icon>
+              导出订单
+            </el-button>
+          </div>
         </div>
       </div>
 
@@ -101,12 +114,18 @@
             <el-tag v-else-if="scope.row.status === 'cancelled'" type="info">已取消</el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="withdrawalStatus" label="提款状态" min-width="120">
+          <template #default="scope">
+            <el-tag v-if="scope.row.withdrawalStatus === 'withdrawn'" type="success">已提款</el-tag>
+            <el-tag v-else-if="scope.row.withdrawalStatus === 'not_withdrawn'" type="info">未提款</el-tag>
+            <el-tag v-else type="info">未提款</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="createTime" label="创建时间" min-width="180" sortable="custom" />
         <el-table-column prop="payTime" label="支付时间" min-width="180" sortable="custom" />
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
-              <el-button size="small" @click="viewOrderDetail(scope.row)">查看</el-button>
               <el-button 
                 v-if="scope.row.status === 'pending'" 
                 size="small" 
@@ -119,6 +138,11 @@
                 type="warning" 
                 @click="handleRefund(scope.row)"
               >退款</el-button>
+              <el-button 
+                size="small" 
+                type="danger" 
+                @click="handleDelete(scope.row)"
+              >删除</el-button>
             </div>
           </template>
         </el-table-column>
@@ -157,6 +181,11 @@
             <el-tag v-else-if="currentOrder.status === 'paid' && !currentOrder.refunded" type="success">已支付</el-tag>
             <el-tag v-else-if="currentOrder.status === 'cancelled' && currentOrder.refunded" type="danger">已退款</el-tag>
             <el-tag v-else-if="currentOrder.status === 'cancelled'" type="info">已取消</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="提款状态">
+            <el-tag v-if="currentOrder.withdrawalStatus === 'withdrawn'" type="success">已提款</el-tag>
+            <el-tag v-else-if="currentOrder.withdrawalStatus === 'not_withdrawn'" type="info">未提款</el-tag>
+            <el-tag v-else type="info">未提款</el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="支付方式">
             <el-tag size="small" effect="plain" :type="currentOrder.paymentMethod === 'usdt' ? 'danger' : 'info'">
@@ -221,7 +250,10 @@
             :step="0.01"
             style="width: 100%;"
           ></el-input-number>
-          <div class="form-tip">最大可退金额: ¥{{ refundForm.amount }}</div>
+          <div class="form-tip">
+            <div>默认退款金额: ¥{{ refundForm.refundAmount.toFixed(2) }}（已扣除手续费）</div>
+            <div>最大可退金额: ¥{{ refundForm.amount.toFixed(2) }}</div>
+          </div>
         </el-form-item>
         <el-form-item label="退款原因" prop="refundReason">
           <el-select v-model="refundForm.refundReason" placeholder="请选择退款原因" style="width: 100%;">
@@ -258,7 +290,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { Download } from '@element-plus/icons-vue'
+import { Download, Money } from '@element-plus/icons-vue'
 
 // 定义充值订单类型
 interface RechargeOrder {
@@ -279,6 +311,7 @@ interface RechargeOrder {
     operator: string
   }>
   refunded?: boolean
+  withdrawalStatus?: 'withdrawn' | 'not_withdrawn'
 }
 
 // 搜索表单
@@ -287,7 +320,8 @@ const searchForm = reactive({
   userEmail: '',
   status: '',
   paymentMethod: '',
-  dateRange: [] as string[]
+  dateRange: [] as string[],
+  withdrawalStatus: ''
 })
 
 // 表格数据
@@ -326,10 +360,75 @@ const refundRules = reactive<FormRules>({
 })
 
 // 添加总充值金额计算
-const showTotalAmount = ref(false)
 const totalAmount = computed(() => {
+  if (orderList.value.length === 0) return 0;
   return orderList.value.reduce((sum, order) => sum + order.amount, 0)
 })
+
+// 添加总提款金额计算
+const totalWithdrawal = computed(() => {
+  return orderList.value.reduce((sum, order) => {
+    // 这里可以根据实际业务逻辑调整计算规则
+    return sum + (order.status === 'paid' ? order.amount : 0)
+  }, 0)
+})
+
+// 处理总提款按钮点击
+const handleWithdrawal = () => {
+  if (orderList.value.length === 0) {
+    ElMessage.warning('没有可提款的订单');
+    return;
+  }
+
+  // 获取所有已支付但未提款的订单
+  const ordersToWithdraw = orderList.value.filter(
+    order => order.status === 'paid' && 
+    !order.refunded && 
+    (order.withdrawalStatus === 'not_withdrawn' || !order.withdrawalStatus)
+  );
+  
+  if (ordersToWithdraw.length === 0) {
+    ElMessage.warning('没有可提款的订单');
+    return;
+  }
+  
+  const totalAmount = ordersToWithdraw.reduce((sum, order) => sum + order.amount, 0);
+  
+  ElMessageBox.confirm(
+    `确定要提取总金额 ¥${totalAmount.toFixed(2)} 吗？共 ${ordersToWithdraw.length} 笔订单`,
+    '提款确认',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  )
+    .then(() => {
+      // 更新订单的提款状态
+      ordersToWithdraw.forEach(order => {
+        const index = orderList.value.findIndex(item => item.id === order.id);
+        if (index !== -1) {
+          orderList.value[index].withdrawalStatus = 'withdrawn';
+          
+          // 添加提款记录到日志
+          if (!orderList.value[index].logs) {
+            orderList.value[index].logs = [];
+          }
+          
+          orderList.value[index].logs.push({
+            time: new Date().toLocaleString(),
+            action: `提款 ¥${order.amount.toFixed(2)}`,
+            operator: '管理员'
+          });
+        }
+      });
+      
+      ElMessage.success(`已成功提取 ¥${totalAmount.toFixed(2)}`);
+    })
+    .catch(() => {
+      ElMessage.info('已取消提款操作');
+    });
+}
 
 // 获取订单列表
 const fetchOrders = async () => {
@@ -351,9 +450,11 @@ const fetchOrders = async () => {
           transactionId: '2024031012345678',
           createTime: '2024-03-10 10:00:00',
           payTime: '2024-03-10 10:05:23',
+          withdrawalStatus: 'withdrawn',
           logs: [
             { time: '2024-03-10 10:00:00', action: '创建订单', operator: '系统' },
-            { time: '2024-03-10 10:05:23', action: '支付成功', operator: '系统' }
+            { time: '2024-03-10 10:05:23', action: '支付成功', operator: '系统' },
+            { time: '2024-03-10 11:00:00', action: '提款完成', operator: '管理员' }
           ]
         },
         {
@@ -366,6 +467,7 @@ const fetchOrders = async () => {
           status: 'pending',
           paymentMethod: 'other',
           createTime: '2024-03-10 11:30:00',
+          withdrawalStatus: 'not_withdrawn',
           logs: [
             { time: '2024-03-10 11:30:00', action: '创建订单', operator: '系统' }
           ]
@@ -380,6 +482,7 @@ const fetchOrders = async () => {
           status: 'cancelled',
           paymentMethod: 'other',
           createTime: '2024-03-10 14:20:00',
+          withdrawalStatus: 'not_withdrawn',
           logs: [
             { time: '2024-03-10 14:20:00', action: '创建订单', operator: '系统' },
             { time: '2024-03-10 15:30:00', action: '取消订单', operator: '管理员' }
@@ -392,15 +495,15 @@ const fetchOrders = async () => {
           userEmail: 'zhaoliu@example.com',
           amount: 1000.00,
           fee: 20.00,
-          status: 'cancelled',
+          status: 'paid',
           paymentMethod: 'other',
           transactionId: '2024031087654321',
           createTime: '2024-03-10 16:00:00',
           payTime: '2024-03-10 16:05:12',
+          withdrawalStatus: 'not_withdrawn',
           logs: [
             { time: '2024-03-10 16:00:00', action: '创建订单', operator: '系统' },
-            { time: '2024-03-10 16:05:12', action: '支付成功', operator: '系统' },
-            { time: '2024-03-10 16:30:00', action: '取消订单', operator: '管理员' }
+            { time: '2024-03-10 16:05:12', action: '支付成功', operator: '系统' }
           ]
         }
       ]
@@ -460,11 +563,12 @@ const handleSearch = () => {
       })
     }
     
+    if (searchForm.withdrawalStatus) {
+      filteredList = filteredList.filter(item => item.withdrawalStatus === searchForm.withdrawalStatus)
+    }
+    
     orderList.value = filteredList
     total.value = filteredList.length
-    
-    // 显示总充值金额
-    showTotalAmount.value = true
     
     loading.value = false
   }, 500)
@@ -476,7 +580,6 @@ const resetSearch = () => {
     // @ts-ignore
     searchForm[key] = key === 'dateRange' ? [] : ''
   })
-  showTotalAmount.value = false
   handleSearch()
 }
 
@@ -551,7 +654,9 @@ const handleRefund = (row: any) => {
   refundForm.orderNo = row.orderNo
   refundForm.userEmail = row.userEmail
   refundForm.amount = row.amount
-  refundForm.refundAmount = row.amount
+  // 计算默认退款金额：充值金额减去手续费
+  const fee = row.fee || 0
+  refundForm.refundAmount = row.amount - fee
   refundForm.refundReason = ''
   refundForm.refundRemark = ''
   refundForm.deductBalance = true
@@ -625,7 +730,7 @@ const exportOrders = () => {
   }
   
   // 创建CSV内容
-  let csvContent = '订单号,用户邮箱,充值金额,手续费,支付方式,订单状态,创建时间,支付时间\n'
+  let csvContent = '订单号,用户邮箱,充值金额,手续费,支付方式,订单状态,提款状态,创建时间,支付时间\n'
   
   orderList.value.forEach(order => {
     const status = order.status === 'pending' ? '待支付' : 
@@ -634,7 +739,9 @@ const exportOrders = () => {
     
     const paymentMethod = order.paymentMethod === 'usdt' ? 'USDT' : '其他方式'
     
-    csvContent += `"${order.orderNo}","${order.userEmail}",${order.amount.toFixed(2)},${order.fee ? order.fee.toFixed(2) : '0.00'},"${paymentMethod}","${status}","${order.createTime}","${order.payTime || ''}"\n`
+    const withdrawalStatus = order.withdrawalStatus === 'withdrawn' ? '已提款' : '未提款'
+    
+    csvContent += `"${order.orderNo}","${order.userEmail}",${order.amount.toFixed(2)},${order.fee ? order.fee.toFixed(2) : '0.00'},"${paymentMethod}","${status}","${withdrawalStatus}","${order.createTime}","${order.payTime || ''}"\n`
   })
   
   // 创建Blob对象
@@ -658,6 +765,30 @@ const exportOrders = () => {
   URL.revokeObjectURL(url)
   
   ElMessage.success('订单导出成功')
+}
+
+// 处理删除订单
+const handleDelete = (row: RechargeOrder) => {
+  ElMessageBox.confirm(
+    `确定要删除订单 ${row.orderNo} 吗？此操作不可恢复。`,
+    '删除确认',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  )
+    .then(() => {
+      // 模拟删除操作
+      const index = orderList.value.findIndex(item => item.id === row.id)
+      if (index !== -1) {
+        orderList.value.splice(index, 1)
+        ElMessage.success(`订单 ${row.orderNo} 已成功删除`)
+      }
+    })
+    .catch(() => {
+      ElMessage.info('已取消删除操作')
+    })
 }
 
 onMounted(() => {
@@ -761,4 +892,25 @@ onMounted(() => {
   color: #f56c6c;
   margin-left: 5px;
 }
-</style> 
+
+.action-btns {
+  display: flex;
+  align-items: center;
+}
+
+.action-btns .el-button + .el-button {
+  margin-left: 20px;
+}
+
+.form-tip {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #909399;
+}
+
+.form-tip div:first-child {
+  color: #E6A23C;
+  font-weight: 500;
+}
+</style>

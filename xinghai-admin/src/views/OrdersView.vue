@@ -53,6 +53,7 @@
               <el-option label="已取消" value="已取消"></el-option>
               <el-option label="已退款" value="已退款"></el-option>
               <el-option label="申请退款中" value="申请退款中"></el-option>
+             <el-option label="拒绝退款" value="拒绝退款"></el-option>
             </el-select>
           </el-form-item>
           <el-form-item label="下单时间">
@@ -68,8 +69,24 @@
           <el-form-item>
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetSearch">重置</el-button>
+            <el-button type="success" @click="handleWithdrawal">总提款</el-button>
           </el-form-item>
         </el-form>
+        
+        <!-- 添加总金额和导出按钮 -->
+        <div class="search-summary">
+          <div class="total-amount">
+            <span>筛选结果总金额：</span>
+            <span class="amount-value">¥{{ totalAmount.toFixed(2) }}</span>
+          </div>
+          <div class="action-btns">
+            <el-button type="success" @click="handleWithdrawal">提款</el-button>
+            <el-button type="success" @click="exportOrders">
+              <el-icon><Download /></el-icon>
+              导出订单
+            </el-button>
+          </div>
+        </div>
       </div>
       
       <!-- 表格区域 -->
@@ -116,6 +133,12 @@
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
             <el-tag :type="getStatusType(scope.row.status)">{{ scope.row.status }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="withdrawalStatus" label="提款状态" width="120">
+          <template #default="scope">
+            <el-tag v-if="scope.row.withdrawalStatus === 'withdrawn'" type="success">已提款</el-tag>
+            <el-tag v-else type="info">未提款</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
@@ -204,46 +227,62 @@
     <el-dialog
       v-model="refundDialogVisible"
       title="订单退款"
-      width="550px"
+      width="600px"
+      class="refund-dialog"
+      :close-on-click-modal="false"
     >
+      <div class="refund-dialog-title">
+        <i class="el-icon-warning" style="margin-right: 8px; color: #E6A23C;"></i>
+        退款审核
+      </div>
       <el-form :model="refundForm" label-width="100px" :rules="refundRules" ref="refundFormRef">
-        <el-form-item label="订单号">
-          <el-input v-model="refundForm.orderId" disabled></el-input>
-        </el-form-item>
-        <el-form-item label="商品名称">
-          <el-input v-model="refundForm.productName" disabled></el-input>
-        </el-form-item>
-        <el-form-item label="用户邮箱">
-          <el-input v-model="refundForm.userEmail" disabled></el-input>
-        </el-form-item>
-        <el-form-item label="退款金额" prop="refundAmount">
-          <el-input-number 
-            v-model="refundForm.refundAmount" 
-            :min="0" 
-            :max="refundForm.totalPrice" 
-            :precision="2" 
-            :step="0.01"
-            style="width: 100%;"
-          ></el-input-number>
-          <div class="form-tip">最大可退金额: {{ refundForm.totalPrice }}</div>
-        </el-form-item>
-        <el-form-item label="退款原因" prop="refundReason">
-          <el-select v-model="refundForm.refundReason" placeholder="请选择退款原因" style="width: 100%;">
-            <el-option label="客户申请退款" value="客户申请退款"></el-option>
-            <el-option label="商品缺货" value="商品缺货"></el-option>
-            <el-option label="商品质量问题" value="商品质量问题"></el-option>
-            <el-option label="订单信息有误" value="订单信息有误"></el-option>
-            <el-option label="其他原因" value="其他原因"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="退款说明" prop="refundRemark">
-          <el-input 
-            v-model="refundForm.refundRemark" 
-            type="textarea" 
-            :rows="3" 
-            placeholder="请输入退款说明"
-          ></el-input>
-        </el-form-item>
+        <div class="refund-section order-info">
+          <h4>订单信息</h4>
+          <el-form-item label="订单号">
+            <el-input v-model="refundForm.orderId" disabled></el-input>
+          </el-form-item>
+          <el-form-item label="商品名称">
+            <el-input v-model="refundForm.productName" disabled></el-input>
+          </el-form-item>
+          <el-form-item label="用户邮箱">
+            <el-input v-model="refundForm.userEmail" disabled></el-input>
+          </el-form-item>
+        </div>
+        
+        <div class="refund-section refund-info">
+          <h4>退款信息</h4>
+          <el-form-item label="退款金额" prop="refundAmount">
+            <el-input-number 
+              v-model="refundForm.refundAmount" 
+              :min="0" 
+              :max="refundForm.totalPrice" 
+              :precision="2" 
+              :step="0.01"
+              style="width: 100%;"
+            ></el-input-number>
+            <div class="form-tip warning">
+              <i class="el-icon-warning" style="margin-right: 4px;"></i>
+              最大可退金额: ¥{{ refundForm.totalPrice }}
+            </div>
+          </el-form-item>
+          <el-form-item label="退款原因" prop="refundReason">
+            <el-select v-model="refundForm.refundReason" placeholder="请选择退款原因" style="width: 100%;">
+              <el-option label="客户申请退款" value="客户申请退款"></el-option>
+              <el-option label="商品缺货" value="商品缺货"></el-option>
+              <el-option label="商品质量问题" value="商品质量问题"></el-option>
+              <el-option label="订单信息有误" value="订单信息有误"></el-option>
+              <el-option label="其他原因" value="其他原因"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="退款说明" prop="refundRemark">
+            <el-input 
+              v-model="refundForm.refundRemark" 
+              type="textarea" 
+              :rows="3" 
+              placeholder="请输入退款说明"
+            ></el-input>
+          </el-form-item>
+        </div>
       </el-form>
       <template #footer>
         <span class="dialog-footer">
@@ -256,8 +295,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Download } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 
 // 搜索表单
@@ -311,6 +351,7 @@ interface OrderItem {
   remark?: string;
   createTime: string;
   refundInfo: RefundInfo | null;
+  withdrawalStatus?: 'withdrawn' | 'not_withdrawn';
 }
 
 // 表格数据
@@ -435,6 +476,63 @@ const orderList = ref<OrderItem[]>([
   }
 ])
 
+// 添加总金额计算
+const showTotalAmount = ref(false)
+const totalAmount = computed(() => {
+  return orderList.value.reduce((sum, order) => {
+    const price = parseFloat(order.totalPrice.replace('¥', ''))
+    return sum + price
+  }, 0)
+})
+
+// 添加总提款金额计算
+const totalWithdrawal = computed(() => {
+  return orderList.value.reduce((sum, order) => {
+    // 根据业务逻辑调整计算规则，这里只计算已完成且未提款的订单
+    const price = parseFloat(order.totalPrice.replace('¥', ''))
+    return sum + (order.status === '已完成' && !order.withdrawalStatus ? price : 0)
+  }, 0)
+})
+
+// 导出订单
+const exportOrders = () => {
+  if (orderList.value.length === 0) {
+    ElMessage.warning('没有可导出的订单数据')
+    return
+  }
+  
+  // 创建CSV内容
+  let csvContent = '订单号,商品名称,商品分类,数量,总价,手续费,用户邮箱,支付方式,发货方式,订单状态,提款状态,创建时间\n'
+  
+  orderList.value.forEach(order => {
+    const withdrawalStatus = order.withdrawalStatus === 'withdrawn' ? '已提款' : '未提款'
+    
+    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${order.userEmail}","${order.payMethod === 'usdt' ? 'USDT' : '其他方式'}","${order.deliveryMethod}","${order.status}","${withdrawalStatus}","${order.createTime}"\n`
+  })
+  
+  // 创建Blob对象
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  
+  // 创建下载链接
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  
+  // 设置下载属性
+  link.setAttribute('href', url)
+  link.setAttribute('download', `商品订单_${new Date().toISOString().split('T')[0]}.csv`)
+  link.style.visibility = 'hidden'
+  
+  // 添加到文档并触发点击
+  document.body.appendChild(link)
+  link.click()
+  
+  // 清理
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+  
+  ElMessage.success('订单导出成功')
+}
+
 // 分页相关
 const currentPage = ref(1)
 const pageSize = ref(10)
@@ -519,6 +617,8 @@ const getStatusType = (status: string) => {
       return 'danger'
     case '申请退款中':
       return 'warning'
+    case '拒绝退款':
+      return 'danger'
     default:
       return 'info'
   }
@@ -527,10 +627,46 @@ const getStatusType = (status: string) => {
 // 查询
 const handleSearch = () => {
   loading.value = true
-  // 模拟请求
+  
+  // 模拟搜索操作
   setTimeout(() => {
+    // 根据搜索条件过滤数据
+    let filteredList = [...orderList.value]
+    
+    if (searchForm.orderId) {
+      filteredList = filteredList.filter(item => item.orderId.includes(searchForm.orderId))
+    }
+    
+    if (searchForm.category) {
+      filteredList = filteredList.filter(item => item.category === searchForm.category)
+    }
+    
+    if (searchForm.payMethod) {
+      filteredList = filteredList.filter(item => item.payMethod === searchForm.payMethod)
+    }
+    
+    if (searchForm.deliveryMethod) {
+      filteredList = filteredList.filter(item => item.deliveryMethod === searchForm.deliveryMethod)
+    }
+    
+    if (searchForm.status) {
+      filteredList = filteredList.filter(item => item.status === searchForm.status)
+    }
+    
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      const startDate = new Date(searchForm.dateRange[0])
+      const endDate = new Date(searchForm.dateRange[1])
+      endDate.setHours(23, 59, 59, 999) // 设置为当天结束时间
+      
+      filteredList = filteredList.filter(item => {
+        const createTime = new Date(item.createTime)
+        return createTime >= startDate && createTime <= endDate
+      })
+    }
+    
+    orderList.value = filteredList
+    total.value = filteredList.length
     loading.value = false
-    ElMessage.success('查询成功')
   }, 500)
 }
 
@@ -542,6 +678,7 @@ const resetSearch = () => {
   searchForm.deliveryMethod = ''
   searchForm.status = ''
   searchForm.dateRange = []
+  showTotalAmount.value = false
 }
 
 // 查看
@@ -805,28 +942,31 @@ const handleApproveRefund = (row: any) => {
   const refundDetails = row.refundInfo ? row.refundInfo.refundRemark : '无详细说明';
   
   ElMessageBox.confirm(
-    `<div style="padding: 0;">
-      <div style="font-weight: bold; font-size: 16px; margin-bottom: 15px;">审核退款</div>
-      <div style="margin-bottom: 15px;">
-        <div>订单号：${row.orderId}</div>
+    `<div class="refund-dialog">
+      <div class="refund-dialog-title">审核退款</div>
+      <div class="refund-dialog-item">
+        <div class="detail-item">
+          <span class="label">订单号：</span>
+          <span>${row.orderId}</span>
+        </div>
       </div>
-      <div style="margin-bottom: 15px;">
+      <div class="refund-dialog-item">
         <div>退款金额</div>
-        <div style="font-size: 16px; color: #f56c6c; font-weight: bold; margin-top: 5px;">¥${row.refundInfo ? row.refundInfo.refundAmount.toFixed(2) : '0.00'}</div>
+        <div class="refund-amount">¥${row.refundInfo ? row.refundInfo.refundAmount.toFixed(2) : '0.00'}</div>
       </div>
-      <div style="margin-bottom: 15px;">
-        <div style="display: flex; align-items: center; margin-bottom: 5px;">
-          <span style="color: #e6a23c; margin-right: 5px;">⚠</span>
+      <div class="refund-dialog-item">
+        <div class="refund-time">
+          <i class="el-icon-warning warning-icon"></i>
           <span>申请时间</span>
         </div>
         <div>${row.refundInfo ? row.refundInfo.refundTime : '未知'}</div>
       </div>
-      <div style="margin-bottom: 15px;">
+      <div class="refund-dialog-item">
         <div>用户描述</div>
-        <div style="margin-top: 5px; color: #606266; word-break: break-all;">${refundDetails}</div>
+        <div class="refund-remark">${refundDetails}</div>
       </div>
-      <div style="margin-top: 20px; text-align: center; color: #606266;">
-        确定要审核通过此退款申请吗？
+      <div class="refund-dialog-footer">
+        <div class="refund-confirm-text">确定要审核通过此退款申请吗？</div>
       </div>
     </div>`,
     ' ',
@@ -849,13 +989,61 @@ const handleApproveRefund = (row: any) => {
           // 拒绝退款
           const index = orderList.value.findIndex(item => item.id === row.id)
           if (index !== -1) {
-            orderList.value[index].status = '已完成'
+            orderList.value[index].status = '拒绝退款'
             ElMessage.info(`订单 ${row.orderId} 的退款申请已拒绝`)
           }
         }
       }
     }
   )
+}
+
+// 处理总提款按钮点击
+const handleWithdrawal = () => {
+  if (orderList.value.length === 0) {
+    ElMessage.warning('没有可提款的订单');
+    return;
+  }
+
+  // 获取所有已完成但未提款的订单
+  const ordersToWithdraw = orderList.value.filter(
+    order => order.status === '已完成' && !order.withdrawalStatus
+  );
+  
+  if (ordersToWithdraw.length === 0) {
+    ElMessage.warning('没有可提款的订单');
+    return;
+  }
+  
+  const totalAmount = ordersToWithdraw.reduce((sum, order) => {
+    const price = parseFloat(order.totalPrice.replace('¥', ''))
+    return sum + price
+  }, 0);
+  
+  ElMessageBox.confirm(
+    `确定要提取总金额 ¥${totalAmount.toFixed(2)} 吗？共 ${ordersToWithdraw.length} 笔订单`,
+    '提款确认',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  )
+    .then(() => {
+      // 更新订单的提款状态
+      ordersToWithdraw.forEach(order => {
+        const index = orderList.value.findIndex(item => item.id === order.id);
+        if (index !== -1) {
+          // 添加提款状态标记
+          orderList.value[index].withdrawalStatus = 'withdrawn';
+        }
+      });
+      
+      ElMessage.success(`已成功提取 ¥${totalAmount.toFixed(2)}`);
+    })
+    .catch(() => {
+      ElMessage.info('已取消提款操作');
+    });
 }
 
 onMounted(() => {
@@ -935,7 +1123,7 @@ onMounted(() => {
 }
 
 .fee {
-  color: #f56c6c;
+  color: #E6A23C;
   font-weight: bold;
 }
 
@@ -1006,47 +1194,146 @@ onMounted(() => {
 }
 
 /* 退款审核弹窗样式 */
-:deep(.refund-dialog) {
-  font-size: 14px;
-  line-height: 1.6;
-  padding: 15px 20px;
+:deep(.refund-dialog) .el-dialog__body {
+  padding: 0 24px;
+}
+
+:deep(.refund-dialog) .el-form-item {
+  margin-bottom: 20px;
+}
+
+:deep(.refund-dialog) .el-input.is-disabled .el-input__inner {
+  background-color: #f5f7fa;
+  border-color: #e4e7ed;
+  color: #606266;
 }
 
 :deep(.refund-dialog-title) {
-  font-weight: bold;
+  font-weight: 600;
   color: #303133;
-  font-size: 16px;
-  margin-bottom: 15px;
-  border-bottom: none;
+  font-size: 18px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
 }
 
-:deep(.refund-dialog-item) {
-  margin-bottom: 15px;
+:deep(.refund-section) {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+:deep(.refund-section) h4 {
+  font-size: 16px;
+  color: #303133;
+  margin: 0 0 16px;
+  display: flex;
+  align-items: center;
+}
+
+:deep(.refund-section) h4::before {
+  content: '';
+  width: 3px;
+  height: 16px;
+  background-color: #409EFF;
+  margin-right: 8px;
+  border-radius: 2px;
+}
+
+:deep(.form-tip) {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+:deep(.form-tip.warning) {
+  color: #E6A23C;
+  display: flex;
+  align-items: center;
+}
+
+:deep(.dialog-footer) {
+  padding: 16px 24px;
+  text-align: right;
+  background-color: #f8f9fa;
+  border-top: 1px solid #e4e7ed;
+  border-radius: 0 0 4px 4px;
+}
+
+:deep(.dialog-footer) .el-button + .el-button {
+  margin-left: 12px;
+}
+
+:deep(.refund-dialog-item:last-child) {
+  margin-bottom: 0;
+}
+
+:deep(.detail-item) {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+:deep(.detail-item:last-child) {
+  margin-bottom: 0;
+}
+
+:deep(.detail-item .label) {
+  color: #909399;
+  margin-right: 12px;
+  min-width: 80px;
+  font-weight: 500;
+}
+
+:deep(.detail-item .value) {
+  color: #303133;
+  flex: 1;
 }
 
 :deep(.refund-amount) {
-  font-size: 16px;
-  color: #f56c6c;
-  font-weight: bold;
-  margin-top: 5px;
+  font-size: 24px;
+  color: #F56C6C;
+  font-weight: 600;
+  margin-top: 12px;
+  padding: 16px;
+  background-color: #FEF0F0;
+  border-radius: 6px;
+  text-align: center;
 }
 
 :deep(.refund-time) {
   display: flex;
   align-items: center;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
+  color: #909399;
 }
 
 :deep(.warning-icon) {
-  color: #e6a23c;
+  color: #E6A23C;
   font-size: 16px;
-  margin-right: 5px;
+  margin-right: 8px;
 }
 
 :deep(.refund-remark) {
-  margin-top: 5px;
+  margin-top: 8px;
   color: #606266;
   word-break: break-all;
+  background-color: #FFFFFF;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid #EBEEF5;
+}
+
+:deep(.refund-dialog-footer) {
+  text-align: center;
+  margin-top: 24px;
+}
+
+:deep(.refund-confirm-text) {
+  color: #606266;
+  font-size: 15px;
+  font-weight: 500;
 }
 
 :deep(.refund-dialog-footer) {
@@ -1088,4 +1375,35 @@ onMounted(() => {
   margin-left: 0 !important;
   margin-right: 0 !important;
 }
-</style> 
+
+.search-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 15px;
+  padding: 10px 15px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+.total-amount {
+  font-size: 14px;
+  color: #606266;
+}
+
+.amount-value {
+  font-size: 16px;
+  font-weight: bold;
+  color: #f56c6c;
+  margin-left: 5px;
+}
+
+.action-btns {
+  display: flex;
+  align-items: center;
+}
+
+.action-btns .el-button + .el-button {
+  margin-left: 20px;
+}
+</style>
