@@ -18,4 +18,10 @@ npm run build
 echo "Copying dist directory to root..."
 cp -r dist ../
 
+# 确保favicon.ico存在
+echo "Ensuring favicon.ico exists..."
+if [ ! -f ../dist/favicon.ico ]; then
+  touch ../dist/favicon.ico
+fi
+
 echo "Build completed successfully!" 

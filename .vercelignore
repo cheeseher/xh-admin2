@@ -22,4 +22,14 @@ pnpm-debug.log*
 
 # 系统文件
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# 忽略不需要部署的文件和目录
+.git
+.github
+.env
+.env.*
+!.env.example
+
+# 不忽略dist目录
+# dist 
