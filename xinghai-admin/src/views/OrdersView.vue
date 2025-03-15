@@ -4,6 +4,13 @@
       <template #header>
         <div class="card-header">
           <span>商品订单列表</span>
+          <div class="header-buttons">
+            <el-button type="success" @click="handleWithdrawal">总提款</el-button>
+            <el-button type="primary" @click="exportAllOrders">
+              <el-icon><Download /></el-icon>
+              导出所有订单
+            </el-button>
+          </div>
         </div>
       </template>
       
@@ -16,6 +23,9 @@
         <el-form :inline="true" :model="searchForm" class="demo-form-inline">
           <el-form-item label="订单号">
             <el-input v-model="searchForm.orderId" placeholder="请输入订单号" clearable></el-input>
+          </el-form-item>
+          <el-form-item label="用户邮箱">
+            <el-input v-model="searchForm.userEmail" placeholder="请输入用户邮箱" clearable></el-input>
           </el-form-item>
           <el-form-item label="商品分类">
             <el-select v-model="searchForm.category" placeholder="请选择" clearable style="width: 168px;">
@@ -56,6 +66,13 @@
              <el-option label="已拒绝退款" value="已拒绝退款"></el-option>
             </el-select>
           </el-form-item>
+          <el-form-item label="提款状态">
+            <el-select v-model="searchForm.withdrawalStatus" placeholder="请选择" clearable style="width: 168px;">
+              <el-option label="全部" value=""></el-option>
+              <el-option label="已提款" value="withdrawn"></el-option>
+              <el-option label="未提款" value="not_withdrawn"></el-option>
+            </el-select>
+          </el-form-item>
           <el-form-item label="下单时间">
             <el-date-picker
               v-model="searchForm.dateRange"
@@ -69,7 +86,6 @@
           <el-form-item>
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetSearch">重置</el-button>
-            <el-button type="success" @click="handleWithdrawal">总提款</el-button>
           </el-form-item>
         </el-form>
         
@@ -78,25 +94,45 @@
           <div class="total-amount">
             <span>筛选结果总金额：</span>
             <span class="amount-value">¥{{ totalAmount.toFixed(2) }}</span>
+            <span v-if="multipleSelection.length > 0" style="margin-left: 20px;">已选择：{{ multipleSelection.length }}笔订单</span>
+            <span v-if="multipleSelection.length > 0" class="amount-value">¥{{ selectedTotalAmount.toFixed(2) }}</span>
           </div>
           <div class="action-btns">
-            <el-button type="success" @click="handleWithdrawal">提款</el-button>
-            <el-button type="success" @click="exportOrders">
+            <el-button type="primary" @click="handleBatchWithdrawal" :disabled="!hasSelectedWithdrawableOrders">批量提款</el-button>
+            <el-button type="success" @click="exportOrders" :disabled="multipleSelection.length === 0">
               <el-icon><Download /></el-icon>
-              导出订单
+              导出选中订单
             </el-button>
           </div>
         </div>
       </div>
       
       <!-- 表格区域 -->
-      <el-table :data="orderList" style="width: 100%" v-loading="loading" border stripe>
+      <el-table 
+        :data="filteredOrderList" 
+        style="width: 100%" 
+        v-loading="loading" 
+        border 
+        stripe
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column type="selection" width="55"></el-table-column>
         <el-table-column prop="id" label="商品订单ID" width="100"></el-table-column>
         <el-table-column prop="orderId" label="订单号" width="180"></el-table-column>
         <el-table-column prop="productName" label="商品名称" min-width="180"></el-table-column>
         <el-table-column prop="category" label="商品分类" width="100">
           <template #default="scope">
             <el-tag :type="getCategoryTag(scope.row.category)">{{ scope.row.category }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="originalPrice" label="线上价格" width="100">
+          <template #default="scope">
+            <span class="original-price">{{ scope.row.originalPrice }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="purchasePrice" label="购买价格（折后）" width="130">
+          <template #default="scope">
+            <span class="purchase-price">{{ scope.row.purchasePrice }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="quantity" label="数量" width="80"></el-table-column>
@@ -294,10 +330,12 @@ import type { FormInstance, FormRules } from 'element-plus'
 // 搜索表单
 const searchForm = reactive({
   orderId: '',
+  userEmail: '',
   category: '',
   payMethod: '',
   deliveryMethod: '',
   status: '',
+  withdrawalStatus: '',
   dateRange: [] as string[]
 })
 
@@ -312,15 +350,21 @@ const productOptions = [
   { label: 'Gmail美国老号 (6个月+)', value: 'Gmail美国老号 (6个月+)', price: 16.88 },
   { label: '2022年老号账号-谷歌邮箱', value: '2022年老号账号-谷歌邮箱', price: 14.00 },
   { label: 'Instagram账号', value: 'Instagram账号', price: 39.99 },
+  { label: 'Instagram账号-高粉丝', value: 'Instagram账号-高粉丝', price: 399.99 },
   { label: 'Twitter账号', value: 'Twitter账号', price: 49.99 },
+  { label: 'Twitter账号-已认证', value: 'Twitter账号-已认证', price: 599.99 },
   { label: 'Facebook账号', value: 'Facebook账号', price: 59.99 },
-  { label: 'ChatGPT账号', value: 'ChatGPT账号', price: 199.99 }
+  { label: 'Facebook账号-商业版', value: 'Facebook账号-商业版', price: 199.99 },
+  { label: 'Discord账号', value: 'Discord账号', price: 39.99 },
+  { label: 'ChatGPT账号', value: 'ChatGPT账号', price: 199.99 },
+  { label: 'ChatGPT账号-高级版', value: 'ChatGPT账号-高级版', price: 299.99 },
+  { label: '微软邮箱账号', value: '微软邮箱账号', price: 25.00 },
+  { label: '其他账号-Steam', value: '其他账号-Steam', price: 79.99 }
 ]
 
 // 表格数据类型定义
 interface RefundInfo {
   refundAmount: number;
-  refundReason: string;
   refundRemark: string;
   refundTime: string;
 }
@@ -331,6 +375,8 @@ interface OrderItem {
   productName: string;
   category: string;
   quantity: number;
+  originalPrice: string;
+  purchasePrice: string;
   totalPrice: string;
   fee: string;
   cardId?: string;
@@ -347,11 +393,13 @@ interface OrderItem {
 
 // 表格数据
 const orderList = ref<OrderItem[]>([{
-    id: '1001',
+    id: 'S001001',
     orderId: 'SO20230901001',
     productName: '谷歌邮箱账号',
     category: '谷歌邮箱',
     quantity: 1,
+    originalPrice: '¥120.00',
+    purchasePrice: '¥99.00',
     totalPrice: '¥99.00',
     fee: '¥2.00',
     cardId: 'C001',
@@ -365,11 +413,13 @@ const orderList = ref<OrderItem[]>([{
     refundInfo: null
   },
   {
-    id: '1002',
+    id: 'S001002',
     orderId: 'SO20230901002',
     productName: 'Instagram账号',
     category: 'Instagram账号',
     quantity: 1,
+    originalPrice: '¥220.00',
+    purchasePrice: '¥199.00',
     totalPrice: '¥199.00',
     fee: '¥3.00',
     cardId: 'C002',
@@ -388,6 +438,8 @@ const orderList = ref<OrderItem[]>([{
     productName: 'ChatGPT账号', 
     category: 'ChatGPT账号',
     quantity: 1,
+    originalPrice: '¥249.99',
+    purchasePrice: '¥199.99',
     totalPrice: '¥199.99',
     fee: '¥0.00',
     cardId: 'C000007',
@@ -401,7 +453,6 @@ const orderList = ref<OrderItem[]>([{
     withdrawalStatus: 'not_withdrawn',
     refundInfo: {
       refundAmount: 199.99,
-      refundReason: '商品质量问题',
       refundRemark: '账号登录异常，无法正常使用',
       refundTime: '2024-03-15 19:45:00'
     }
@@ -412,6 +463,8 @@ const orderList = ref<OrderItem[]>([{
     productName: 'Gmail邮箱-稳定可用', 
     category: '谷歌邮箱',
     quantity: 1,
+    originalPrice: '¥5.50',
+    purchasePrice: '¥4.20',
     totalPrice: '¥4.20',
     fee: '¥0.00',
     cardId: 'C000001',
@@ -431,6 +484,8 @@ const orderList = ref<OrderItem[]>([{
     productName: 'Gmail邮箱-1月以上', 
     category: '谷歌邮箱',
     quantity: 1,
+    originalPrice: '¥6.50',
+    purchasePrice: '¥5.50',
     totalPrice: '¥5.50',
     fee: '¥0.00',
     cardId: 'C000002',
@@ -450,6 +505,8 @@ const orderList = ref<OrderItem[]>([{
     productName: 'Instagram账号', 
     category: 'Instagram账号',
     quantity: 1,
+    originalPrice: '¥49.99',
+    purchasePrice: '¥39.99',
     totalPrice: '¥39.99',
     fee: '¥0.00',
     cardId: '',
@@ -469,6 +526,8 @@ const orderList = ref<OrderItem[]>([{
     productName: 'Gmail邮箱-美国稳定', 
     category: '谷歌邮箱',
     quantity: 2,
+    originalPrice: '¥12.00',
+    purchasePrice: '¥10.00',
     totalPrice: '¥20.00',
     fee: '¥0.00',
     cardId: '',
@@ -488,6 +547,8 @@ const orderList = ref<OrderItem[]>([{
     productName: 'Twitter账号', 
     category: 'Twitter账号',
     quantity: 1,
+    originalPrice: '¥59.99',
+    purchasePrice: '¥49.99',
     totalPrice: '¥49.99',
     fee: '¥0.00',
     cardId: 'C000003',
@@ -501,7 +562,6 @@ const orderList = ref<OrderItem[]>([{
     createTime: '2024-03-15 09:15:00',
     refundInfo: {
       refundAmount: 49.99,
-      refundReason: '客户申请退款',
       refundRemark: '客户不需要此账号',
       refundTime: '2024-03-15 10:30:00'
     }
@@ -512,6 +572,8 @@ const orderList = ref<OrderItem[]>([{
     productName: 'Gmail邮箱-半年以上', 
     category: '谷歌邮箱',
     quantity: 3,
+    originalPrice: '¥8.50',
+    purchasePrice: '¥7.50',
     totalPrice: '¥22.50',
     fee: '¥0.00',
     cardId: '',
@@ -523,38 +585,382 @@ const orderList = ref<OrderItem[]>([{
     remark: '批量购买',
     createTime: '2024-03-15 07:30:00',
     refundInfo: null
+  },
+  // 新增各种情况的订单数据
+  {
+    id: 'S000008',
+    orderId: 'DD20240316001', 
+    productName: 'Facebook账号', 
+    category: 'Facebook账号',
+    quantity: 1,
+    originalPrice: '¥69.99',
+    purchasePrice: '¥59.99',
+    totalPrice: '¥59.99',
+    fee: '¥1.50',
+    cardId: 'C000008',
+    cardInfo: 'facebook@example.com|fb123456',
+    userEmail: 'user888@example.com',
+    payMethod: 'other',
+    deliveryMethod: '自动发货',
+    status: '已完成',
+    remark: '客户需要美国地区的账号',
+    createTime: '2024-03-16 08:15:00',
+    withdrawalStatus: 'not_withdrawn',
+    refundInfo: null
+  },
+  {
+    id: 'S000009',
+    orderId: 'DD20240316002', 
+    productName: 'Discord账号', 
+    category: 'Discord账号',
+    quantity: 2,
+    originalPrice: '¥45.99',
+    purchasePrice: '¥39.99',
+    totalPrice: '¥79.98',
+    fee: '¥2.00',
+    cardId: 'C000009',
+    cardInfo: 'discord1@example.com|dis123\ndiscord2@example.com|dis456',
+    userEmail: 'user999@example.com',
+    payMethod: 'usdt',
+    deliveryMethod: '自动发货',
+    status: '已拒绝退款',
+    remark: '客户申请退款但不符合条件',
+    createTime: '2024-03-16 09:30:00',
+    withdrawalStatus: 'not_withdrawn',
+    refundInfo: {
+      refundAmount: 79.98,
+      refundRemark: '客户表示不再需要此账号，但已超过退款期限',
+      refundTime: '2024-03-16 10:45:00'
+    }
+  },
+  {
+    id: 'S000010',
+    orderId: 'DD20240316003', 
+    productName: '微软邮箱账号', 
+    category: '微软邮箱',
+    quantity: 5,
+    originalPrice: '¥30.00',
+    purchasePrice: '¥25.00',
+    totalPrice: '¥125.00',
+    fee: '¥3.50',
+    cardId: 'C000010',
+    cardInfo: '多个账号信息，请联系客服获取',
+    userEmail: 'business@company.com',
+    payMethod: 'other',
+    deliveryMethod: '手动发货',
+    status: '已发货',
+    remark: '企业批量采购',
+    createTime: '2024-03-16 11:20:00',
+    withdrawalStatus: 'not_withdrawn',
+    refundInfo: null
+  },
+  {
+    id: 'S000011',
+    orderId: 'DD20240316004', 
+    productName: 'ChatGPT账号-高级版', 
+    category: 'ChatGPT账号',
+    quantity: 1,
+    originalPrice: '¥349.99',
+    purchasePrice: '¥299.99',
+    totalPrice: '¥299.99',
+    fee: '¥5.00',
+    cardId: '',
+    cardInfo: '',
+    userEmail: 'premium@example.com',
+    payMethod: 'usdt',
+    deliveryMethod: '手动发货',
+    status: '已取消',
+    remark: '客户主动取消订单',
+    createTime: '2024-03-16 13:45:00',
+    withdrawalStatus: 'not_withdrawn',
+    refundInfo: null
+  },
+  {
+    id: 'S000012',
+    orderId: 'DD20240316005', 
+    productName: 'Gmail邮箱-一年以上', 
+    category: '谷歌邮箱',
+    quantity: 10,
+    originalPrice: '¥15.00',
+    purchasePrice: '¥12.00',
+    totalPrice: '¥120.00',
+    fee: '¥0.00',
+    cardId: 'C000012',
+    cardInfo: '批量账号，详情见附件',
+    userEmail: 'wholesale@example.com',
+    payMethod: 'usdt',
+    deliveryMethod: '自动发货',
+    status: '已完成',
+    remark: '批发客户，享受折扣',
+    createTime: '2024-03-16 15:30:00',
+    withdrawalStatus: 'not_withdrawn',
+    refundInfo: null
+  },
+  {
+    id: 'S000013',
+    orderId: 'DD20240316006', 
+    productName: 'Instagram账号-高粉丝', 
+    category: 'Instagram账号',
+    quantity: 1,
+    originalPrice: '¥499.99',
+    purchasePrice: '¥399.99',
+    totalPrice: '¥399.99',
+    fee: '¥10.00',
+    cardId: 'C000013',
+    cardInfo: 'instagram_premium@example.com|ins789xyz',
+    userEmail: 'influencer@example.com',
+    payMethod: 'other',
+    deliveryMethod: '手动发货',
+    status: '待发货',
+    remark: '特殊账号，需人工审核',
+    createTime: '2024-03-16 16:45:00',
+    withdrawalStatus: 'not_withdrawn',
+    refundInfo: null
+  },
+  {
+    id: 'S000014',
+    orderId: 'DD20240316007', 
+    productName: 'Twitter账号-已认证', 
+    category: 'Twitter账号',
+    quantity: 1,
+    originalPrice: '¥699.99',
+    purchasePrice: '¥599.99',
+    totalPrice: '¥599.99',
+    fee: '¥15.00',
+    cardId: '',
+    cardInfo: '',
+    userEmail: 'verified@example.com',
+    payMethod: 'usdt',
+    deliveryMethod: '手动发货',
+    status: '待付款',
+    remark: '高级认证账号',
+    createTime: '2024-03-16 17:30:00',
+    withdrawalStatus: 'not_withdrawn',
+    refundInfo: null
+  },
+  {
+    id: 'S000015',
+    orderId: 'DD20240316008', 
+    productName: '其他账号-Steam', 
+    category: '其他账号',
+    quantity: 2,
+    originalPrice: '¥89.99',
+    purchasePrice: '¥79.99',
+    totalPrice: '¥159.98',
+    fee: '¥4.00',
+    cardId: 'C000015',
+    cardInfo: 'steam1@example.com|steam123\nsteam2@example.com|steam456',
+    userEmail: 'gamer@example.com',
+    payMethod: 'other',
+    deliveryMethod: '自动发货',
+    status: '已完成',
+    remark: '游戏账号',
+    createTime: '2024-03-16 18:15:00',
+    withdrawalStatus: 'withdrawn',
+    refundInfo: null
+  },
+  {
+    id: 'S000016',
+    orderId: 'DD20240316009', 
+    productName: 'Gmail邮箱-美国稳定', 
+    category: '谷歌邮箱',
+    quantity: 1,
+    originalPrice: '¥12.00',
+    purchasePrice: '¥10.00',
+    totalPrice: '¥10.00',
+    fee: '¥0.00',
+    cardId: 'C000016',
+    cardInfo: 'gmail_us@example.com|gmailUS123',
+    userEmail: 'overseas@example.com',
+    payMethod: 'usdt',
+    deliveryMethod: '自动发货',
+    status: '申请退款中',
+    remark: '客户称账号无法登录',
+    createTime: '2024-03-16 19:30:00',
+    withdrawalStatus: 'not_withdrawn',
+    refundInfo: {
+      refundAmount: 10.00,
+      refundRemark: '账号无法登录，提示安全验证',
+      refundTime: '2024-03-16 20:45:00'
+    }
+  },
+  {
+    id: 'S000017',
+    orderId: 'DD20240316010', 
+    productName: 'Facebook账号-商业版', 
+    category: 'Facebook账号',
+    quantity: 1,
+    originalPrice: '¥249.99',
+    purchasePrice: '¥199.99',
+    totalPrice: '¥199.99',
+    fee: '¥5.00',
+    cardId: 'C000017',
+    cardInfo: 'fb_business@example.com|fbBiz789',
+    userEmail: 'marketing@example.com',
+    payMethod: 'other',
+    deliveryMethod: '手动发货',
+    status: '已发货',
+    remark: '商业账号，含广告权限',
+    createTime: '2024-03-16 21:00:00',
+    withdrawalStatus: 'not_withdrawn',
+    refundInfo: null
   }
 ])
+
+// 添加一个新的变量来存储所有订单数据
+const allOrderList = ref<OrderItem[]>([])
+
+// 查询
+const handleSearch = () => {
+  loading.value = true
+  
+  // 模拟搜索操作
+  setTimeout(() => {
+    // 更新分页相关数据
+    total.value = filteredOrderList.value.length
+    loading.value = false
+  }, 500)
+}
+
+// 初始化allOrderList
+onMounted(() => {
+  allOrderList.value = [...orderList.value]
+  handleSearch()
+})
+
+// 添加一个新的变量来存储筛选后的订单数据
+const filteredOrderList = computed(() => {
+  let result = [...allOrderList.value]
+  
+  if (searchForm.orderId) {
+    result = result.filter(item => item.orderId.includes(searchForm.orderId))
+  }
+  
+  if (searchForm.userEmail) {
+    result = result.filter(item => item.userEmail.toLowerCase().includes(searchForm.userEmail.toLowerCase()))
+  }
+  
+  if (searchForm.category) {
+    result = result.filter(item => item.category === searchForm.category)
+  }
+  
+  if (searchForm.payMethod) {
+    result = result.filter(item => item.payMethod === searchForm.payMethod)
+  }
+  
+  if (searchForm.deliveryMethod) {
+    result = result.filter(item => item.deliveryMethod === searchForm.deliveryMethod)
+  }
+  
+  if (searchForm.status) {
+    result = result.filter(item => item.status === searchForm.status)
+  }
+  
+  if (searchForm.withdrawalStatus) {
+    result = result.filter(item => item.withdrawalStatus === searchForm.withdrawalStatus)
+  }
+  
+  if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+    const startDate = new Date(searchForm.dateRange[0])
+    const endDate = new Date(searchForm.dateRange[1])
+    endDate.setHours(23, 59, 59, 999) // 设置为当天结束时间
+    
+    result = result.filter(item => {
+      const createTime = new Date(item.createTime)
+      return createTime >= startDate && createTime <= endDate
+    })
+  }
+  
+  return result
+})
 
 // 添加总金额计算
 const showTotalAmount = ref(false)
 const totalAmount = computed(() => {
-  return orderList.value.reduce((sum, order) => {
+  return filteredOrderList.value.reduce((sum, order) => {
     const price = parseFloat(order.totalPrice.replace('¥', ''))
     return sum + price
   }, 0)
 })
 
-// 添加总提款金额计算
-const totalWithdrawal = computed(() => {
-  return orderList.value.reduce((sum, order) => {
-    // 根据业务逻辑调整计算规则，这里只计算已完成且未提款的订单
+// 多选相关
+const multipleSelection = ref<OrderItem[]>([])
+const selectedTotalAmount = computed(() => {
+  return multipleSelection.value.reduce((sum, order) => {
     const price = parseFloat(order.totalPrice.replace('¥', ''))
-    return sum + (order.status === '已完成' && !order.withdrawalStatus ? price : 0)
+    return sum + price
   }, 0)
 })
 
-// 导出订单
+// 判断是否有可提款的订单
+const hasWithdrawableOrders = computed(() => {
+  return filteredOrderList.value.some(order => 
+    order.status === '已完成' && 
+    order.withdrawalStatus === 'not_withdrawn'
+  )
+})
+
+// 处理表格选择变化
+const handleSelectionChange = (selection: OrderItem[]) => {
+  multipleSelection.value = selection
+}
+
+// 批量提款
+const handleBatchWithdrawal = () => {
+  // 获取选中的已完成且未提款的订单
+  const withdrawableOrders = multipleSelection.value.filter(
+    order => order.status === '已完成' && order.withdrawalStatus === 'not_withdrawn'
+  )
+  
+  if (withdrawableOrders.length === 0) {
+    ElMessage.warning('选中的订单中没有可提款的订单')
+    return
+  }
+  
+  // 计算总金额
+  const totalWithdrawalAmount = withdrawableOrders.reduce((sum, order) => {
+    const price = parseFloat(order.totalPrice.replace('¥', ''))
+    return sum + price
+  }, 0)
+  
+  // 确认提款
+  ElMessageBox.confirm(
+    `确定要对选中的 ${withdrawableOrders.length} 个订单进行提款操作吗？总金额：¥${totalWithdrawalAmount.toFixed(2)}`,
+    '批量提款确认',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(() => {
+    // 模拟提款操作
+    withdrawableOrders.forEach(order => {
+      // 同时更新 allOrderList 中的数据
+      const index = allOrderList.value.findIndex(item => item.id === order.id);
+      if (index !== -1) {
+        allOrderList.value[index].withdrawalStatus = 'withdrawn';
+      }
+      order.withdrawalStatus = 'withdrawn'
+    })
+    
+    ElMessage.success(`成功提款 ${withdrawableOrders.length} 个订单，总金额：¥${totalWithdrawalAmount.toFixed(2)}`)
+  }).catch(() => {
+    ElMessage.info('已取消提款操作')
+  })
+}
+
+// 修改导出订单功能，区分是否有选中订单
 const exportOrders = () => {
-  if (orderList.value.length === 0) {
-    ElMessage.warning('没有可导出的订单数据')
+  // 确定要导出的订单列表
+  if (multipleSelection.value.length === 0) {
+    ElMessage.warning('请先选择要导出的订单')
     return
   }
   
   // 创建CSV内容
   let csvContent = '订单号,商品名称,商品分类,数量,总价,手续费,用户邮箱,支付方式,发货方式,订单状态,提款状态,创建时间\n'
   
-  orderList.value.forEach(order => {
+  multipleSelection.value.forEach(order => {
     const withdrawalStatus = order.withdrawalStatus === 'withdrawn' ? '已提款' : '未提款'
     
     csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${order.userEmail}","${order.payMethod === 'usdt' ? 'USDT' : '其他方式'}","${order.deliveryMethod}","${order.status}","${withdrawalStatus}","${order.createTime}"\n`
@@ -569,7 +975,8 @@ const exportOrders = () => {
   
   // 设置下载属性
   link.setAttribute('href', url)
-  link.setAttribute('download', `商品订单_${new Date().toISOString().split('T')[0]}.csv`)
+  const fileName = `选中订单_${new Date().toISOString().split('T')[0]}.csv`
+  link.setAttribute('download', fileName)
   link.style.visibility = 'hidden'
   
   // 添加到文档并触发点击
@@ -580,7 +987,7 @@ const exportOrders = () => {
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
   
-  ElMessage.success('订单导出成功')
+  ElMessage.success(`成功导出选中订单数据`)
 }
 
 // 分页相关
@@ -622,7 +1029,6 @@ const refundForm = reactive({
   userEmail: '',
   totalPrice: 0,
   refundAmount: 0,
-  refundReason: '',
   refundRemark: '',
   refundTime: '',
   approved: true // 审核结果，默认为通过
@@ -632,9 +1038,6 @@ const refundForm = reactive({
 const refundRules = reactive<FormRules>({
   refundAmount: [
     { required: true, message: '请输入退款金额', trigger: 'blur' }
-  ],
-  refundReason: [
-    { required: true, message: '请选择退款原因', trigger: 'change' }
   ]
 })
 
@@ -646,7 +1049,7 @@ const getCategoryTag = (category: string) => {
     'Instagram账号': 'warning',
     'Twitter账号': 'info',
     'Facebook账号': 'success',
-    'Discord账号': '',
+    'Discord账号': 'warning',
     'ChatGPT账号': 'danger',
     '其他账号': 'info'
   }
@@ -675,61 +1078,20 @@ const getStatusType = (status: string) => {
   }
 }
 
-// 查询
-const handleSearch = () => {
-  loading.value = true
-  
-  // 模拟搜索操作
-  setTimeout(() => {
-    // 根据搜索条件过滤数据
-    let filteredList = [...orderList.value]
-    
-    if (searchForm.orderId) {
-      filteredList = filteredList.filter(item => item.orderId.includes(searchForm.orderId))
-    }
-    
-    if (searchForm.category) {
-      filteredList = filteredList.filter(item => item.category === searchForm.category)
-    }
-    
-    if (searchForm.payMethod) {
-      filteredList = filteredList.filter(item => item.payMethod === searchForm.payMethod)
-    }
-    
-    if (searchForm.deliveryMethod) {
-      filteredList = filteredList.filter(item => item.deliveryMethod === searchForm.deliveryMethod)
-    }
-    
-    if (searchForm.status) {
-      filteredList = filteredList.filter(item => item.status === searchForm.status)
-    }
-    
-    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
-      const startDate = new Date(searchForm.dateRange[0])
-      const endDate = new Date(searchForm.dateRange[1])
-      endDate.setHours(23, 59, 59, 999) // 设置为当天结束时间
-      
-      filteredList = filteredList.filter(item => {
-        const createTime = new Date(item.createTime)
-        return createTime >= startDate && createTime <= endDate
-      })
-    }
-    
-    orderList.value = filteredList
-    total.value = filteredList.length
-    loading.value = false
-  }, 500)
-}
-
 // 重置
 const resetSearch = () => {
   searchForm.orderId = ''
+  searchForm.userEmail = ''
   searchForm.category = ''
   searchForm.payMethod = ''
   searchForm.deliveryMethod = ''
   searchForm.status = ''
+  searchForm.withdrawalStatus = ''
   searchForm.dateRange = []
   showTotalAmount.value = false
+  
+  // 重置后重新查询
+  handleSearch()
 }
 
 // 查看
@@ -741,14 +1103,6 @@ const handleView = (row: any) => {
       <div class="detail-item">
         <span class="label">退款金额：</span>
         <span class="price">¥${row.refundInfo.refundAmount.toFixed(2)}</span>
-      </div>
-      <div class="detail-item">
-        <span class="label">退款原因：</span>
-        <span>${row.refundInfo.refundReason}</span>
-      </div>
-      <div class="detail-item">
-        <span class="label">退款说明：</span>
-        <span>${row.refundInfo.refundRemark || '无'}</span>
       </div>
       <div class="detail-item">
         <span class="label">退款时间：</span>
@@ -931,9 +1285,30 @@ const handleRefund = (row: any) => {
   refundForm.userEmail = row.userEmail
   refundForm.totalPrice = parseFloat(row.totalPrice.replace('¥', ''))
   refundForm.refundAmount = refundForm.totalPrice
-  refundForm.refundReason = ''
-  refundForm.refundRemark = ''
-  refundForm.refundTime = ''
+  
+  // 添加假数据
+  const now = new Date()
+  refundForm.refundTime = now.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).replace(/\//g, '-')
+  
+  // 根据不同商品类型设置不同的退款说明
+  if (row.category === '谷歌邮箱') {
+    refundForm.refundRemark = '账号无法正常登录，提示安全验证'
+  } else if (row.category === 'Instagram账号' || row.category === 'Facebook账号' || row.category === 'Twitter账号') {
+    refundForm.refundRemark = '账号登录后显示已被平台限制使用'
+  } else if (row.category === 'ChatGPT账号') {
+    refundForm.refundRemark = '账号无法使用高级功能，与商品描述不符'
+  } else {
+    refundForm.refundRemark = '客户表示不再需要此账号'
+  }
+  
   refundForm.approved = true
   refundDialogVisible.value = true
 }
@@ -950,12 +1325,10 @@ const handleApproveRefund = (row: any) => {
   // 如果有退款信息，填充退款信息
   if (row.refundInfo) {
     refundForm.refundAmount = row.refundInfo.refundAmount
-    refundForm.refundReason = row.refundInfo.refundReason
     refundForm.refundRemark = row.refundInfo.refundRemark
     refundForm.refundTime = row.refundInfo.refundTime
   } else {
     refundForm.refundAmount = refundForm.totalPrice
-    refundForm.refundReason = ''
     refundForm.refundRemark = ''
     refundForm.refundTime = ''
   }
@@ -995,14 +1368,9 @@ const submitRefund = async () => {
 
 // 处理总提款按钮点击
 const handleWithdrawal = () => {
-  if (orderList.value.length === 0) {
-    ElMessage.warning('没有可提款的订单');
-    return;
-  }
-
   // 获取所有已完成但未提款的订单
-  const ordersToWithdraw = orderList.value.filter(
-    order => order.status === '已完成' && !order.withdrawalStatus
+  const ordersToWithdraw = allOrderList.value.filter(
+    order => order.status === '已完成' && order.withdrawalStatus !== 'withdrawn'
   );
   
   if (ordersToWithdraw.length === 0) {
@@ -1016,8 +1384,8 @@ const handleWithdrawal = () => {
   }, 0);
   
   ElMessageBox.confirm(
-    `确定要提取总金额 ¥${totalAmount.toFixed(2)} 吗？共 ${ordersToWithdraw.length} 笔订单`,
-    '提款确认',
+    `确定要提取所有可提款订单，总金额 ¥${totalAmount.toFixed(2)} 吗？共 ${ordersToWithdraw.length} 笔订单`,
+    '总提款确认',
     {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
@@ -1027,10 +1395,10 @@ const handleWithdrawal = () => {
     .then(() => {
       // 更新订单的提款状态
       ordersToWithdraw.forEach(order => {
-        const index = orderList.value.findIndex(item => item.id === order.id);
+        const index = allOrderList.value.findIndex(item => item.id === order.id);
         if (index !== -1) {
           // 添加提款状态标记
-          orderList.value[index].withdrawalStatus = 'withdrawn';
+          allOrderList.value[index].withdrawalStatus = 'withdrawn';
         }
       });
       
@@ -1041,10 +1409,54 @@ const handleWithdrawal = () => {
     });
 }
 
-onMounted(() => {
-  // 初始加载数据
-  handleSearch()
+// 添加判断是否有选中的可提款订单的计算属性
+const hasSelectedWithdrawableOrders = computed(() => {
+  return multipleSelection.value.some(order => 
+    order.status === '已完成' && 
+    order.withdrawalStatus === 'not_withdrawn'
+  )
 })
+
+// 添加导出所有订单的方法
+const exportAllOrders = () => {
+  // 导出所有订单
+  if (allOrderList.value.length === 0) {
+    ElMessage.warning('没有可导出的订单数据')
+    return
+  }
+  
+  // 创建CSV内容
+  let csvContent = '订单号,商品名称,商品分类,数量,总价,手续费,用户邮箱,支付方式,发货方式,订单状态,提款状态,创建时间\n'
+  
+  allOrderList.value.forEach(order => {
+    const withdrawalStatus = order.withdrawalStatus === 'withdrawn' ? '已提款' : '未提款'
+    
+    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${order.userEmail}","${order.payMethod === 'usdt' ? 'USDT' : '其他方式'}","${order.deliveryMethod}","${order.status}","${withdrawalStatus}","${order.createTime}"\n`
+  })
+  
+  // 创建Blob对象
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  
+  // 创建下载链接
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  
+  // 设置下载属性
+  link.setAttribute('href', url)
+  const fileName = `全部订单_${new Date().toISOString().split('T')[0]}.csv`
+  link.setAttribute('download', fileName)
+  link.style.visibility = 'hidden'
+  
+  // 添加到文档并触发点击
+  document.body.appendChild(link)
+  link.click()
+  
+  // 清理
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+  
+  ElMessage.success('成功导出全部订单数据')
+}
 </script>
 
 <style>
@@ -1156,6 +1568,22 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0 5px;
+}
+
+.card-header span {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.header-buttons .el-button + .el-button {
+  margin-left: 0;
 }
 
 .page-description {
@@ -1179,6 +1607,16 @@ onMounted(() => {
 
 .price {
   color: #f56c6c;
+  font-weight: bold;
+}
+
+.original-price {
+  color: #909399;
+  text-decoration: line-through;
+}
+
+.purchase-price {
+  color: #67c23a;
   font-weight: bold;
 }
 
@@ -1367,14 +1805,19 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-top: 15px;
-  padding: 10px 15px;
+  padding: 12px 15px;
   background-color: #f5f7fa;
   border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
 .total-amount {
   font-size: 14px;
   color: #606266;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
 }
 
 .amount-value {
@@ -1387,9 +1830,20 @@ onMounted(() => {
 .action-btns {
   display: flex;
   align-items: center;
+  gap: 10px;
 }
 
 .action-btns .el-button + .el-button {
-  margin-left: 20px;
+  margin-left: 0;
+}
+
+/* 添加表格选中行的样式 */
+:deep(.el-table .el-table__row.selected-row) {
+  background-color: #f0f9eb;
+}
+
+:deep(.el-table .el-checkbox.is-checked .el-checkbox__inner) {
+  background-color: #67c23a;
+  border-color: #67c23a;
 }
 </style>

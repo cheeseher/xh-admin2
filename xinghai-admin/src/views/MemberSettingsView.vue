@@ -9,7 +9,7 @@
       </template>
       
       <div class="page-description">
-        <p>管理会员等级和充值折扣设置，会员等级折扣仅适用于用户充值余额。用户累计充值金额达到设定条件时，系统将自动升级用户的会员等级。同时支持月消费系统（三月一核验），用户连续三个月达到月消费标准也可升级对应会员等级，与累充不对冲。</p>
+        <p>管理会员等级和充值折扣设置，会员等级折扣仅适用于用户充值余额。用户累计充值金额达到设定条件时，系统将自动升级用户的会员等级。同时支持月消费系统，用户连续达到指定月数的月消费标准也可升级对应会员等级，与累充不对冲。</p>
       </div>
       
       <!-- 会员等级表格 -->
@@ -35,10 +35,17 @@
             <span v-else>{{ scope.row.condition }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="monthlyConsumption" label="月消费升级条件" min-width="180">
+        <el-table-column prop="monthlyConsumption" label="月消费升级条件" min-width="120">
           <template #default="scope">
             <span v-if="scope.row.level === 999">欢迎洽谈</span>
-            <span v-else-if="scope.row.monthlyConsumption > 0">连续三个月每月消费 {{ scope.row.monthlyConsumption }}元</span>
+            <span v-else-if="scope.row.monthlyConsumption > 0">¥{{ scope.row.monthlyConsumption }}</span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="consecutiveMonths" label="连续月数" width="100">
+          <template #default="scope">
+            <span v-if="scope.row.level === 999">-</span>
+            <span v-else-if="scope.row.monthlyConsumption > 0">{{ scope.row.consecutiveMonths || 3 }}个月</span>
             <span v-else>-</span>
           </template>
         </el-table-column>
@@ -74,9 +81,9 @@
 
       <!-- 月消费系统说明 -->
       <div class="system-description">
-        <h3>月消费系统说明（三月一核验）</h3>
+        <h3>月消费系统说明</h3>
         <p>1. 月消费系统与累计充值系统并行，两者不对冲，用户可通过任一方式达到升级条件。</p>
-        <p>2. 月消费系统要求用户连续三个月每月消费达到指定金额，系统每月1日进行核验。</p>
+        <p>2. 月消费系统要求用户连续指定月数每月消费达到指定金额，系统每月1日进行核验。</p>
         <p>3. 若用户某月消费未达标，连续计数将重置为0，需重新开始累计。</p>
         <p>4. 用户达到月消费升级条件后，系统将自动升级用户会员等级。</p>
         <p>5. 若用户当前等级已高于月消费可升级的等级，则不会降级。</p>
@@ -185,7 +192,18 @@
               :step="100"
               style="width: 180px;"
             ></el-input-number>
-            <span class="form-tip">元（用户连续三个月每月消费达到此金额时自动升级）</span>
+            <span class="form-tip">元（用户每月消费达到此金额）</span>
+          </el-form-item>
+          <el-form-item label="连续月数" prop="consecutiveMonths">
+            <el-input-number 
+              v-model="levelForm.consecutiveMonths" 
+              :min="1" 
+              :max="12" 
+              :precision="0" 
+              :step="1"
+              style="width: 180px;"
+            ></el-input-number>
+            <span class="form-tip">月（用户需要连续多少个月达到月消费条件）</span>
           </el-form-item>
           <el-form-item label="最低充值金额" prop="minRecharge">
             <el-input-number 
@@ -254,6 +272,7 @@ const memberLevels = ref([
     condition: '默认等级',
     minRechargeTotal: 0,
     monthlyConsumption: 0,
+    consecutiveMonths: 3,
     minRecharge: 0,
     discount: 100,
     description: '所有用户的默认等级',
@@ -267,7 +286,8 @@ const memberLevels = ref([
     level: 1,
     condition: '累计充值满100元',
     minRechargeTotal: 100,
-    monthlyConsumption: 100,
+    monthlyConsumption: 1000,
+    consecutiveMonths: 1,
     minRecharge: 100,
     discount: 95,
     description: '储值用户享受95折优惠',
@@ -280,7 +300,8 @@ const memberLevels = ref([
     level: 2,
     condition: '累计充值满1000元',
     minRechargeTotal: 1000,
-    monthlyConsumption: 500,
+    monthlyConsumption: 2000,
+    consecutiveMonths: 2,
     minRecharge: 1000,
     discount: 90,
     description: '稳定用户、活跃用户享受9折优惠',
@@ -293,7 +314,8 @@ const memberLevels = ref([
     level: 3,
     condition: '累计充值满5000元',
     minRechargeTotal: 5000,
-    monthlyConsumption: 1000,
+    monthlyConsumption: 5000,
+    consecutiveMonths: 3,
     minRecharge: 5000,
     discount: 85,
     description: '大客户，可定期回访与商务交流',
@@ -307,6 +329,7 @@ const memberLevels = ref([
     condition: '欢迎洽谈',
     minRechargeTotal: 0,
     monthlyConsumption: 0,
+    consecutiveMonths: 3,
     minRecharge: 0,
     discount: 0,
     description: '特殊客户，经理可为每位超级VIP用户单独设置折扣',
@@ -333,6 +356,7 @@ const levelForm = reactive({
   condition: '',
   minRechargeTotal: 0, // 累计充值金额
   monthlyConsumption: 0,
+  consecutiveMonths: 3,
   minRecharge: 0,
   discount: 100,
   description: '',
@@ -356,6 +380,9 @@ const levelRules = reactive<FormRules>({
   ],
   monthlyConsumption: [
     { required: true, message: '请输入月消费升级条件', trigger: 'blur' }
+  ],
+  consecutiveMonths: [
+    { required: true, message: '请输入连续月数', trigger: 'blur' }
   ],
   minRecharge: [
     { required: true, message: '请输入最低充值金额', trigger: 'blur' }
@@ -393,6 +420,7 @@ const handleAddLevel = () => {
   levelForm.condition = ''
   levelForm.minRechargeTotal = 0
   levelForm.monthlyConsumption = 0
+  levelForm.consecutiveMonths = 3
   levelForm.minRecharge = 0
   levelForm.discount = 100
   levelForm.description = ''
@@ -413,6 +441,7 @@ const handleEditLevel = (row: any) => {
   levelForm.condition = row.condition
   levelForm.minRechargeTotal = row.minRechargeTotal
   levelForm.monthlyConsumption = row.monthlyConsumption
+  levelForm.consecutiveMonths = row.consecutiveMonths || 3
   levelForm.minRecharge = row.minRecharge
   levelForm.discount = row.discount
   levelForm.description = row.description
@@ -476,6 +505,7 @@ const submitLevelForm = async () => {
         levelForm.condition = '欢迎洽谈'
         levelForm.minRechargeTotal = 0
         levelForm.monthlyConsumption = 0
+        levelForm.consecutiveMonths = 3
         levelForm.minRecharge = 0
         levelForm.isCustomDiscount = true
         levelForm.isSystemDefault = true
@@ -503,6 +533,7 @@ const submitLevelForm = async () => {
           condition: levelForm.condition,
           minRechargeTotal: levelForm.minRechargeTotal,
           monthlyConsumption: levelForm.monthlyConsumption,
+          consecutiveMonths: levelForm.consecutiveMonths,
           minRecharge: levelForm.minRecharge,
           discount: levelForm.discount,
           description: levelForm.description,
@@ -523,6 +554,7 @@ const submitLevelForm = async () => {
             condition: levelForm.condition,
             minRechargeTotal: levelForm.minRechargeTotal,
             monthlyConsumption: levelForm.monthlyConsumption,
+            consecutiveMonths: levelForm.consecutiveMonths,
             minRecharge: levelForm.minRecharge,
             discount: levelForm.discount,
             description: levelForm.description,
