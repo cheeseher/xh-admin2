@@ -204,28 +204,26 @@
                   <span>¥{{ productForm.costPrice.toFixed(2) }}</span>
                 </template>
               </el-table-column>
-              <el-table-column label="现有价格" width="100">
+              <el-table-column label="价格(上线价格)" width="120">
                 <template #default="scope">
                   <span :class="{'highlight-price': scope.row.highlight}">¥{{ scope.row.price.toFixed(2) }}</span>
                 </template>
               </el-table-column>
-              <el-table-column label="折扣" width="100">
+              <el-table-column label="折扣情况" width="180">
                 <template #default="scope">
-                  <span v-if="scope.row.discount">{{ scope.row.discount }}</span>
-                  <span v-else>-</span>
+                  <div v-if="scope.row.memberDiscount && scope.row.memberDiscount !== '-'">
+                    <div>会员折扣: {{ scope.row.memberDiscount }}</div>
+                  </div>
+                  <div v-if="scope.row.wholesaleDiscount && scope.row.wholesaleDiscount !== '-'">
+                    <div>批发折扣: {{ scope.row.wholesaleDiscount }}</div>
+                  </div>
+                  <span v-if="(!scope.row.memberDiscount || scope.row.memberDiscount === '-') && 
+                             (!scope.row.wholesaleDiscount || scope.row.wholesaleDiscount === '-')">-</span>
                 </template>
               </el-table-column>
-              <el-table-column label="折后价" width="100">
+              <el-table-column label="最高成交价" width="100">
                 <template #default="scope">
-                  <span v-if="scope.row.finalPrice !== undefined">¥{{ scope.row.finalPrice.toFixed(2) }}</span>
-                  <span v-else>-</span>
-                </template>
-              </el-table-column>
-              <el-table-column label="利润" width="100">
-                <template #default="scope">
-                  <span v-if="scope.row.profit !== undefined" :class="{'profit-negative': scope.row.profit < 0}">
-                    ¥{{ scope.row.profit.toFixed(2) }}
-                  </span>
+                  <span v-if="scope.row.lowestPrice !== undefined">¥{{ scope.row.lowestPrice.toFixed(2) }}</span>
                   <span v-else>-</span>
                 </template>
               </el-table-column>
@@ -234,7 +232,7 @@
                   <span 
                     v-if="scope.row.profitRate !== undefined" 
                     class="profit-text" 
-                    :class="getProfitRateClass(scope.row.price)"
+                    :class="getProfitRateClass(scope.row.lowestPrice || scope.row.price)"
                   >
                     {{ scope.row.profitRate }}
                   </span>
@@ -269,7 +267,7 @@
               <div class="wholesale-header">
                 <div class="wholesale-header-left">
                   <span class="wholesale-title">批发价格区间设置</span>
-                  <el-tooltip content="设置不同数量区间的批发价格，客户购买数量达到要求时将自动享受优惠" placement="top">
+                  <el-tooltip content="设置不同数量区间的批发价格，客户购买数量达到要求时将自动享受优惠，最多支持3个区间" placement="top">
                     <el-icon class="wholesale-help-icon"><QuestionFilled /></el-icon>
                   </el-tooltip>
                 </div>
@@ -290,7 +288,7 @@
                   <span>当前单价: <span class="current-price-text">¥{{ productForm.currentPrice.toFixed(2) }}</span></span>
                 </template>
                 <template #default>
-                  <p class="wholesale-tip">设置批发价格区间，当客户购买数量达到要求时将自动享受优惠价格。请确保批发价低于单价，且数量越多价格越优惠。</p>
+                  <p class="wholesale-tip">设置批发价格区间，当客户购买数量达到要求时将自动享受优惠价格。请确保批发价低于单价，且数量越多价格越优惠。最多支持3个批发价区间。</p>
                 </template>
               </el-alert>
             </div>
@@ -302,7 +300,7 @@
                 <el-table-column label="起批数量" min-width="200">
                   <template #default="scope">
                     <div class="wholesale-input-group">
-                      <span class="wholesale-prefix">≥</span>
+                      <span class="wholesale-prefix">大于</span>
                       <el-input-number 
                         v-model="scope.row.quantity" 
                         :min="1" 
@@ -320,7 +318,7 @@
                 <el-table-column label="批发单价" min-width="200">
                   <template #default="scope">
                     <div class="wholesale-input-group">
-                      <span class="wholesale-prefix">¥</span>
+                      <span class="wholesale-prefix">单价</span>
                       <el-input-number 
                         v-model="scope.row.price" 
                         :min="0.01" 
@@ -332,7 +330,7 @@
                         controls-position="right"
                         @change="validateWholesalePrices"
                       ></el-input-number>
-                      <span class="wholesale-unit">/件</span>
+                      <span class="wholesale-unit">元</span>
                     </div>
                   </template>
                 </el-table-column>
@@ -370,7 +368,7 @@
                     effect="plain" 
                     class="wholesale-preview-tag"
                   >
-                    ≥{{ item.quantity }}/¥{{ item.price.toFixed(2) }}
+                    大于{{ item.quantity }}单价¥{{ item.price.toFixed(2) }}
                   </el-tag>
                 </div>
               </div>
@@ -768,6 +766,9 @@ const rules = reactive<FormRules>({
   ],
   currentPrice: [
     { required: true, message: '请输入当前价格', trigger: 'blur' }
+  ],
+  costPrice: [
+    { required: true, message: '请输入成本价', trigger: 'blur' }
   ],
   deliveryMethod: [
     { required: true, message: '请选择发货方式', trigger: 'change' }
@@ -1266,35 +1267,34 @@ const goToTemplateSettings = () => {
 
 // 添加批发价
 const addWholesalePrice = () => {
-  // 设置默认值为当前价格的95%
-  const defaultPrice = productForm.currentPrice > 0 ? 
-    Math.round(productForm.currentPrice * 0.95 * 100) / 100 : 0;
-  
-  // 设置默认数量为10或者比最大数量多10
-  let defaultQuantity = 10;
-  if (productForm.wholesalePrices && productForm.wholesalePrices.length > 0) {
-    const maxQuantity = Math.max(...productForm.wholesalePrices.map(item => item.quantity));
-    defaultQuantity = maxQuantity + 10;
+  if (!productForm.currentPrice) {
+    ElMessage.warning('请先设置当前价格，再添加批发价区间')
+    return
   }
   
-  // 确保wholesalePrices是一个数组
   if (!Array.isArray(productForm.wholesalePrices)) {
-    productForm.wholesalePrices = [];
+    productForm.wholesalePrices = []
   }
   
-  productForm.wholesalePrices.push({ 
-    quantity: defaultQuantity, 
-    price: defaultPrice 
-  });
+  // 检查批发价区间数量限制
+  if (productForm.wholesalePrices.length >= 3) {
+    ElMessage.warning('最多只能设置3个批发价区间')
+    return
+  }
   
-  // 验证并排序批发价
-  validateWholesalePrices();
+  // 默认数量和价格
+  const defaultQuantity = productForm.wholesalePrices.length > 0 ? 
+    Math.max(...productForm.wholesalePrices.map(item => item.quantity)) + 50 : 10
   
-  // 添加调试信息
-  console.log('添加批发价区间', productForm.wholesalePrices);
+  const defaultPrice = productForm.currentPrice * 0.9 // 默认为当前价格的9折
   
-  // 显示成功提示
-  ElMessage.success('已添加新的批发价区间');
+  productForm.wholesalePrices.push({
+    quantity: defaultQuantity,
+    price: parseFloat(defaultPrice.toFixed(2))
+  })
+  
+  // 验证批发价格
+  validateWholesalePrices()
 }
 
 // 移除批发价
@@ -1424,15 +1424,57 @@ const runPriceValidation = () => {
     return;
   }
   
+  // 获取批发价信息
+  const wholesalePrices = productForm.wholesalePrices && Array.isArray(productForm.wholesalePrices) 
+    ? [...productForm.wholesalePrices].filter(item => item && typeof item === 'object' && item.quantity > 0 && item.price > 0)
+    : [];
+  
+  // 如果没有设置批发价，提示用户
+  if (wholesalePrices.length === 0) {
+    ElMessageBox.confirm(
+      '您尚未设置批发价格，是否继续进行价格预验算？',
+      '提示',
+      {
+        confirmButtonText: '继续',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    ).then(() => {
+      // 用户选择继续，执行预验算
+      performPriceValidation(wholesalePrices);
+    }).catch(() => {
+      // 用户选择取消，提示添加批发价
+      ElMessage.info('请添加批发价格后再进行预验算');
+    });
+  } else {
+    // 已设置批发价，直接执行预验算
+    performPriceValidation(wholesalePrices);
+  }
+}
+
+// 执行价格预验算的具体逻辑
+const performPriceValidation = (wholesalePrices: Array<{quantity: number, price: number}>) => {
   // 构建验算数据
   const validationData = [];
+  
+  // 按价格从低到高排序
+  wholesalePrices.sort((a, b) => a.price - b.price);
+  
+  // 获取最低批发价
+  const lowestWholesalePrice = wholesalePrices.length > 0 ? wholesalePrices[0].price : null;
+  
+  // 计算最低批发价折扣
+  const lowestWholesaleDiscount = lowestWholesalePrice 
+    ? (lowestWholesalePrice / productForm.currentPrice * 10).toFixed(1) + '折' 
+    : null;
   
   // 1. 成本价
   validationData.push({
     type: '成本价',
     price: productForm.costPrice,
-    discount: '-',
-    finalPrice: productForm.costPrice,
+    memberDiscount: '-',
+    wholesaleDiscount: '-',
+    lowestPrice: productForm.costPrice,
     profit: 0,
     profitRate: '0%',
     status: '基准价格',
@@ -1443,51 +1485,115 @@ const runPriceValidation = () => {
   // 2. 当前价格
   const currentProfit = productForm.currentPrice - productForm.costPrice;
   const currentProfitRate = (currentProfit / productForm.currentPrice * 100).toFixed(1) + '%';
+  
+  // 计算最高成交价（考虑批发价）
+  const lowestFinalPrice = lowestWholesalePrice && lowestWholesalePrice < productForm.currentPrice 
+    ? lowestWholesalePrice 
+    : productForm.currentPrice;
+  
+  // 计算最低利润
+  const lowestProfit = lowestFinalPrice - productForm.costPrice;
+  const lowestProfitRate = (lowestProfit / lowestFinalPrice * 100).toFixed(1) + '%';
+  
+  // 检查当前价格是否有足够的利润空间
+  let currentPriceStatus = '正常';
+  let currentPriceStatusType = 'success';
+  
+  if (lowestProfit < 0) {
+    currentPriceStatus = '亏损';
+    currentPriceStatusType = 'danger';
+    priceWarnings.value.push(`最高成交价(¥${lowestFinalPrice.toFixed(2)})低于成本价(¥${productForm.costPrice.toFixed(2)})，将导致亏损！`);
+  } else if (lowestProfit / lowestFinalPrice * 100 < 15) {
+    currentPriceStatus = '低利润';
+    currentPriceStatusType = 'warning';
+    priceWarnings.value.push(`最高成交价利润率仅为${lowestProfitRate}，建议提高售价以确保合理利润`);
+  }
+  
   validationData.push({
     type: '当前价格',
     price: productForm.currentPrice,
-    discount: productForm.originalPrice && productForm.originalPrice > productForm.currentPrice ? 
+    memberDiscount: productForm.originalPrice && productForm.originalPrice > productForm.currentPrice ? 
       (productForm.currentPrice / productForm.originalPrice * 10).toFixed(1) + '折' : '-',
-    finalPrice: productForm.currentPrice,
-    profit: currentProfit,
-    profitRate: currentProfitRate,
-    status: getMemberDiscountStatus(productForm.currentPrice),
-    statusType: getMemberDiscountStatusType(productForm.currentPrice),
+    wholesaleDiscount: lowestWholesaleDiscount || '-',
+    lowestPrice: lowestFinalPrice,
+    profit: lowestProfit,
+    profitRate: lowestProfitRate,
+    status: currentPriceStatus,
+    statusType: currentPriceStatusType,
     highlight: true
   });
   
-  // 3. 获取所有批发价
-  const wholesalePrices: Array<{quantity: number, price: number}> = [];
-  if (productForm.wholesalePrices && productForm.wholesalePrices.length > 0) {
-    // 按数量从小到大排序
-    const sortedWholesalePrices = [...productForm.wholesalePrices]
-      .filter(item => item && typeof item === 'object' && item.quantity > 0 && item.price > 0)
-      .sort((a, b) => a.quantity - b.quantity);
-    
-    // 添加每个批发价
-    sortedWholesalePrices.forEach(item => {
+  // 3. 检查批发价
+  if (wholesalePrices.length > 0) {
+    // 添加批发价分析
+    wholesalePrices.forEach((item, index) => {
       const wholesaleProfit = item.price - productForm.costPrice;
       const wholesaleProfitRate = (wholesaleProfit / item.price * 100).toFixed(1) + '%';
+      
+      // 检查批发价是否合理
+      let wholesaleStatus = '正常';
+      let wholesaleStatusType = 'success';
+      
+      if (wholesaleProfit < 0) {
+        wholesaleStatus = '亏损';
+        wholesaleStatusType = 'danger';
+        priceWarnings.value.push(`批发价(${item.quantity}+)¥${item.price.toFixed(2)}低于成本价，将导致亏损！`);
+      } else if (wholesaleProfit / item.price * 100 < 10) {
+        wholesaleStatus = '低利润';
+        wholesaleStatusType = 'warning';
+        priceWarnings.value.push(`批发价(${item.quantity}+)利润率仅为${wholesaleProfitRate}，可能导致过度优惠`);
+      }
+      
+      // 检查批发价是否低于当前价格
+      const discountRate = item.price / productForm.currentPrice;
+      if (discountRate > 0.95) {
+        priceWarnings.value.push(`批发价(${item.quantity}+)折扣率仅为${(discountRate * 10).toFixed(1)}折，优惠力度不足`);
+      } else if (discountRate < 0.7 && wholesaleProfit > 0) {
+        priceWarnings.value.push(`批发价(${item.quantity}+)折扣率为${(discountRate * 10).toFixed(1)}折，优惠力度可能过大`);
+      }
+      
+      // 检查批发价阶梯是否合理
+      if (index > 0) {
+        const prevItem = wholesalePrices[index - 1];
+        if (item.price >= prevItem.price) {
+          priceWarnings.value.push(`批发价阶梯设置不合理：${item.quantity}+的价格(¥${item.price.toFixed(2)})不低于${prevItem.quantity}+的价格(¥${prevItem.price.toFixed(2)})`);
+        }
+      }
       
       validationData.push({
         type: `批发价(${item.quantity}+)`,
         price: item.price,
-        discount: (item.price / productForm.currentPrice * 10).toFixed(1) + '折',
-        finalPrice: item.price,
+        memberDiscount: '-',
+        wholesaleDiscount: (item.price / productForm.currentPrice * 10).toFixed(1) + '折',
+        lowestPrice: item.price,
         profit: wholesaleProfit,
         profitRate: wholesaleProfitRate,
-        status: getMemberDiscountStatus(item.price),
-        statusType: getMemberDiscountStatusType(item.price),
+        status: wholesaleStatus,
+        statusType: wholesaleStatusType,
         highlight: false,
         wholesaleItem: item
       });
-      
-      // 删除批发价警告检查
-      wholesalePrices.push(item);
     });
   }
   
-  // 删除会员折扣价部分
+  // 显示价格警告
+  if (priceWarnings.value.length > 0) {
+    ElMessageBox.alert(
+      `<div class="price-warnings">
+        <p><strong>价格设置存在以下问题：</strong></p>
+        <ul>
+          ${priceWarnings.value.map(warning => `<li>${warning}</li>`).join('')}
+        </ul>
+        <p>建议调整价格设置，确保合理的利润空间，防止过度优惠导致亏损。</p>
+      </div>`,
+      '价格预警',
+      {
+        dangerouslyUseHTMLString: true,
+        confirmButtonText: '我知道了',
+        type: 'warning'
+      }
+    );
+  }
   
   // 更新验算数据
   priceValidationData.value = validationData;
@@ -2095,5 +2201,76 @@ const getMemberDiscountStatusType = (price: number) => {
   background-color: #fff;
   border: 1px solid #ebeef5;
   border-radius: 4px;
+}
+
+/* 价格预验算相关样式 */
+.price-validation-card {
+  margin-top: 10px;
+  margin-bottom: 20px;
+}
+
+.price-validation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.price-validation-description {
+  margin-bottom: 15px;
+  color: #606266;
+  font-size: 14px;
+}
+
+.highlight-price {
+  font-weight: bold;
+  color: #409EFF;
+}
+
+.profit-negative {
+  color: #F56C6C;
+  font-weight: bold;
+}
+
+.profit-low {
+  color: #E6A23C;
+  font-weight: bold;
+}
+
+.profit-normal {
+  color: #67C23A;
+}
+
+.profit-high {
+  color: #409EFF;
+  font-weight: bold;
+}
+
+.profit-text {
+  font-weight: bold;
+}
+
+/* 价格预警样式 */
+:deep(.price-warnings) {
+  text-align: left;
+}
+
+:deep(.price-warnings ul) {
+  padding-left: 20px;
+  margin: 10px 0;
+}
+
+:deep(.price-warnings li) {
+  margin-bottom: 8px;
+  line-height: 1.5;
+  color: #E6A23C;
+}
+
+:deep(.price-warnings strong) {
+  color: #F56C6C;
+}
+
+:deep(.el-message-box__message p) {
+  margin: 0;
+  line-height: 1.5;
 }
 </style> 
