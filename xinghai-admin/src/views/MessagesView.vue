@@ -147,6 +147,10 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { View, Check, Delete } from '@element-plus/icons-vue'
+import { useRoute } from 'vue-router'
+
+// 获取路由对象
+const route = useRoute()
 
 // 搜索表单
 const searchForm = reactive({
@@ -351,8 +355,14 @@ const getPendingCount = () => {
   return messageList.value.filter(item => item.status === 'pending').length
 }
 
+// 初始化
 onMounted(() => {
-  // 初始化数据，实际项目中这里应该调用API获取补货提醒列表
+  // 从URL参数中获取筛选条件
+  const query = route.query
+  if (query.status) {
+    searchForm.status = query.status as string
+    handleSearch()
+  }
 })
 
 // 导出未解决的补货提醒数量，供其他组件使用

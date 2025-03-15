@@ -43,6 +43,13 @@
               <el-option label="已下架" value="off"></el-option>
             </el-select>
           </el-form-item>
+          <el-form-item label="库存预警">
+            <el-select v-model="searchForm.stockWarningStatus" placeholder="请选择" clearable style="width: 168px;">
+              <el-option label="全部" value=""></el-option>
+              <el-option label="已达预警" value="warning"></el-option>
+              <el-option label="未达预警" value="normal"></el-option>
+            </el-select>
+          </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetSearch">重置</el-button>
@@ -549,20 +556,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch, computed } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { Delete, QuestionFilled, Plus, Setting, ArrowDown, Lock, Check, Warning, Document, List, View, InfoFilled } from '@element-plus/icons-vue'
 import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
-import { useRouter } from 'vue-router'
 
 // 搜索表单
 const searchForm = reactive({
   name: '',
   category: '',
   deliveryMethod: '',
-  status: ''
+  status: '',
+  stockWarningStatus: ''
 })
 
 // 表格数据
@@ -791,16 +799,10 @@ const rules = reactive<FormRules>({
     { required: true, message: '请选择商品分类', trigger: 'change' }
   ],
   currentPrice: [
-    { required: true, message: '请输入当前价格', trigger: 'blur' }
+    { required: true, message: '请设置商品价格', trigger: 'blur' }
   ],
-  costPrice: [
-    { required: true, message: '请输入成本价', trigger: 'blur' }
-  ],
-  deliveryMethod: [
-    { required: true, message: '请选择发货方式', trigger: 'change' }
-  ],
-  description: [
-    { required: true, message: '请输入商品详情', trigger: 'blur' }
+  stockWarning: [
+    { required: true, message: '请设置库存预警值', trigger: 'blur' }
   ]
 })
 
@@ -861,6 +863,15 @@ const getProductList = () => {
           return false
         }
       }
+      // 库存预警筛选
+      if (searchForm.stockWarningStatus) {
+        if (searchForm.stockWarningStatus === 'warning' && item.stock < item.stockWarning) {
+          return false
+        }
+        if (searchForm.stockWarningStatus === 'normal' && item.stock >= item.stockWarning) {
+          return false
+        }
+      }
       return true
     })
     
@@ -888,6 +899,7 @@ const resetSearch = () => {
   searchForm.category = ''
   searchForm.deliveryMethod = ''
   searchForm.status = ''
+  searchForm.stockWarningStatus = ''
   currentPage.value = 1
   getProductList()
 }
@@ -1096,7 +1108,7 @@ const handleCurrentChange = (val: number) => {
 }
 
 // 监听搜索表单变化，重置分页并重新获取数据
-watch([() => searchForm.name, () => searchForm.category, () => searchForm.deliveryMethod, () => searchForm.status], () => {
+watch([() => searchForm.name, () => searchForm.category, () => searchForm.deliveryMethod, () => searchForm.status, () => searchForm.stockWarningStatus], () => {
   currentPage.value = 1
   getProductList()
 })
@@ -1126,6 +1138,7 @@ const editorOptions = {
 }
 
 // 模板相关
+const route = useRoute()
 const router = useRouter()
 const templateList = ref([
   {
@@ -1533,6 +1546,20 @@ const performPriceValidation = (wholesalePrices: Array<{quantity: number, price:
 
 // 初始化
 onMounted(() => {
+  // 从URL参数中获取筛选条件
+  const query = route.query
+  if (query.name) {
+    searchForm.name = query.name as string
+  }
+  if (query.id) {
+    // 如果有商品ID参数，可以直接跳转到编辑页面或者高亮显示该商品
+    console.log('商品ID:', query.id)
+  }
+  if (query.stockWarningStatus) {
+    searchForm.stockWarningStatus = query.stockWarningStatus as string
+  }
+  
+  // 获取商品列表
   getProductList()
 })
 

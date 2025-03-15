@@ -376,7 +376,12 @@ const viewAllNotifications = () => {
   if (activeTab.value === 'inventory') {
     router.push('/inventory')
   } else {
-    router.push('/messages')
+    router.push({
+      path: '/messages',
+      query: {
+        status: 'pending'
+      }
+    })
   }
 }
 
@@ -398,7 +403,8 @@ const navigateToProduct = (productId: string, productName: string) => {
     path: '/products',
     query: {
       id: productId,
-      name: productName
+      name: productName,
+      stockWarningStatus: 'warning'
     }
   })
 }
