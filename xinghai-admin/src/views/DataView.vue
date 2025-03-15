@@ -363,7 +363,7 @@ const getStatusType = (status: string) => {
 
 // 查看更多
 const viewMore = () => {
-  console.log('查看更多订单')
+  router.push('/orders')
 }
 
 // 初始化销售趋势图表

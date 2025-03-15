@@ -85,11 +85,11 @@
         border
         stripe
         style="width: 100%"
-        @sort-change="handleSortChange"
       >
-        <el-table-column prop="orderNo" label="订单号" min-width="180" sortable="custom" />
+        <el-table-column prop="id" label="充值订单ID" min-width="100" />
+        <el-table-column prop="orderNo" label="订单号" min-width="180" />
         <el-table-column prop="userEmail" label="用户邮箱" min-width="180" />
-        <el-table-column prop="amount" label="充值金额" min-width="120" sortable="custom">
+        <el-table-column prop="amount" label="充值金额" min-width="120">
           <template #default="scope">
             <span class="price">¥{{ scope.row.amount.toFixed(2) }}</span>
           </template>
@@ -121,8 +121,8 @@
             <el-tag v-else type="info">未提款</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" min-width="180" sortable="custom" />
-        <el-table-column prop="payTime" label="支付时间" min-width="180" sortable="custom" />
+        <el-table-column prop="createTime" label="创建时间" min-width="180" />
+        <el-table-column prop="payTime" label="支付时间" min-width="180" />
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
@@ -294,7 +294,7 @@ import { Download, Money } from '@element-plus/icons-vue'
 
 // 定义充值订单类型
 interface RechargeOrder {
-  id: number
+  id: string
   orderNo: string
   userId: number
   userEmail: string
@@ -439,7 +439,7 @@ const fetchOrders = async () => {
     setTimeout(() => {
       const mockData: RechargeOrder[] = [
         {
-          id: 1,
+          id: 'R000001',
           orderNo: 'CZ202403100001',
           userId: 1001,
           userEmail: 'zhangsan@example.com',
@@ -458,7 +458,7 @@ const fetchOrders = async () => {
           ]
         },
         {
-          id: 2,
+          id: 'R000002',
           orderNo: 'CZ202403100002',
           userId: 1002,
           userEmail: 'lisi@example.com',
@@ -473,7 +473,7 @@ const fetchOrders = async () => {
           ]
         },
         {
-          id: 3,
+          id: 'R000003',
           orderNo: 'CZ202403100003',
           userId: 1003,
           userEmail: 'wangwu@example.com',
@@ -489,7 +489,7 @@ const fetchOrders = async () => {
           ]
         },
         {
-          id: 4,
+          id: 'R000004',
           orderNo: 'CZ202403100004',
           userId: 1004,
           userEmail: 'zhaoliu@example.com',
@@ -581,13 +581,6 @@ const resetSearch = () => {
     searchForm[key] = key === 'dateRange' ? [] : ''
   })
   handleSearch()
-}
-
-// 排序变化
-const handleSortChange = (column: { prop: string; order: string }) => {
-  // 实际项目中应该根据排序字段和顺序重新请求数据
-  console.log('排序字段:', column.prop, '排序方式:', column.order)
-  fetchOrders()
 }
 
 // 页码变化

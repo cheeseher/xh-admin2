@@ -558,7 +558,7 @@ const searchForm = reactive({
 // 表格数据
 const tableData = ref([
   { 
-    id: 1,
+    id: 'P000001',
     name: 'Gmail邮箱-稳定可用 (手工)', 
     category: '谷歌邮箱',
     currentPrice: 4.20,
@@ -584,7 +584,7 @@ const tableData = ref([
     templateId: 2
   },
   { 
-    id: 2,
+    id: 'P000002',
     name: 'Gmail邮箱-稳定可用', 
     category: '谷歌邮箱',
     currentPrice: 2.75,
@@ -610,7 +610,7 @@ const tableData = ref([
     templateId: 0
   },
   { 
-    id: 3,
+    id: 'P000003',
     name: 'Gmail邮箱-1月以上', 
     category: '谷歌邮箱',
     currentPrice: 5.50,
@@ -636,7 +636,7 @@ const tableData = ref([
     templateId: 2
   },
   { 
-    id: 4,
+    id: 'P000004',
     name: 'Gmail邮箱-半年以上', 
     category: '谷歌邮箱',
     currentPrice: 7.50,
@@ -657,7 +657,7 @@ const tableData = ref([
     templateId: 0
   },
   { 
-    id: 5,
+    id: 'P000005',
     name: 'Gmail邮箱-美国稳定', 
     category: '谷歌邮箱',
     currentPrice: 10.00,
@@ -673,7 +673,7 @@ const tableData = ref([
     templateId: 0
   },
   { 
-    id: 6,
+    id: 'P000006',
     name: 'Gmail邮箱-一年以上', 
     category: '谷歌邮箱',
     currentPrice: 12.00,
@@ -689,7 +689,7 @@ const tableData = ref([
     templateId: 0
   },
   { 
-    id: 7,
+    id: 'P000007',
     name: 'Gmail美国老号 (6个月+)', 
     category: '谷歌邮箱',
     currentPrice: 16.88,
@@ -705,7 +705,7 @@ const tableData = ref([
     templateId: 0
   },
   { 
-    id: 8,
+    id: 'P000008',
     name: '2022年老号账号-谷歌邮箱', 
     category: '谷歌邮箱',
     currentPrice: 14.00,

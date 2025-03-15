@@ -91,6 +91,7 @@
       
       <!-- 表格区域 -->
       <el-table :data="orderList" style="width: 100%" v-loading="loading" border stripe>
+        <el-table-column prop="id" label="商品订单ID" width="100"></el-table-column>
         <el-table-column prop="orderId" label="订单号" width="180"></el-table-column>
         <el-table-column prop="productName" label="商品名称" min-width="180"></el-table-column>
         <el-table-column prop="category" label="商品分类" width="100">
@@ -335,7 +336,7 @@ interface RefundInfo {
 }
 
 interface OrderItem {
-  id: number;
+  id: string;
   orderId: string;
   productName: string;
   category: string;
@@ -357,15 +358,15 @@ interface OrderItem {
 // 表格数据
 const orderList = ref<OrderItem[]>([
   { 
-    id: 1,
+    id: 'S000001',
     orderId: 'DD20240315001', 
     productName: 'Gmail邮箱-稳定可用', 
     category: '谷歌邮箱',
     quantity: 1,
-    totalPrice: '¥2.75',
+    totalPrice: '¥4.20',
     fee: '¥0.00',
-    cardId: 'CM001',
-    cardInfo: 'example@gmail.com|password123',
+    cardId: 'C000001',
+    cardInfo: 'gmail@example.com|password123',
     userEmail: 'user123@example.com',
     payMethod: 'usdt',
     deliveryMethod: '自动发货',
@@ -375,30 +376,25 @@ const orderList = ref<OrderItem[]>([
     refundInfo: null
   },
   { 
-    id: 2,
+    id: 'S000002',
     orderId: 'DD20240315002', 
-    productName: 'ChatGPT账号', 
-    category: 'ChatGPT账号',
+    productName: 'Gmail邮箱-1月以上', 
+    category: '谷歌邮箱',
     quantity: 1,
-    totalPrice: '¥199.99',
+    totalPrice: '¥5.50',
     fee: '¥0.00',
-    cardId: 'CM002',
-    cardInfo: 'chatgpt@example.com|password456',
+    cardId: 'C000002',
+    cardInfo: 'gmail1month@example.com|password456',
     userEmail: 'user456@example.com',
     payMethod: 'usdt',
     deliveryMethod: '手动发货',
-    status: '申请退款中',
+    status: '待发货',
     remark: '客户需要美国地区的账号',
     createTime: '2024-03-15 11:30:00',
-    refundInfo: {
-      refundAmount: 199.99,
-      refundReason: '商品质量问题',
-      refundRemark: '账号无法正常登录',
-      refundTime: '2024-03-16 09:15:00'
-    }
+    refundInfo: null
   },
   { 
-    id: 3,
+    id: 'S000003',
     orderId: 'DD20240315003', 
     productName: 'Instagram账号', 
     category: 'Instagram账号',
@@ -416,7 +412,7 @@ const orderList = ref<OrderItem[]>([
     refundInfo: null
   },
   { 
-    id: 4,
+    id: 'S000004',
     orderId: 'DD20240315004', 
     productName: 'Gmail邮箱-美国稳定', 
     category: '谷歌邮箱',
@@ -434,14 +430,14 @@ const orderList = ref<OrderItem[]>([
     refundInfo: null
   },
   { 
-    id: 5,
+    id: 'S000005',
     orderId: 'DD20240315005', 
     productName: 'Twitter账号', 
     category: 'Twitter账号',
     quantity: 1,
     totalPrice: '¥49.99',
     fee: '¥0.00',
-    cardId: 'CM003',
+    cardId: 'C000003',
     cardInfo: 'twitter@example.com|password789',
     userEmail: 'user202@example.com',
     payMethod: 'usdt',
@@ -457,7 +453,7 @@ const orderList = ref<OrderItem[]>([
     }
   },
   { 
-    id: 6,
+    id: 'S000006',
     orderId: 'DD20240315006', 
     productName: 'Gmail邮箱-半年以上', 
     category: '谷歌邮箱',
@@ -543,7 +539,7 @@ const loading = ref(false)
 const deliverDialogVisible = ref(false)
 const deliverFormRef = ref<FormInstance>()
 const deliverForm = reactive({
-  id: 0,
+  id: '',
   orderId: '',
   productName: '',
   userEmail: '',
@@ -566,7 +562,7 @@ const deliverRules = reactive<FormRules>({
 const refundDialogVisible = ref(false)
 const refundFormRef = ref<FormInstance>()
 const refundForm = reactive({
-  id: 0,
+  id: '',
   orderId: '',
   productName: '',
   userEmail: '',

@@ -191,7 +191,7 @@ const categoryList = ref([
   { 
     id: 2,
     name: '微软邮箱', 
-    description: 'Microsoft邮箱账号，支持自定义密码和换绑手机',
+    description: 'Outlook/Hotmail邮箱账号，支持自定义密码和换绑手机',
     sort: 2,
     status: '启用',
     statusBool: true,

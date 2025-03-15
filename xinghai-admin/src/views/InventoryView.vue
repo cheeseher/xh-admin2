@@ -212,7 +212,7 @@ const productOptions = ref([
 // 表格数据
 const tableData = ref([
   {
-    id: 1,
+    id: 'C0000001',
     cardInfo: 'henduohao2014----henduohao888----henduohao@outlook.com----henduohao888',
     productId: 1,
     productName: '谷歌邮箱 - 美国地区',
