@@ -246,15 +246,15 @@
           </div>
           <div class="info-item">
             <span class="label">退款金额：</span>
-            <span class="value price">{{ refundForm.refundAmount }}</span>
+            <span class="value price">¥{{ refundForm.refundAmount.toFixed(2) }}</span>
           </div>
           <div class="info-item">
             <span class="label">申请时间：</span>
-            <span class="value">{{ refundForm.applyTime }}</span>
+            <span class="value">{{ refundForm.refundTime || '未知' }}</span>
           </div>
           <div class="info-item full-width">
             <span class="label">退款说明：</span>
-            <span class="value">{{ refundForm.description || '无' }}</span>
+            <span class="value">{{ refundForm.refundRemark || '无' }}</span>
           </div>
         </div>
       </div>
@@ -265,22 +265,12 @@
           <el-form-item label="审核结果" prop="approved" required>
             <el-radio-group v-model="refundForm.approved">
               <el-radio :label="true">同意退款</el-radio>
-              <el-radio :label="false">已拒绝退款</el-radio>
+              <el-radio :label="false">拒绝退款</el-radio>
             </el-radio-group>
             <div class="form-tip warning" v-if="refundForm.approved === false">
               <el-icon><Warning /></el-icon>
-              <span>已拒绝退款后将无法撤销，请谨慎操作</span>
+              <span>拒绝退款后将无法撤销，请谨慎操作</span>
             </div>
-          </el-form-item>
-          <el-form-item label="审核备注" prop="remark">
-            <el-input
-              v-model="refundForm.remark"
-              type="textarea"
-              :rows="3"
-              :maxlength="200"
-              show-word-limit
-              placeholder="请输入审核备注（选填）"
-            ></el-input>
           </el-form-item>
         </el-form>
       </div>
@@ -634,7 +624,8 @@ const refundForm = reactive({
   refundAmount: 0,
   refundReason: '',
   refundRemark: '',
-  refundTime: ''
+  refundTime: '',
+  approved: true // 审核结果，默认为通过
 })
 
 // 退款表单验证规则
@@ -942,120 +933,64 @@ const handleRefund = (row: any) => {
   refundForm.refundAmount = refundForm.totalPrice
   refundForm.refundReason = ''
   refundForm.refundRemark = ''
+  refundForm.refundTime = ''
+  refundForm.approved = true
   refundDialogVisible.value = true
-}
-
-// 提交退款表单
-const submitRefundForm = async () => {
-  if (!refundFormRef.value) return
-  
-  await refundFormRef.value.validate((valid, fields) => {
-    if (valid) {
-      ElMessageBox.confirm(
-        `确定要退款 ¥${refundForm.refundAmount.toFixed(2)} 吗？此操作不可逆。`,
-        '确认退款',
-        {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning',
-        }
-      )
-        .then(() => {
-          // 模拟退款操作
-          const index = orderList.value.findIndex(item => item.id === refundForm.id)
-          if (index !== -1) {
-            // 更新订单状态
-            // 如果是管理员直接退款，状态为"已退款"
-            // 如果是用户申请退款，状态为"申请退款中"
-            const isAdminDirectRefund = true; // 这里可以根据实际情况判断
-            
-            if (isAdminDirectRefund) {
-              orderList.value[index].status = '已退款'
-            } else {
-              orderList.value[index].status = '申请退款中'
-            }
-            
-            // 记录退款信息
-            orderList.value[index].refundInfo = {
-              refundAmount: refundForm.refundAmount,
-              refundReason: refundForm.refundReason,
-              refundRemark: refundForm.refundRemark,
-              refundTime: new Date().toLocaleString()
-            }
-          }
-          
-          ElMessage.success('退款操作成功')
-          refundDialogVisible.value = false
-        })
-        .catch(() => {
-          ElMessage.info('已取消退款操作')
-        })
-    } else {
-      console.log('表单验证失败', fields)
-    }
-  })
 }
 
 // 处理审核退款
 const handleApproveRefund = (row: any) => {
-  // 获取用户申请退款时的详细说明
-  const refundDetails = row.refundInfo ? row.refundInfo.refundRemark : '无详细说明';
+  // 填充退款表单数据
+  refundForm.id = row.id
+  refundForm.orderId = row.orderId
+  refundForm.productName = row.productName
+  refundForm.userEmail = row.userEmail
+  refundForm.totalPrice = parseFloat(row.totalPrice.replace('¥', ''))
   
-  ElMessageBox.confirm(
-    `<div class="refund-dialog">
-      <div class="refund-dialog-content">
-        <div class="refund-dialog-header">
-          <div class="order-info">
-            <span class="label">订单号：</span>
-            <span class="value">${row.orderId}</span>
-          </div>
-          <div class="amount-info">
-            <span class="amount-label">退款金额</span>
-            <div class="refund-amount">¥${row.refundInfo ? row.refundInfo.refundAmount.toFixed(2) : '0.00'}</div>
-          </div>
-        </div>
-        <div class="refund-dialog-body">
-          <div class="time-info">
-            <span class="time-label">申请时间：</span>
-            <span class="time-value">${row.refundInfo ? row.refundInfo.refundTime : '未知'}</span>
-          </div>
-          <div class="description-section">
-            <div class="description-label">退款说明：</div>
-            <div class="description-content">${refundDetails}</div>
-          </div>
-        </div>
-      </div>
-      <div class="refund-dialog-footer">
-        <div class="refund-confirm-text">确定要审核通过此退款申请吗？</div>
-      </div>
-    </div>`,
-    ' ',
-    {
-      confirmButtonText: '通过',
-      cancelButtonText: '拒绝',
-      type: 'warning',
-      dangerouslyUseHTMLString: true,
-      distinguishCancelAndClose: true,
-      customClass: 'refund-approval-dialog',
-      callback: (action: string) => {
-        if (action === 'confirm') {
-          // 通过退款
-          const index = orderList.value.findIndex(item => item.id === row.id)
-          if (index !== -1) {
-            orderList.value[index].status = '已退款'
-            ElMessage.success(`订单 ${row.orderId} 的退款申请已通过`)
-          }
-        } else if (action === 'cancel') {
-          // 拒绝退款
-          const index = orderList.value.findIndex(item => item.id === row.id)
-          if (index !== -1) {
-            orderList.value[index].status = '已拒绝退款'
-            ElMessage.info(`订单 ${row.orderId} 的退款申请已拒绝`)
-          }
+  // 如果有退款信息，填充退款信息
+  if (row.refundInfo) {
+    refundForm.refundAmount = row.refundInfo.refundAmount
+    refundForm.refundReason = row.refundInfo.refundReason
+    refundForm.refundRemark = row.refundInfo.refundRemark
+    refundForm.refundTime = row.refundInfo.refundTime
+  } else {
+    refundForm.refundAmount = refundForm.totalPrice
+    refundForm.refundReason = ''
+    refundForm.refundRemark = ''
+    refundForm.refundTime = ''
+  }
+  
+  // 重置审核相关字段
+  refundForm.approved = true
+  
+  // 显示退款审核对话框
+  refundDialogVisible.value = true
+}
+
+// 提交审核结果
+const submitRefund = async () => {
+  if (!refundFormRef.value) return
+  
+  await refundFormRef.value.validate((valid, fields) => {
+    if (valid) {
+      // 获取订单
+      const index = orderList.value.findIndex(item => item.id === refundForm.id)
+      if (index !== -1) {
+        // 根据审核结果更新订单状态
+        if (refundForm.approved) {
+          orderList.value[index].status = '已退款'
+          ElMessage.success(`订单 ${refundForm.orderId} 的退款申请已通过`)
+        } else {
+          orderList.value[index].status = '已拒绝退款'
+          ElMessage.info(`订单 ${refundForm.orderId} 的退款申请已拒绝`)
         }
       }
+      
+      refundDialogVisible.value = false
+    } else {
+      console.log('表单验证失败', fields)
     }
-  )
+  })
 }
 
 // 处理总提款按钮点击
@@ -1318,304 +1253,102 @@ onMounted(() => {
   width: 100%;
 }
 
-/* 退款审核弹窗样式 */
-:deep(.refund-dialog) .el-dialog__body {
-  padding: 20px;
+/* 退款审核弹窗样式优化 */
+:deep(.refund-dialog) {
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-:deep(.refund-dialog) .el-dialog__header {
-  margin-right: 0;
-  padding: 20px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+:deep(.refund-dialog .el-dialog__header) {
+  background-color: #f8f9fa;
+  padding: 16px 24px;
+  margin: 0;
+  border-bottom: 1px solid #e4e7ed;
 }
 
-:deep(.refund-dialog) .el-dialog__title {
+:deep(.refund-dialog .el-dialog__title) {
   font-size: 16px;
   font-weight: 600;
-}
-
-:deep(.refund-dialog) .el-dialog__footer {
-  padding: 20px;
-  border-top: 1px solid var(--el-border-color-lighter);
-}
-
-:deep(.refund-dialog) .refund-section {
-  margin-bottom: 24px;
-  padding: 16px;
-  background-color: var(--el-fill-color-light);
-  border-radius: 4px;
-}
-
-:deep(.refund-dialog) .refund-section:last-child {
-  margin-bottom: 0;
-}
-
-:deep(.refund-dialog) h4 {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-  margin: 0 0 16px;
-}
-
-:deep(.refund-dialog) .info-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-:deep(.refund-dialog) .form-tip {
-  margin-top: 8px;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-:deep(.refund-dialog) .form-tip.warning {
-  color: var(--el-color-warning);
-}
-
-:deep(.refund-dialog) .el-form-item:last-child {
-  margin-bottom: 0;
-}
-
-:deep(.refund-dialog) .dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-  margin-bottom: 0;
-}
-
-:deep(.detail-item .value) {
-  color: #303133;
-  font-weight: 500;
-}
-
-:deep(.refund-amount-section) {
-  text-align: center;
-  padding: 16px 0;
-}
-
-:deep(.amount-label) {
-  color: #606266;
-  margin-bottom: 8px;
-}
-
-:deep(.refund-amount) {
-  font-size: 24px;
-  color: #f56c6c;
-  font-weight: bold;
-}
-
-:deep(.time-section) {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-:deep(.time-label) {
-  color: #606266;
-}
-
-:deep(.time-value) {
   color: #303133;
 }
 
-:deep(.description-section) {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px dashed #e4e7ed;
+:deep(.refund-dialog .el-dialog__body) {
+  padding: 24px;
 }
 
-:deep(.description-label) {
-  color: #606266;
-  margin-bottom: 8px;
-}
-
-:deep(.description-content) {
-  color: #303133;
-  line-height: 1.5;
-  background-color: #fff;
-  padding: 12px;
-  border-radius: 4px;
-  border: 1px solid #e4e7ed;
-}
-
-:deep(.refund-dialog-footer) {
-  margin-top: 20px;
-  text-align: center;
-  color: #606266;
-  font-weight: 500;
+:deep(.refund-dialog .el-dialog__footer) {
+  padding: 16px 24px;
+  background-color: #f8f9fa;
+  border-top: 1px solid #e4e7ed;
+  margin-top: 0;
 }
 
 :deep(.refund-section) {
   background-color: #f8f9fa;
   border-radius: 8px;
-  padding: 24px;
-  margin-bottom: 24px;
+  padding: 20px;
+  margin-bottom: 20px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
-:deep(.refund-section) h4 {
+:deep(.refund-section:last-child) {
+  margin-bottom: 0;
+}
+
+:deep(.refund-section h4) {
   font-size: 16px;
   color: #303133;
-  margin: 0 0 20px;
+  margin: 0 0 16px;
+  padding-left: 10px;
+  border-left: 3px solid #409EFF;
+  line-height: 1.2;
+}
+
+:deep(.info-grid) {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+:deep(.info-item) {
   display: flex;
-  align-items: center;
-  font-weight: 500;
+  align-items: flex-start;
 }
 
-:deep(.refund-section) h4::before {
-  content: '';
-  width: 4px;
-  height: 16px;
-  background-color: #409EFF;
-  margin-right: 8px;
-  border-radius: 2px;
+:deep(.info-item.full-width) {
+  grid-column: span 2;
 }
 
-:deep(.form-tip.warning) {
-  margin-top: 8px;
-  color: #E6A23C;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-}
-
-:deep(.form-tip.warning) i {
-  margin-right: 4px;
-  font-size: 14px;
-}
-
-:deep(.el-dialog__footer) {
-  padding: 16px 24px;
-  border-top: 1px solid #ebeef5;
-  background-color: #fff;
-}
-
-:deep(.form-tip) {
-  margin-top: 8px;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-:deep(.form-tip.warning) {
-  color: #E6A23C;
-  display: flex;
-  align-items: center;
-}
-
-:deep(.dialog-footer) {
-  padding: 16px 24px;
-  text-align: right;
-  background-color: #f8f9fa;
-  border-top: 1px solid #e4e7ed;
-  border-radius: 0 0 4px 4px;
-}
-
-:deep(.dialog-footer) .el-button + .el-button {
-  margin-left: 12px;
-}
-
-:deep(.refund-dialog-item:last-child) {
-  margin-bottom: 0;
-}
-
-:deep(.detail-item) {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-:deep(.detail-item:last-child) {
-  margin-bottom: 0;
-}
-
-:deep(.detail-item .label) {
-  color: #909399;
-  margin-right: 12px;
+:deep(.info-item .label) {
+  color: #606266;
   min-width: 80px;
   font-weight: 500;
 }
 
-:deep(.detail-item .value) {
+:deep(.info-item .value) {
   color: #303133;
   flex: 1;
+  word-break: break-all;
 }
 
-:deep(.refund-amount) {
-  font-size: 24px;
-  color: #F56C6C;
+:deep(.info-item .value.price) {
+  color: #f56c6c;
   font-weight: 600;
-  margin-top: 12px;
-  padding: 16px;
-  background-color: #FEF0F0;
-  border-radius: 6px;
-  text-align: center;
 }
 
-:deep(.refund-time) {
+:deep(.form-tip.warning) {
+  margin-top: 8px;
+  color: #E6A23C;
+  font-size: 13px;
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
-  color: #909399;
+  gap: 4px;
 }
 
-:deep(.warning-icon) {
-  color: #E6A23C;
-  font-size: 16px;
-  margin-right: 8px;
-}
-
-:deep(.refund-remark) {
-  margin-top: 8px;
-  color: #606266;
-  word-break: break-all;
-  background-color: #FFFFFF;
-  padding: 12px;
-  border-radius: 4px;
-  border: 1px solid #EBEEF5;
-}
-
-:deep(.refund-dialog-footer) {
-  text-align: center;
-  margin-top: 24px;
-}
-
-:deep(.refund-confirm-text) {
-  color: #606266;
-  font-size: 15px;
-  font-weight: 500;
-}
-
-:deep(.refund-dialog-footer) {
-  margin-top: 15px;
-  color: #606266;
-  text-align: center;
-}
-
-:deep(.el-message-box) {
-  padding: 0;
-  border-radius: 4px;
-  overflow: hidden;
-  max-width: 400px;
-}
-
-:deep(.el-message-box__header) {
-  display: none;
-}
-
-:deep(.el-message-box__content) {
-  padding: 0;
-}
-
-:deep(.el-message-box__message) {
-  padding: 0;
-}
-
-:deep(.el-message-box__btns) {
-  padding: 10px 15px 15px;
+:deep(.dialog-footer) {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
 }
 
 .action-buttons {
