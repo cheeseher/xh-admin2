@@ -95,6 +95,15 @@ export const useDashboardStore = defineStore('dashboard', () => {
     { name: 'Instagram账号 (美国)', value: 165, percentage: 45, color: '#909399' }
   ])
   
+  // 按金额排序的热销商品数据
+  const hotProductsByAmount = ref([
+    { name: 'ChatGPT账号 (美国)', value: '¥58400', percentage: 100, color: '#67c23a' },
+    { name: 'Gmail（美国）', value: '¥36800', percentage: 63, color: '#f56c6c' },
+    { name: 'Facebook账号 (美国)', value: '¥25600', percentage: 44, color: '#e6a23c' },
+    { name: 'Instagram账号 (美国)', value: '¥24750', percentage: 42, color: '#909399' },
+    { name: 'Twitter账号 (美国)', value: '¥19800', percentage: 34, color: '#909399' }
+  ])
+  
   // 订单状态分布
   const orderStatusDistribution = ref([
     { value: 19.77, name: '待付款', color: '#fac858' },
@@ -250,6 +259,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     yesterdayFlow,
     salesTrend,
     hotProducts,
+    hotProductsByAmount,
     orderStatusDistribution,
     userGrowthTrend,
     recentOrders,

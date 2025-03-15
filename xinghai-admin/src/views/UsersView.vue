@@ -64,9 +64,6 @@
         <el-table-column prop="role" label="会员等级" width="120">
           <template #default="scope">
             <el-tag :type="getVipLevelType(scope.row.role)">{{ getVipLevelName(scope.row.role) }}</el-tag>
-            <div v-if="scope.row.role === 4 && scope.row.customDiscount" class="custom-discount">
-              折扣: {{ scope.row.customDiscount }}%
-            </div>
           </template>
         </el-table-column>
         <el-table-column prop="balance" label="账户余额" width="120">
@@ -128,9 +125,6 @@
       width="650px"
     >
       <el-form :model="userForm" label-width="100px" :rules="rules" ref="userFormRef">
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="userForm.username" placeholder="请输入用户名"></el-input>
-        </el-form-item>
         <el-form-item label="昵称" prop="nickname">
           <el-input v-model="userForm.nickname" placeholder="请输入昵称"></el-input>
         </el-form-item>
@@ -142,14 +136,6 @@
         </el-form-item>
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="userForm.email" placeholder="请输入邮箱"></el-input>
-        </el-form-item>
-        <el-form-item label="图形验证码" prop="captcha" v-if="dialogType === 'add'">
-          <div class="captcha-container">
-            <el-input v-model="userForm.captcha" placeholder="请输入验证码"></el-input>
-            <div class="captcha-image" @click="refreshCaptcha">
-              <img :src="captchaUrl" alt="验证码" />
-            </div>
-          </div>
         </el-form-item>
         
         <!-- 新增：超级VIP功能开关 -->
@@ -189,19 +175,6 @@
           </el-select>
           <span v-if="isSuperVipEnabled" class="info-text">超级VIP功能已启用，只能选择超级VIP</span>
           <span v-if="!isSuperVipEnabled && userForm.role === 4" class="warning-text">超级VIP功能已禁用</span>
-        </el-form-item>
-        
-        <!-- 超级VIP自定义折扣 -->
-        <el-form-item label="自定义折扣" v-if="userForm.role === 4 && isSuperVipEnabled">
-          <el-input-number 
-            v-model="userForm.customDiscount" 
-            :min="0" 
-            :max="100" 
-            :precision="1" 
-            :step="0.1"
-            style="width: 168px;"
-          ></el-input-number>
-          <span class="form-tip">%（百分比，可设置0%-100%之间的折扣）</span>
         </el-form-item>
         
         <el-form-item label="账户余额" prop="balance">
@@ -338,8 +311,7 @@ const tableData = ref([
     registerIp: '192.168.1.6',
     balance: 10000.00,
     totalRecharge: 50000.00,
-    totalSpent: 40000.00,
-    customDiscount: 65.5
+    totalSpent: 40000.00
   }
 ])
 
@@ -559,7 +531,6 @@ const userForm = reactive({
   role: 0,
   balance: 0,
   statusBool: true,
-  customDiscount: 50, // 超级VIP自定义折扣
   rechargeDiscount: 0 // 新增充值折扣
 })
 
@@ -668,11 +639,6 @@ const handleRoleChange = (value: number) => {
     // 可以选择自动切换到VIP3
     userForm.role = 3
   }
-  
-  // 如果选择了超级VIP，设置默认折扣
-  if (value === 4) {
-    userForm.customDiscount = 0
-  }
 }
 
 // 处理超级VIP功能开关变化
@@ -680,7 +646,6 @@ const handleSuperVipChange = (value: boolean) => {
   if (value) {
     // 启用超级VIP功能，自动设置会员等级为超级VIP
     userForm.role = 4
-    userForm.customDiscount = 0
     userForm.rechargeDiscount = 0 // 设置默认充值折扣
     ElMessage.success('超级VIP功能已启用，会员等级已设置为超级VIP')
   } else {
@@ -694,13 +659,11 @@ const handleSuperVipChange = (value: boolean) => {
 const handleEdit = (row: any) => {
   dialogType.value = 'edit'
   userForm.userId = row.userId
-  userForm.username = row.username
   userForm.nickname = row.nickname
   userForm.email = row.email
   userForm.role = row.role
   userForm.balance = row.balance
   userForm.statusBool = row.statusBool
-  userForm.customDiscount = row.customDiscount || 50
   userForm.rechargeDiscount = row.rechargeDiscount || 0 // 设置充值折扣
   
   // 设置自动计算的会员等级
@@ -715,13 +678,6 @@ const submitForm = async () => {
   
   await userFormRef.value.validate((valid, fields) => {
     if (valid) {
-      // 如果是超级VIP，保存自定义折扣和充值折扣
-      if (userForm.role === 4 && isSuperVipEnabled.value) {
-        // 在实际应用中，这里应该将自定义折扣和充值折扣保存到用户数据中
-        console.log('超级VIP自定义折扣:', userForm.customDiscount)
-        console.log('超级VIP充值折扣:', userForm.rechargeDiscount)
-      }
-      
       if (dialogType.value === 'add') {
         ElMessage.success('新增用户成功')
       } else {

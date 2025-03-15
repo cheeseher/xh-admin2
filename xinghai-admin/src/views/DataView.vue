@@ -172,7 +172,7 @@
             </div>
           </div>
           <div class="rank-list">
-            <div class="rank-item" v-for="(item, index) in dashboardStore.hotProducts" :key="index">
+            <div class="rank-item" v-for="(item, index) in hotProductsList" :key="index">
               <div class="rank-index" :class="'rank-' + (index + 1)">{{ index + 1 }}</div>
               <div class="rank-content">
                 <div class="rank-name">{{ item.name }}</div>
@@ -183,7 +183,7 @@
                   :stroke-width="8"
                 ></el-progress>
               </div>
-              <div class="rank-value">{{ item.value }}笔</div>
+              <div class="rank-value">{{ item.value }}{{ sortType === 'sales' ? '笔' : '' }}</div>
             </div>
           </div>
         </el-card>
@@ -326,6 +326,13 @@ const getPaymentData = computed(() => {
       fees: dashboardStore.totalFees
     }
   }
+})
+
+// 根据排序类型获取热销商品数据
+const hotProductsList = computed(() => {
+  return sortType.value === 'sales' 
+    ? dashboardStore.hotProducts 
+    : dashboardStore.hotProductsByAmount
 })
 
 // 图表引用
@@ -543,7 +550,7 @@ watch(timeRange, (newValue) => {
 // 监听排序类型变化
 watch(sortType, (newValue) => {
   console.log('排序类型变化:', newValue)
-  // 这里可以根据排序类型重新排序热销商品数据
+  // 数据已通过计算属性自动更新，无需额外处理
 })
 
 onMounted(() => {

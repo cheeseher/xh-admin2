@@ -247,7 +247,7 @@
                 <div class="form-tip">交易需要的区块确认数，确认数越多越安全，但处理时间也越长</div>
               </el-form-item>
               
-              <el-form-item label="支付二维码Logo">
+              <el-form-item label="支付二维码">
                 <el-upload
                   class="avatar-uploader"
                   action="#"

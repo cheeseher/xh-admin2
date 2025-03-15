@@ -109,7 +109,6 @@
     >
       <div class="message-detail">
         <div class="message-header">
-          <h3>补货提醒 #{{ currentMessage.id }}</h3>
           <div class="message-meta">
             <span>时间: {{ currentMessage.createTime }}</span>
             <el-tag v-if="currentMessage.status === 'pending'" type="danger">未解决</el-tag>

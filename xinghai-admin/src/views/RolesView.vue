@@ -33,6 +33,13 @@
         <el-table-column type="index" label="序号" width="60"></el-table-column>
         <el-table-column prop="roleId" label="角色ID" width="100"></el-table-column>
         <el-table-column prop="name" label="角色名称" width="150"></el-table-column>
+        <el-table-column prop="permissionType" label="权限类型" width="120">
+          <template #default="scope">
+            <el-tag :type="scope.row.permissionType === 'advanced' ? 'success' : 'warning'">
+              {{ scope.row.permissionType === 'advanced' ? '高级权限' : '普通权限' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="description" label="角色描述" min-width="200"></el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
@@ -88,6 +95,34 @@
         <el-form-item label="角色名称" prop="name">
           <el-input v-model="roleForm.name" placeholder="请输入角色名称"></el-input>
         </el-form-item>
+        <el-form-item label="权限类型" prop="permissionType">
+          <el-radio-group v-model="roleForm.permissionType">
+            <el-radio :label="'normal'">普通权限</el-radio>
+            <el-radio :label="'advanced'">高级权限</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="roleForm.permissionType === 'normal'">
+          <div class="permission-description">
+            <div class="permission-description-title">普通权限说明：</div>
+            <ul class="permission-description-list">
+              <li>商品订单不可删除，可发货</li>
+              <li>充值订单不可确认支付</li>
+              <li>商品列表可查看，不可上架</li>
+              <li>商品分类可查看不可编辑</li>
+              <li>库存管理可查看，不可编辑</li>
+              <li>用户管理内仅可编辑为vip1权限</li>
+              <li>会员设置不可编辑</li>
+              <li>内容管理相关可编辑</li>
+              <li>站内信仅可查看</li>
+            </ul>
+          </div>
+        </el-form-item>
+        <el-form-item v-else-if="roleForm.permissionType === 'advanced'">
+          <div class="permission-description">
+            <div class="permission-description-title">高级权限说明：</div>
+            <p>高级权限支持项目内所有操作，无任何限制。</p>
+          </div>
+        </el-form-item>
         <el-form-item label="角色描述" prop="description">
           <el-input v-model="roleForm.description" type="textarea" :rows="3" placeholder="请输入角色描述"></el-input>
         </el-form-item>
@@ -108,10 +143,21 @@
     <el-dialog
       v-model="permissionDialogVisible"
       title="权限设置"
-      width="600px"
+      width="700px"
     >
       <div v-if="currentRole">
         <p class="permission-title">当前角色: {{ currentRole.name }}</p>
+        
+        <div class="permission-type-info" v-if="currentRole.permissionType">
+          <el-alert
+            :title="currentRole.permissionType === 'advanced' ? '高级权限' : '普通权限'"
+            :type="currentRole.permissionType === 'advanced' ? 'success' : 'warning'"
+            :description="getPermissionTypeDescription(currentRole.permissionType)"
+            show-icon
+            :closable="false"
+          />
+        </div>
+        
         <el-tree
           ref="permissionTreeRef"
           :data="permissionTree"
@@ -119,6 +165,7 @@
           node-key="id"
           :default-checked-keys="checkedPermissions"
           :props="{ label: 'name', children: 'children' }"
+          :disabled="currentRole.name === '超级管理员'"
         ></el-tree>
       </div>
       <template #footer>
@@ -150,38 +197,43 @@ const roleList = ref([
     description: '拥有系统所有权限，可以管理所有功能和数据',
     status: '启用',
     statusBool: true,
+    permissionType: 'advanced',
     createTime: '2023-12-01 10:00:00'
   },
   { 
     roleId: 'R002',
-    name: '普通管理员',
+    name: '普通管理员1',
     description: '拥有部分管理权限，可以管理部分功能和数据',
     status: '启用',
     statusBool: true,
+    permissionType: 'normal',
     createTime: '2023-12-05 14:30:00'
   },
   { 
     roleId: 'R003',
-    name: 'VIP用户',
-    description: '高级会员，拥有特殊功能和服务',
+    name: '普通管理员2',
+    description: '拥有部分管理权限，负责内容管理和用户服务',
     status: '启用',
     statusBool: true,
+    permissionType: 'normal',
     createTime: '2023-12-10 09:15:00'
   },
   { 
     roleId: 'R004',
-    name: '普通用户',
-    description: '基础会员，拥有基本功能和服务',
+    name: '普通管理员3',
+    description: '拥有部分管理权限，负责订单处理和客户服务',
     status: '启用',
     statusBool: true,
+    permissionType: 'normal',
     createTime: '2023-12-15 16:45:00'
   },
   { 
     roleId: 'R005',
-    name: '游客',
-    description: '未注册用户，只能浏览部分内容',
+    name: '普通管理员4',
+    description: '拥有部分管理权限，负责数据分析和报表生成',
     status: '禁用',
     statusBool: false,
+    permissionType: 'normal',
     createTime: '2023-12-20 11:20:00'
   }
 ])
@@ -200,7 +252,8 @@ const roleForm = reactive({
   roleId: '',
   name: '',
   description: '',
-  statusBool: true
+  statusBool: true,
+  permissionType: 'normal'
 })
 
 // 表单验证规则
@@ -212,6 +265,9 @@ const rules = reactive<FormRules>({
   description: [
     { required: true, message: '请输入角色描述', trigger: 'blur' },
     { max: 200, message: '长度不能超过 200 个字符', trigger: 'blur' }
+  ],
+  permissionType: [
+    { required: true, message: '请选择权限类型', trigger: 'change' }
   ]
 })
 
@@ -323,6 +379,7 @@ const handleAddRole = () => {
   roleForm.name = ''
   roleForm.description = ''
   roleForm.statusBool = true
+  roleForm.permissionType = 'normal'
   dialogVisible.value = true
 }
 
@@ -333,35 +390,44 @@ const handleEdit = (row: any) => {
   roleForm.name = row.name
   roleForm.description = row.description
   roleForm.statusBool = row.statusBool
+  roleForm.permissionType = row.permissionType || 'normal'
   dialogVisible.value = true
 }
 
 // 权限设置
 const handlePermission = (row: any) => {
   currentRole.value = row
-  // 模拟获取当前角色的权限
-  if (row.roleId === 'R001') {
-    // 超级管理员拥有所有权限
+  // 根据角色类型设置权限
+  if (row.roleId === 'R001' || row.permissionType === 'advanced') {
+    // 超级管理员或高级权限拥有所有权限
     checkedPermissions.value = [
       101, 201, 202, 301, 302, 303, 401, 501, 601, 602, 603, 701, 702, 801, 802
     ]
-  } else if (row.roleId === 'R002') {
-    // 普通管理员拥有部分权限
+  } else if (row.permissionType === 'normal') {
+    // 普通权限根据规则设置
+    // 商品订单不可删除，可发货
+    // 充值订单不可确认支付
+    // 商品列表可查看，不可上架
+    // 商品分类可查看不可编辑
+    // 库存管理可查看，不可编辑
+    // 用户管理内仅可编辑为vip1权限
+    // 会员设置不可编辑
+    // 内容管理相关可编辑
+    // 站内信仅可查看
     checkedPermissions.value = [
-      101, 201, 202, 301, 302, 303, 401, 501, 601, 602, 603, 701, 702, 801, 802
-    ]
-  } else if (row.roleId === 'R003') {
-    // VIP用户拥有部分权限
-    checkedPermissions.value = [
-      101, 201, 202, 301, 302, 303, 401, 501, 601
-    ]
-  } else if (row.roleId === 'R004') {
-    // 普通用户拥有基本权限
-    checkedPermissions.value = [
-      101, 201, 301, 401, 601
+      101, // 数据概览
+      201, // 商品订单（有限制）
+      202, // 充值订单（有限制）
+      301, // 商品列表（有限制）
+      302, // 分类管理（有限制）
+      303, // 库存管理（有限制）
+      401, // 用户管理（有限制）
+      // 501 会员设置不可编辑
+      601, 602, // 内容管理相关可编辑
+      603, // 站内信仅可查看
     ]
   } else {
-    // 游客几乎没有权限
+    // 其他角色设置基本权限
     checkedPermissions.value = [101]
   }
   permissionDialogVisible.value = true
@@ -374,8 +440,23 @@ const savePermissions = () => {
     const halfCheckedKeys = permissionTreeRef.value.getHalfCheckedKeys()
     console.log('选中的权限', checkedKeys)
     console.log('半选中的权限', halfCheckedKeys)
+    
+    // 如果是普通权限，需要应用权限限制规则
+    if (currentRole.value && currentRole.value.permissionType === 'normal') {
+      ElMessage.info('普通权限角色的部分操作将受到限制，详见权限说明')
+    }
+    
     ElMessage.success(`角色"${currentRole.value.name}"的权限已更新`)
     permissionDialogVisible.value = false
+  }
+}
+
+// 获取权限类型描述
+const getPermissionTypeDescription = (type: string) => {
+  if (type === 'advanced') {
+    return '高级权限支持项目内所有操作，无任何限制。'
+  } else {
+    return '普通权限有特定的操作限制，详见权限说明。'
   }
 }
 
@@ -489,5 +570,25 @@ onMounted(() => {
   margin-right: 0 !important;
   padding-left: 8px;
   padding-right: 8px;
+}
+
+.permission-description {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.permission-description-title {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.permission-description-list {
+  list-style-type: disc;
+  padding-left: 20px;
+}
+
+.permission-type-info {
+  margin-bottom: 10px;
 }
 </style> 
