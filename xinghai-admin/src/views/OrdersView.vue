@@ -955,9 +955,9 @@ const handleApproveRefund = (row: any) => {
     refundForm.refundTime = row.refundInfo.refundTime
   } else {
     refundForm.refundAmount = refundForm.totalPrice
-    refundForm.refundReason = ''
-    refundForm.refundRemark = ''
-    refundForm.refundTime = ''
+    refundForm.refundReason = '商品质量问题'
+    refundForm.refundRemark = '收到商品后发现账号无法正常使用，申请全额退款。'
+    refundForm.refundTime = new Date().toLocaleString()
   }
   
   // 重置审核相关字段
