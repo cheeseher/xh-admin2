@@ -1,28 +1,113 @@
 <template>
   <div class="data-container">
-    <!-- 数据概览卡片 -->
+    <!-- 数据概览卡片 - 第一行 -->
     <el-row :gutter="20">
-      <el-col :span="6">
-        <el-card shadow="hover" class="data-card">
+      <el-col :span="8">
+        <el-card shadow="hover" class="data-card sales-card">
+          <div class="card-header">
+            <div class="title">总销售额</div>
+            <div class="actions">
+              <el-radio-group v-model="salesTimeRange" size="small">
+                <el-radio-button label="total">总计</el-radio-button>
+                <el-radio-button label="today">今日</el-radio-button>
+                <el-radio-button label="yesterday">昨日</el-radio-button>
+              </el-radio-group>
+            </div>
+          </div>
           <div class="data-card-content">
             <div class="icon-container blue">
               <el-icon><Money /></el-icon>
             </div>
             <div class="data-info">
-              <div class="data-title">总销售额</div>
-              <div class="data-value">¥{{ formatNumber(dashboardStore.totalSales) }}</div>
-              <div class="data-trend">
-                <span>较昨日</span>
-                <span class="up">↑ 12.5%</span>
+              <div class="data-value">¥{{ formatNumber(getSalesData.sales) }}</div>
+              <div class="data-extra-info">
+                <div class="data-extra-item">
+                  <span class="label">总退款：</span>
+                  <span class="value red-text">¥{{ formatNumber(getSalesData.refunds) }}</span>
+                </div>
+                <div class="data-extra-item">
+                  <span class="label">总预收益：</span>
+                  <span class="value green-text">¥{{ formatNumber(getSalesData.netRevenue) }}</span>
+                </div>
               </div>
             </div>
           </div>
         </el-card>
       </el-col>
-      <el-col :span="6">
+      <el-col :span="8">
+        <el-card shadow="hover" class="data-card flow-card">
+          <div class="card-header">
+            <div class="title">总流水额</div>
+            <div class="actions">
+              <el-radio-group v-model="flowTimeRange" size="small">
+                <el-radio-button label="total">总计</el-radio-button>
+                <el-radio-button label="today">今日</el-radio-button>
+                <el-radio-button label="yesterday">昨日</el-radio-button>
+              </el-radio-group>
+            </div>
+          </div>
+          <div class="data-card-content">
+            <div class="icon-container purple">
+              <el-icon><Connection /></el-icon>
+            </div>
+            <div class="data-info">
+              <div class="data-value">¥{{ formatNumber(getFlowData.flow) }}</div>
+              <div class="data-extra-info">
+                <div class="data-extra-item">
+                  <span class="label">总充值：</span>
+                  <span class="value green-text">¥{{ formatNumber(getFlowData.recharge) }}</span>
+                </div>
+                <div class="flow-info-row">
+                  <div class="flow-info-item">
+                    <span class="label">总提款：</span>
+                    <span class="value red-text">¥{{ formatNumber(getFlowData.withdrawal) }}</span>
+                  </div>
+                  <div class="flow-info-item">
+                    <span class="label">顺差：</span>
+                    <span class="value blue-text">¥{{ formatNumber(getFlowData.surplus) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="8">
+        <el-card shadow="hover" class="data-card payment-card">
+          <div class="card-header">
+            <div class="title">支付笔数</div>
+            <div class="actions">
+              <el-radio-group v-model="paymentTimeRange" size="small">
+                <el-radio-button label="total">总计</el-radio-button>
+                <el-radio-button label="today">今日</el-radio-button>
+                <el-radio-button label="yesterday">昨日</el-radio-button>
+              </el-radio-group>
+            </div>
+          </div>
+          <div class="data-card-content">
+            <div class="icon-container cyan">
+              <el-icon><ShoppingBag /></el-icon>
+            </div>
+            <div class="data-info">
+              <div class="data-value">{{ formatNumber(getPaymentData.count) }}</div>
+              <div class="data-extra-info">
+                <div class="data-extra-item">
+                  <span class="label">总手续费：</span>
+                  <span class="value orange-text">¥{{ formatNumber(getPaymentData.fees) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 数据概览卡片 - 第二行 -->
+    <el-row :gutter="20" class="second-row">
+      <el-col :span="8">
         <el-card shadow="hover" class="data-card">
           <div class="data-card-content">
-            <div class="icon-container green">
+            <div class="icon-container indigo">
               <el-icon><List /></el-icon>
             </div>
             <div class="data-info">
@@ -36,7 +121,7 @@
           </div>
         </el-card>
       </el-col>
-      <el-col :span="6">
+      <el-col :span="8">
         <el-card shadow="hover" class="data-card">
           <div class="data-card-content">
             <div class="icon-container orange">
@@ -53,22 +138,8 @@
           </div>
         </el-card>
       </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="data-card">
-          <div class="data-card-content">
-            <div class="icon-container red">
-              <el-icon><ShoppingBag /></el-icon>
-            </div>
-            <div class="data-info">
-              <div class="data-title">支付笔数</div>
-              <div class="data-value">{{ formatNumber(dashboardStore.paymentCount) }}</div>
-              <div class="data-trend">
-                <span>较昨日</span>
-                <span class="up">↑ 10.6%</span>
-              </div>
-            </div>
-          </div>
-        </el-card>
+      <el-col :span="8">
+        <!-- 这里可以添加其他统计卡片 -->
       </el-col>
     </el-row>
 
@@ -166,8 +237,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { Money, List, User, ShoppingBag, ArrowRight } from '@element-plus/icons-vue'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
+import { Money, List, User, ShoppingBag, ArrowRight, RefreshRight, Wallet, PriceTag, Connection } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import { useDashboardStore } from '@/store/dashboard'
 import { useRouter } from 'vue-router'
@@ -178,9 +249,84 @@ const router = useRouter()
 
 // 时间范围选择
 const timeRange = ref('week')
+const salesTimeRange = ref('total')
+const flowTimeRange = ref('total')
+const paymentTimeRange = ref('total')
 
 // 排序类型
 const sortType = ref('sales')
+
+// 根据时间范围获取销售数据
+const getSalesData = computed(() => {
+  if (salesTimeRange.value === 'today') {
+    return {
+      sales: dashboardStore.todaySales,
+      refunds: dashboardStore.todayRefunds,
+      fees: dashboardStore.todayFees,
+      netRevenue: dashboardStore.todayNetRevenue
+    }
+  } else if (salesTimeRange.value === 'yesterday') {
+    return {
+      sales: dashboardStore.yesterdaySales,
+      refunds: dashboardStore.yesterdayRefunds,
+      fees: dashboardStore.yesterdayFees,
+      netRevenue: dashboardStore.yesterdayNetRevenue
+    }
+  } else {
+    return {
+      sales: dashboardStore.totalSales,
+      refunds: dashboardStore.totalRefunds,
+      fees: dashboardStore.totalFees,
+      netRevenue: dashboardStore.netRevenue
+    }
+  }
+})
+
+// 根据时间范围获取流水数据
+const getFlowData = computed(() => {
+  if (flowTimeRange.value === 'today') {
+    return {
+      flow: dashboardStore.todayFlow,
+      recharge: dashboardStore.todayRecharge,
+      withdrawal: dashboardStore.todayWithdrawal,
+      surplus: dashboardStore.todayBalanceSurplus
+    }
+  } else if (flowTimeRange.value === 'yesterday') {
+    return {
+      flow: dashboardStore.yesterdayFlow,
+      recharge: dashboardStore.yesterdayRecharge,
+      withdrawal: dashboardStore.yesterdayWithdrawal,
+      surplus: dashboardStore.yesterdayBalanceSurplus
+    }
+  } else {
+    return {
+      flow: dashboardStore.totalFlow,
+      recharge: dashboardStore.totalRecharge,
+      withdrawal: dashboardStore.totalWithdrawal,
+      surplus: dashboardStore.balanceSurplus
+    }
+  }
+})
+
+// 根据时间范围获取支付数据
+const getPaymentData = computed(() => {
+  if (paymentTimeRange.value === 'today') {
+    return {
+      count: dashboardStore.todayPaymentCount,
+      fees: dashboardStore.todayFees
+    }
+  } else if (paymentTimeRange.value === 'yesterday') {
+    return {
+      count: dashboardStore.yesterdayPaymentCount,
+      fees: dashboardStore.yesterdayFees
+    }
+  } else {
+    return {
+      count: dashboardStore.paymentCount,
+      fees: dashboardStore.totalFees
+    }
+  }
+})
 
 // 图表引用
 const salesChartRef = ref<HTMLElement | null>(null)
@@ -436,7 +582,7 @@ onUnmounted(() => {
 }
 
 .data-card {
-  height: 120px;
+  height: 160px;
   transition: all 0.3s;
 }
 
@@ -448,7 +594,8 @@ onUnmounted(() => {
 .data-card-content {
   display: flex;
   align-items: center;
-  height: 100%;
+  height: calc(100% - 50px);
+  padding: 0 15px;
 }
 
 .icon-container {
@@ -487,6 +634,18 @@ onUnmounted(() => {
   background-color: #F56C6C;
 }
 
+.purple {
+  background-color: #9254de;
+}
+
+.cyan {
+  background-color: #36cfc9;
+}
+
+.indigo {
+  background-color: #5c6bc0;
+}
+
 .data-info {
   flex: 1;
 }
@@ -517,6 +676,72 @@ onUnmounted(() => {
 .down {
   color: #67C23A;
   margin-left: 5px;
+}
+
+.data-extra-info {
+  margin-top: 10px;
+  border-top: 1px dashed #ebeef5;
+  padding-top: 8px;
+}
+
+.data-extra-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.data-extra-item .label {
+  color: #606266;
+}
+
+.data-extra-item .value {
+  font-weight: 500;
+}
+
+.flow-info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.flow-info-item {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+}
+
+.flow-info-item .label {
+  color: #606266;
+  margin-right: 5px;
+}
+
+.flow-info-item .value {
+  font-weight: 500;
+}
+
+.red-text {
+  color: #F56C6C;
+}
+
+.green-text {
+  color: #67C23A;
+}
+
+.blue-text {
+  color: #409EFF;
+}
+
+.orange-text {
+  color: #E6A23C;
+}
+
+.highlight {
+  /* 移除加粗样式 */
+}
+
+.second-row {
+  margin-top: 20px;
 }
 
 .chart-card {
@@ -646,4 +871,24 @@ onUnmounted(() => {
   background-color: #f5f7fa;
 }
 
+.surplus-info {
+  margin-top: 10px;
+  padding: 5px 0;
+  border-top: 1px solid #ebeef5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.surplus-label {
+  font-size: 14px;
+  font-weight: bold;
+  color: #606266;
+}
+
+.surplus-value {
+  font-size: 16px;
+  font-weight: bold;
+  color: #409EFF;
+}
 </style> 

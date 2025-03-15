@@ -1,15 +1,79 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 export const useDashboardStore = defineStore('dashboard', () => {
   // 总销售额
   const totalSales = ref(126560)
+  const todaySales = ref(5680)
+  const yesterdaySales = ref(4890)
+  
   // 订单数量
   const orderCount = ref(1280)
   // 用户数量
   const userCount = ref(8846)
   // 支付笔数
   const paymentCount = ref(1568)
+  const todayPaymentCount = ref(86)
+  const yesterdayPaymentCount = ref(72)
+  
+  // 总退款金额
+  const totalRefunds = ref(12350)
+  const todayRefunds = ref(580)
+  const yesterdayRefunds = ref(420)
+  
+  // 总手续费
+  const totalFees = ref(3560)
+  const todayFees = ref(260)
+  const yesterdayFees = ref(210)
+  
+  // 总充值额度
+  const totalRecharge = ref(235680)
+  const todayRecharge = ref(8760)
+  const yesterdayRecharge = ref(7890)
+  
+  // 总提款额度
+  const totalWithdrawal = ref(156420)
+  const todayWithdrawal = ref(5240)
+  const yesterdayWithdrawal = ref(4680)
+  
+  // 计算预收入金额（总销售额减去总退款减去总手续费）
+  const netRevenue = computed(() => {
+    return totalSales.value - totalRefunds.value - totalFees.value
+  })
+  
+  const todayNetRevenue = computed(() => {
+    return todaySales.value - todayRefunds.value - todayFees.value
+  })
+  
+  const yesterdayNetRevenue = computed(() => {
+    return yesterdaySales.value - yesterdayRefunds.value - yesterdayFees.value
+  })
+  
+  // 计算顺差（总充值额度减去总提款额度）
+  const balanceSurplus = computed(() => {
+    return totalRecharge.value - totalWithdrawal.value
+  })
+  
+  const todayBalanceSurplus = computed(() => {
+    return todayRecharge.value - todayWithdrawal.value
+  })
+  
+  const yesterdayBalanceSurplus = computed(() => {
+    return yesterdayRecharge.value - yesterdayWithdrawal.value
+  })
+  
+  // 计算总流水额（总充值额度加上总提款额度）
+  const totalFlow = computed(() => {
+    return totalRecharge.value + totalWithdrawal.value
+  })
+  
+  const todayFlow = computed(() => {
+    return todayRecharge.value + todayWithdrawal.value
+  })
+  
+  const yesterdayFlow = computed(() => {
+    return yesterdayRecharge.value + yesterdayWithdrawal.value
+  })
   
   // 销售趋势数据
   const salesTrend = ref([
@@ -156,9 +220,34 @@ export const useDashboardStore = defineStore('dashboard', () => {
   
   return {
     totalSales,
+    todaySales,
+    yesterdaySales,
     orderCount,
     userCount,
     paymentCount,
+    todayPaymentCount,
+    yesterdayPaymentCount,
+    totalRefunds,
+    todayRefunds,
+    yesterdayRefunds,
+    totalFees,
+    todayFees,
+    yesterdayFees,
+    netRevenue,
+    todayNetRevenue,
+    yesterdayNetRevenue,
+    totalRecharge,
+    todayRecharge,
+    yesterdayRecharge,
+    totalWithdrawal,
+    todayWithdrawal,
+    yesterdayWithdrawal,
+    balanceSurplus,
+    todayBalanceSurplus,
+    yesterdayBalanceSurplus,
+    totalFlow,
+    todayFlow,
+    yesterdayFlow,
     salesTrend,
     hotProducts,
     orderStatusDistribution,

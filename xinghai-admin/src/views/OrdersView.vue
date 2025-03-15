@@ -87,6 +87,11 @@
             <span class="price">{{ scope.row.totalPrice }}</span>
           </template>
         </el-table-column>
+        <el-table-column prop="fee" label="手续费" width="100">
+          <template #default="scope">
+            <span class="fee">{{ scope.row.fee || '¥0.00' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="cardId" label="卡密ID" width="100"></el-table-column>
         <el-table-column prop="cardInfo" label="卡密信息" min-width="120">
           <template #default="scope">
@@ -117,7 +122,6 @@
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
-              <el-button size="small" @click="handleView(scope.row)">查看</el-button>
               <el-button 
                 v-if="scope.row.status === '待发货'" 
                 size="small" 
@@ -297,6 +301,7 @@ interface OrderItem {
   category: string;
   quantity: number;
   totalPrice: string;
+  fee: string;
   cardId?: string;
   cardInfo?: string;
   userEmail: string;
@@ -317,6 +322,7 @@ const orderList = ref<OrderItem[]>([
     category: '谷歌邮箱',
     quantity: 1,
     totalPrice: '¥2.75',
+    fee: '¥0.00',
     cardId: 'CM001',
     cardInfo: 'example@gmail.com|password123',
     userEmail: 'user123@example.com',
@@ -334,6 +340,7 @@ const orderList = ref<OrderItem[]>([
     category: 'ChatGPT账号',
     quantity: 1,
     totalPrice: '¥199.99',
+    fee: '¥0.00',
     cardId: 'CM002',
     cardInfo: 'chatgpt@example.com|password456',
     userEmail: 'user456@example.com',
@@ -356,6 +363,7 @@ const orderList = ref<OrderItem[]>([
     category: 'Instagram账号',
     quantity: 1,
     totalPrice: '¥39.99',
+    fee: '¥0.00',
     cardId: '',
     cardInfo: '',
     userEmail: 'user789@example.com',
@@ -373,6 +381,7 @@ const orderList = ref<OrderItem[]>([
     category: '谷歌邮箱',
     quantity: 2,
     totalPrice: '¥20.00',
+    fee: '¥0.00',
     cardId: '',
     cardInfo: '',
     userEmail: 'user101@example.com',
@@ -390,6 +399,7 @@ const orderList = ref<OrderItem[]>([
     category: 'Twitter账号',
     quantity: 1,
     totalPrice: '¥49.99',
+    fee: '¥0.00',
     cardId: 'CM003',
     cardInfo: 'twitter@example.com|password789',
     userEmail: 'user202@example.com',
@@ -412,6 +422,7 @@ const orderList = ref<OrderItem[]>([
     category: '谷歌邮箱',
     quantity: 3,
     totalPrice: '¥22.50',
+    fee: '¥0.00',
     cardId: '',
     cardInfo: '',
     userEmail: 'user303@example.com',
@@ -593,6 +604,10 @@ const handleView = (row: any) => {
         <div class="detail-item">
           <span class="label">总价：</span>
           <span class="price">${row.totalPrice}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">手续费：</span>
+          <span class="fee">{{ row.fee || '¥0.00' }}</span>
         </div>
         <div class="detail-item">
           <span class="label">发货方式：</span>
@@ -786,14 +801,42 @@ const submitRefundForm = async () => {
 
 // 处理审核退款
 const handleApproveRefund = (row: any) => {
+  // 获取用户申请退款时的详细说明
+  const refundDetails = row.refundInfo ? row.refundInfo.refundRemark : '无详细说明';
+  
   ElMessageBox.confirm(
-    `确定要审核通过订单 ${row.orderId} 的退款申请吗？`,
-    '审核退款',
+    `<div style="padding: 0;">
+      <div style="font-weight: bold; font-size: 16px; margin-bottom: 15px;">审核退款</div>
+      <div style="margin-bottom: 15px;">
+        <div>订单号：${row.orderId}</div>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <div>退款金额</div>
+        <div style="font-size: 16px; color: #f56c6c; font-weight: bold; margin-top: 5px;">¥${row.refundInfo ? row.refundInfo.refundAmount.toFixed(2) : '0.00'}</div>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+          <span style="color: #e6a23c; margin-right: 5px;">⚠</span>
+          <span>申请时间</span>
+        </div>
+        <div>${row.refundInfo ? row.refundInfo.refundTime : '未知'}</div>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <div>用户描述</div>
+        <div style="margin-top: 5px; color: #606266; word-break: break-all;">${refundDetails}</div>
+      </div>
+      <div style="margin-top: 20px; text-align: center; color: #606266;">
+        确定要审核通过此退款申请吗？
+      </div>
+    </div>`,
+    ' ',
     {
       confirmButtonText: '通过',
       cancelButtonText: '拒绝',
       type: 'warning',
+      dangerouslyUseHTMLString: true,
       distinguishCancelAndClose: true,
+      customClass: 'refund-approval-dialog',
       callback: (action: string) => {
         if (action === 'confirm') {
           // 通过退款
@@ -820,6 +863,41 @@ onMounted(() => {
   handleSearch()
 })
 </script>
+
+<style>
+/* 全局样式，不使用scoped */
+.refund-approval-dialog .el-message-box__header {
+  padding: 15px 15px 0 !important;
+  height: 20px !important;
+}
+
+.refund-approval-dialog .el-message-box__title {
+  display: none !important;
+}
+
+.refund-approval-dialog .el-message-box__headerbtn {
+  top: 15px !important;
+  right: 15px !important;
+}
+
+.refund-approval-dialog .el-message-box__content {
+  padding: 20px !important;
+}
+
+.refund-approval-dialog .el-message-box__message p {
+  margin: 0 !important;
+}
+
+.refund-approval-dialog .el-message-box {
+  padding: 0 !important;
+  max-width: 400px !important;
+  border-radius: 4px !important;
+}
+
+.refund-approval-dialog .el-message-box__btns {
+  padding: 10px 20px 20px !important;
+}
+</style>
 
 <style scoped>
 .orders-container {
@@ -852,6 +930,11 @@ onMounted(() => {
 }
 
 .price {
+  color: #f56c6c;
+  font-weight: bold;
+}
+
+.fee {
   color: #f56c6c;
   font-weight: bold;
 }
@@ -920,6 +1003,79 @@ onMounted(() => {
 :deep(.order-detail-dialog .el-message-box__wrapper .el-message-box) {
   max-width: 600px;
   width: 100%;
+}
+
+/* 退款审核弹窗样式 */
+:deep(.refund-dialog) {
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 15px 20px;
+}
+
+:deep(.refund-dialog-title) {
+  font-weight: bold;
+  color: #303133;
+  font-size: 16px;
+  margin-bottom: 15px;
+  border-bottom: none;
+}
+
+:deep(.refund-dialog-item) {
+  margin-bottom: 15px;
+}
+
+:deep(.refund-amount) {
+  font-size: 16px;
+  color: #f56c6c;
+  font-weight: bold;
+  margin-top: 5px;
+}
+
+:deep(.refund-time) {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+:deep(.warning-icon) {
+  color: #e6a23c;
+  font-size: 16px;
+  margin-right: 5px;
+}
+
+:deep(.refund-remark) {
+  margin-top: 5px;
+  color: #606266;
+  word-break: break-all;
+}
+
+:deep(.refund-dialog-footer) {
+  margin-top: 15px;
+  color: #606266;
+  text-align: center;
+}
+
+:deep(.el-message-box) {
+  padding: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  max-width: 400px;
+}
+
+:deep(.el-message-box__header) {
+  display: none;
+}
+
+:deep(.el-message-box__content) {
+  padding: 0;
+}
+
+:deep(.el-message-box__message) {
+  padding: 0;
+}
+
+:deep(.el-message-box__btns) {
+  padding: 10px 15px 15px;
 }
 
 .action-buttons {

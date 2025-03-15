@@ -51,6 +51,18 @@
             <el-button @click="resetSearch">重置</el-button>
           </el-form-item>
         </el-form>
+        
+        <!-- 添加总充值金额和导出按钮 -->
+        <div class="search-summary" v-if="showTotalAmount">
+          <div class="total-amount">
+            <span>筛选结果总充值金额：</span>
+            <span class="amount-value">¥{{ totalAmount.toFixed(2) }}</span>
+          </div>
+          <el-button type="success" @click="exportOrders">
+            <el-icon><Download /></el-icon>
+            导出订单
+          </el-button>
+        </div>
       </div>
 
       <!-- 表格区域 -->
@@ -67,6 +79,11 @@
         <el-table-column prop="amount" label="充值金额" min-width="120" sortable="custom">
           <template #default="scope">
             <span class="price">¥{{ scope.row.amount.toFixed(2) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="fee" label="手续费" min-width="100">
+          <template #default="scope">
+            <span class="fee">¥{{ scope.row.fee ? scope.row.fee.toFixed(2) : '0.00' }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="paymentMethod" label="支付方式" min-width="120">
@@ -134,6 +151,7 @@
           <el-descriptions-item label="用户邮箱">{{ currentOrder.userEmail }}</el-descriptions-item>
           <el-descriptions-item label="用户ID">{{ currentOrder.userId }}</el-descriptions-item>
           <el-descriptions-item label="充值金额">¥{{ currentOrder.amount.toFixed(2) }}</el-descriptions-item>
+          <el-descriptions-item label="手续费">¥{{ currentOrder.fee ? currentOrder.fee.toFixed(2) : '0.00' }}</el-descriptions-item>
           <el-descriptions-item label="订单状态">
             <el-tag v-if="currentOrder.status === 'pending'" type="warning">待支付</el-tag>
             <el-tag v-else-if="currentOrder.status === 'paid' && !currentOrder.refunded" type="success">已支付</el-tag>
@@ -237,9 +255,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
+import { Download } from '@element-plus/icons-vue'
 
 // 定义充值订单类型
 interface RechargeOrder {
@@ -248,6 +267,7 @@ interface RechargeOrder {
   userId: number
   userEmail: string
   amount: number
+  fee?: number
   status: 'pending' | 'paid' | 'cancelled'
   paymentMethod: 'usdt' | 'other' | string
   transactionId?: string
@@ -305,6 +325,12 @@ const refundRules = reactive<FormRules>({
   ]
 })
 
+// 添加总充值金额计算
+const showTotalAmount = ref(false)
+const totalAmount = computed(() => {
+  return orderList.value.reduce((sum, order) => sum + order.amount, 0)
+})
+
 // 获取订单列表
 const fetchOrders = async () => {
   loading.value = true
@@ -319,6 +345,7 @@ const fetchOrders = async () => {
           userId: 1001,
           userEmail: 'zhangsan@example.com',
           amount: 100.00,
+          fee: 2.00,
           status: 'paid',
           paymentMethod: 'usdt',
           transactionId: '2024031012345678',
@@ -335,6 +362,7 @@ const fetchOrders = async () => {
           userId: 1002,
           userEmail: 'lisi@example.com',
           amount: 200.00,
+          fee: 4.00,
           status: 'pending',
           paymentMethod: 'other',
           createTime: '2024-03-10 11:30:00',
@@ -348,6 +376,7 @@ const fetchOrders = async () => {
           userId: 1003,
           userEmail: 'wangwu@example.com',
           amount: 500.00,
+          fee: 10.00,
           status: 'cancelled',
           paymentMethod: 'other',
           createTime: '2024-03-10 14:20:00',
@@ -362,6 +391,7 @@ const fetchOrders = async () => {
           userId: 1004,
           userEmail: 'zhaoliu@example.com',
           amount: 1000.00,
+          fee: 20.00,
           status: 'cancelled',
           paymentMethod: 'other',
           transactionId: '2024031087654321',
@@ -432,6 +462,10 @@ const handleSearch = () => {
     
     orderList.value = filteredList
     total.value = filteredList.length
+    
+    // 显示总充值金额
+    showTotalAmount.value = true
+    
     loading.value = false
   }, 500)
 }
@@ -442,6 +476,7 @@ const resetSearch = () => {
     // @ts-ignore
     searchForm[key] = key === 'dateRange' ? [] : ''
   })
+  showTotalAmount.value = false
   handleSearch()
 }
 
@@ -582,6 +617,49 @@ const submitRefundForm = async () => {
   })
 }
 
+// 添加导出订单功能
+const exportOrders = () => {
+  if (orderList.value.length === 0) {
+    ElMessage.warning('没有可导出的订单数据')
+    return
+  }
+  
+  // 创建CSV内容
+  let csvContent = '订单号,用户邮箱,充值金额,手续费,支付方式,订单状态,创建时间,支付时间\n'
+  
+  orderList.value.forEach(order => {
+    const status = order.status === 'pending' ? '待支付' : 
+                  (order.status === 'paid' && !order.refunded) ? '已支付' : 
+                  (order.status === 'cancelled' && order.refunded) ? '已退款' : '已取消'
+    
+    const paymentMethod = order.paymentMethod === 'usdt' ? 'USDT' : '其他方式'
+    
+    csvContent += `"${order.orderNo}","${order.userEmail}",${order.amount.toFixed(2)},${order.fee ? order.fee.toFixed(2) : '0.00'},"${paymentMethod}","${status}","${order.createTime}","${order.payTime || ''}"\n`
+  })
+  
+  // 创建Blob对象
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  
+  // 创建下载链接
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  
+  // 设置下载属性
+  link.setAttribute('href', url)
+  link.setAttribute('download', `充值订单_${new Date().toISOString().split('T')[0]}.csv`)
+  link.style.visibility = 'hidden'
+  
+  // 添加到文档并触发点击
+  document.body.appendChild(link)
+  link.click()
+  
+  // 清理
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+  
+  ElMessage.success('订单导出成功')
+}
+
 onMounted(() => {
   fetchOrders()
 })
@@ -626,6 +704,11 @@ onMounted(() => {
   font-weight: bold;
 }
 
+.fee {
+  color: #e6a23c;
+  font-weight: bold;
+}
+
 .pagination-container {
   margin-top: 20px;
   display: flex;
@@ -655,5 +738,27 @@ onMounted(() => {
 .action-buttons .el-button {
   margin-left: 0 !important;
   margin-right: 0 !important;
+}
+
+.search-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 15px;
+  padding: 10px 15px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+.total-amount {
+  font-size: 14px;
+  color: #606266;
+}
+
+.amount-value {
+  font-size: 16px;
+  font-weight: bold;
+  color: #f56c6c;
+  margin-left: 5px;
 }
 </style> 
