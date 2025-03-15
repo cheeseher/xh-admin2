@@ -49,12 +49,6 @@
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column prop="minRecharge" label="最低充值金额" width="120">
-          <template #default="scope">
-            <span v-if="scope.row.level === 999">欢迎洽谈</span>
-            <span v-else>{{ scope.row.minRecharge }}元</span>
-          </template>
-        </el-table-column>
         <el-table-column prop="discount" label="充值折扣" width="120">
           <template #default="scope">
             <span v-if="scope.row.level === 999">欢迎洽谈</span>
@@ -205,16 +199,6 @@
             ></el-input-number>
             <span class="form-tip">月（用户需要连续多少个月达到月消费条件）</span>
           </el-form-item>
-          <el-form-item label="最低充值金额" prop="minRecharge">
-            <el-input-number 
-              v-model="levelForm.minRecharge" 
-              :min="0" 
-              :precision="0" 
-              :step="100"
-              style="width: 180px;"
-            ></el-input-number>
-            <span class="form-tip">元（用户单次最低充值金额）</span>
-          </el-form-item>
           <el-form-item label="充值折扣" prop="discount">
             <el-input-number 
               v-model="levelForm.discount" 
@@ -273,7 +257,6 @@ const memberLevels = ref([
     minRechargeTotal: 0,
     monthlyConsumption: 0,
     consecutiveMonths: 3,
-    minRecharge: 0,
     discount: 100,
     description: '所有用户的默认等级',
     icon: 'https://element-plus.org/images/element-plus-logo.svg',
@@ -288,7 +271,6 @@ const memberLevels = ref([
     minRechargeTotal: 100,
     monthlyConsumption: 1000,
     consecutiveMonths: 1,
-    minRecharge: 100,
     discount: 95,
     description: '储值用户享受95折优惠',
     icon: 'https://element-plus.org/images/element-plus-logo.svg',
@@ -302,9 +284,8 @@ const memberLevels = ref([
     minRechargeTotal: 1000,
     monthlyConsumption: 2000,
     consecutiveMonths: 2,
-    minRecharge: 1000,
     discount: 90,
-    description: '稳定用户、活跃用户享受9折优惠',
+    description: '中级会员，享受9折优惠',
     icon: 'https://element-plus.org/images/element-plus-logo.svg',
     introduction: 'VIP2用户享受充值9折优惠'
   },
@@ -316,7 +297,6 @@ const memberLevels = ref([
     minRechargeTotal: 5000,
     monthlyConsumption: 5000,
     consecutiveMonths: 3,
-    minRecharge: 5000,
     discount: 85,
     description: '大客户，可定期回访与商务交流',
     icon: 'https://element-plus.org/images/element-plus-logo.svg',
@@ -330,7 +310,6 @@ const memberLevels = ref([
     minRechargeTotal: 0,
     monthlyConsumption: 0,
     consecutiveMonths: 3,
-    minRecharge: 0,
     discount: 0,
     description: '特殊客户，经理可为每位超级VIP用户单独设置折扣',
     icon: 'https://element-plus.org/images/element-plus-logo.svg',
@@ -357,7 +336,6 @@ const levelForm = reactive({
   minRechargeTotal: 0, // 累计充值金额
   monthlyConsumption: 0,
   consecutiveMonths: 3,
-  minRecharge: 0,
   discount: 100,
   description: '',
   introduction: '',
@@ -383,9 +361,6 @@ const levelRules = reactive<FormRules>({
   ],
   consecutiveMonths: [
     { required: true, message: '请输入连续月数', trigger: 'blur' }
-  ],
-  minRecharge: [
-    { required: true, message: '请输入最低充值金额', trigger: 'blur' }
   ],
   discount: [
     { required: true, message: '请输入充值折扣', trigger: 'blur' }
@@ -421,7 +396,6 @@ const handleAddLevel = () => {
   levelForm.minRechargeTotal = 0
   levelForm.monthlyConsumption = 0
   levelForm.consecutiveMonths = 3
-  levelForm.minRecharge = 0
   levelForm.discount = 100
   levelForm.description = ''
   levelForm.introduction = ''
@@ -442,7 +416,6 @@ const handleEditLevel = (row: any) => {
   levelForm.minRechargeTotal = row.minRechargeTotal
   levelForm.monthlyConsumption = row.monthlyConsumption
   levelForm.consecutiveMonths = row.consecutiveMonths || 3
-  levelForm.minRecharge = row.minRecharge
   levelForm.discount = row.discount
   levelForm.description = row.description
   levelForm.introduction = row.introduction
@@ -506,7 +479,6 @@ const submitLevelForm = async () => {
         levelForm.minRechargeTotal = 0
         levelForm.monthlyConsumption = 0
         levelForm.consecutiveMonths = 3
-        levelForm.minRecharge = 0
         levelForm.isCustomDiscount = true
         levelForm.isSystemDefault = true
         // 超级VIP不设置统一折扣，由用户管理页面单独设置
@@ -534,7 +506,6 @@ const submitLevelForm = async () => {
           minRechargeTotal: levelForm.minRechargeTotal,
           monthlyConsumption: levelForm.monthlyConsumption,
           consecutiveMonths: levelForm.consecutiveMonths,
-          minRecharge: levelForm.minRecharge,
           discount: levelForm.discount,
           description: levelForm.description,
           introduction: levelForm.introduction,
@@ -555,7 +526,6 @@ const submitLevelForm = async () => {
             minRechargeTotal: levelForm.minRechargeTotal,
             monthlyConsumption: levelForm.monthlyConsumption,
             consecutiveMonths: levelForm.consecutiveMonths,
-            minRecharge: levelForm.minRecharge,
             discount: levelForm.discount,
             description: levelForm.description,
             introduction: levelForm.introduction,

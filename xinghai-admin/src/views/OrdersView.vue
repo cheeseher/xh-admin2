@@ -5,7 +5,7 @@
         <div class="card-header">
           <span>商品订单列表</span>
           <div class="header-buttons">
-            <el-button type="success" @click="handleWithdrawal">总提款</el-button>
+            <el-button type="primary" @click="handleWithdrawal">总提款</el-button>
             <el-button type="primary" @click="exportAllOrders">
               <el-icon><Download /></el-icon>
               导出所有订单

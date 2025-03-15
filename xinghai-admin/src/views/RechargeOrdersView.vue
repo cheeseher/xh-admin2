@@ -4,6 +4,15 @@
       <template #header>
         <div class="card-header">
           <span>充值订单列表</span>
+          <div class="header-actions">
+            <el-button type="primary" @click="handleWithdrawal">
+              总提款
+            </el-button>
+            <el-button type="success" @click="exportAllOrders">
+              <el-icon><Download /></el-icon>
+              导出所有订单
+            </el-button>
+          </div>
         </div>
       </template>
       
@@ -56,9 +65,6 @@
           <el-form-item>
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetSearch">重置</el-button>
-            <el-button type="success" @click="handleWithdrawal">
-              总提款
-            </el-button>
           </el-form-item>
         </el-form>
         
@@ -67,12 +73,16 @@
           <div class="total-amount">
             <span>筛选结果总充值金额：</span>
             <span class="amount-value">¥{{ totalAmount.toFixed(2) }}</span>
+            <span v-if="multipleSelection.length > 0" style="margin-left: 20px;">已选择：{{ multipleSelection.length }}笔订单</span>
+            <span v-if="multipleSelection.length > 0" class="amount-value">¥{{ selectedTotalAmount.toFixed(2) }}</span>
           </div>
           <div class="action-btns">
-            <el-button type="success" @click="handleWithdrawal">提款</el-button>
-            <el-button type="success" @click="exportOrders">
+            <el-button type="primary" @click="handleBatchWithdrawal" :disabled="!hasSelectedWithdrawableOrders">
+              批量提款
+            </el-button>
+            <el-button type="success" @click="exportOrders" :disabled="multipleSelection.length === 0">
               <el-icon><Download /></el-icon>
-              导出订单
+              导出选中订单
             </el-button>
           </div>
         </div>
@@ -85,7 +95,9 @@
         border
         stripe
         style="width: 100%"
+        @selection-change="handleSelectionChange"
       >
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="id" label="充值订单ID" min-width="100" />
         <el-table-column prop="orderNo" label="订单号" min-width="180" />
         <el-table-column prop="userEmail" label="用户邮箱" min-width="180" />
@@ -401,61 +413,78 @@ const totalWithdrawal = computed(() => {
   }, 0)
 })
 
-// 处理总提款按钮点击
-const handleWithdrawal = () => {
-  if (orderList.value.length === 0) {
-    ElMessage.warning('没有可提款的订单');
-    return;
-  }
+// 多选相关
+const multipleSelection = ref<RechargeOrder[]>([])
 
-  // 获取所有已支付但未提款的订单
-  const ordersToWithdraw = orderList.value.filter(
+// 处理表格选择变化
+const handleSelectionChange = (selection: RechargeOrder[]) => {
+  multipleSelection.value = selection
+}
+
+// 计算选中订单的总金额
+const selectedTotalAmount = computed(() => {
+  return multipleSelection.value.reduce((sum, order) => sum + order.amount, 0)
+})
+
+// 判断是否有选中的可提款订单
+const hasSelectedWithdrawableOrders = computed(() => {
+  return multipleSelection.value.some(order => 
+    order.status === 'paid' && 
+    !order.refunded && 
+    (order.withdrawalStatus === 'not_withdrawn' || !order.withdrawalStatus)
+  )
+})
+
+// 批量提款
+const handleBatchWithdrawal = () => {
+  // 获取选中的已支付且未提款的订单
+  const withdrawableOrders = multipleSelection.value.filter(
     order => order.status === 'paid' && 
     !order.refunded && 
     (order.withdrawalStatus === 'not_withdrawn' || !order.withdrawalStatus)
-  );
+  )
   
-  if (ordersToWithdraw.length === 0) {
-    ElMessage.warning('没有可提款的订单');
-    return;
+  if (withdrawableOrders.length === 0) {
+    ElMessage.warning('选中的订单中没有可提款的订单')
+    return
   }
   
-  const totalAmount = ordersToWithdraw.reduce((sum, order) => sum + order.amount, 0);
+  // 计算总金额
+  const totalWithdrawalAmount = withdrawableOrders.reduce((sum, order) => sum + order.amount, 0)
   
+  // 确认提款
   ElMessageBox.confirm(
-    `确定要提取总金额 ¥${totalAmount.toFixed(2)} 吗？共 ${ordersToWithdraw.length} 笔订单`,
-    '提款确认',
+    `确定要对选中的 ${withdrawableOrders.length} 个订单进行提款操作吗？总金额：¥${totalWithdrawalAmount.toFixed(2)}`,
+    '批量提款确认',
     {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
-      type: 'warning',
+      type: 'warning'
     }
-  )
-    .then(() => {
-      // 更新订单的提款状态
-      ordersToWithdraw.forEach(order => {
-        const index = orderList.value.findIndex(item => item.id === order.id);
-        if (index !== -1) {
-          orderList.value[index].withdrawalStatus = 'withdrawn';
-          
-          // 添加提款记录到日志
-          if (!orderList.value[index].logs) {
-            orderList.value[index].logs = [];
-          }
-          
-          orderList.value[index].logs.push({
-            time: new Date().toLocaleString(),
-            action: `提款 ¥${order.amount.toFixed(2)}`,
-            operator: '管理员'
-          });
+  ).then(() => {
+    // 模拟提款操作
+    withdrawableOrders.forEach(order => {
+      const index = orderList.value.findIndex(item => item.id === order.id)
+      if (index !== -1) {
+        orderList.value[index].withdrawalStatus = 'withdrawn'
+        
+        // 添加提款记录到日志
+        if (!orderList.value[index].logs) {
+          orderList.value[index].logs = []
         }
-      });
-      
-      ElMessage.success(`已成功提取 ¥${totalAmount.toFixed(2)}`);
+        
+        orderList.value[index].logs.push({
+          time: new Date().toLocaleString(),
+          action: `批量提款 ¥${order.amount.toFixed(2)}`,
+          operator: '管理员'
+        })
+      }
     })
-    .catch(() => {
-      ElMessage.info('已取消提款操作');
-    });
+    
+    ElMessage.success(`成功提款 ${withdrawableOrders.length} 个订单，总金额：¥${totalWithdrawalAmount.toFixed(2)}`)
+  }).catch(() => {
+    ElMessage.info('已取消提款操作')
+  })
 }
 
 // 获取订单列表
@@ -471,8 +500,8 @@ const fetchOrders = async () => {
           orderNo: 'CZ202403100001',
           userId: 1001,
           userEmail: 'zhangsan@example.com',
-          amount: 100.00,
-          fee: 2.00,
+          amount: 1000.00,
+          fee: 10.00,
           status: 'paid',
           paymentMethod: 'usdt',
           transactionId: '2024031012345678',
@@ -490,10 +519,10 @@ const fetchOrders = async () => {
           orderNo: 'CZ202403100002',
           userId: 1002,
           userEmail: 'lisi@example.com',
-          amount: 200.00,
-          fee: 4.00,
+          amount: 2000.00,
+          fee: 20.00,
           status: 'pending',
-          paymentMethod: 'other',
+          paymentMethod: 'usdt',
           createTime: '2024-03-10 11:30:00',
           withdrawalStatus: 'not_withdrawn',
           logs: [
@@ -506,7 +535,7 @@ const fetchOrders = async () => {
           userId: 1003,
           userEmail: 'wangwu@example.com',
           amount: 500.00,
-          fee: 10.00,
+          fee: 5.00,
           status: 'cancelled',
           paymentMethod: 'other',
           createTime: '2024-03-10 14:20:00',
@@ -522,9 +551,9 @@ const fetchOrders = async () => {
           userId: 1004,
           userEmail: 'zhaoliu@example.com',
           amount: 1000.00,
-          fee: 20.00,
+          fee: 10.00,
           status: 'paid',
-          paymentMethod: 'other',
+          paymentMethod: 'usdt',
           transactionId: '2024031087654321',
           createTime: '2024-03-10 16:00:00',
           payTime: '2024-03-10 16:05:12',
@@ -532,6 +561,148 @@ const fetchOrders = async () => {
           logs: [
             { time: '2024-03-10 16:00:00', action: '创建订单', operator: '系统' },
             { time: '2024-03-10 16:05:12', action: '支付成功', operator: '系统' }
+          ]
+        },
+        {
+          id: 'R000005',
+          orderNo: 'CZ202403110001',
+          userId: 1005,
+          userEmail: 'sunqi@example.com',
+          amount: 3000.00,
+          fee: 30.00,
+          status: 'paid',
+          paymentMethod: 'other',
+          transactionId: '2024031100001',
+          createTime: '2024-03-11 09:15:00',
+          payTime: '2024-03-11 09:20:35',
+          withdrawalStatus: 'not_withdrawn',
+          logs: [
+            { time: '2024-03-11 09:15:00', action: '创建订单', operator: '系统' },
+            { time: '2024-03-11 09:20:35', action: '支付成功', operator: '系统' }
+          ]
+        },
+        {
+          id: 'R000006',
+          orderNo: 'CZ202403110002',
+          userId: 1006,
+          userEmail: 'zhouba@example.com',
+          amount: 5000.00,
+          fee: 50.00,
+          status: 'cancelled',
+          paymentMethod: 'usdt',
+          refunded: true,
+          createTime: '2024-03-11 10:30:00',
+          payTime: '2024-03-11 10:35:22',
+          withdrawalStatus: 'not_withdrawn',
+          logs: [
+            { time: '2024-03-11 10:30:00', action: '创建订单', operator: '系统' },
+            { time: '2024-03-11 10:35:22', action: '支付成功', operator: '系统' },
+            { time: '2024-03-11 14:20:00', action: '退款 ¥5000.00 - 客户申请退款', operator: '管理员' }
+          ]
+        },
+        {
+          id: 'R000007',
+          orderNo: 'CZ202403110003',
+          userId: 1007,
+          userEmail: 'wujiu@example.com',
+          amount: 800.00,
+          fee: 8.00,
+          status: 'paid',
+          paymentMethod: 'other',
+          transactionId: '2024031100003',
+          createTime: '2024-03-11 13:45:00',
+          payTime: '2024-03-11 13:50:18',
+          withdrawalStatus: 'withdrawn',
+          logs: [
+            { time: '2024-03-11 13:45:00', action: '创建订单', operator: '系统' },
+            { time: '2024-03-11 13:50:18', action: '支付成功', operator: '系统' },
+            { time: '2024-03-11 16:30:00', action: '提款 ¥800.00', operator: '管理员' }
+          ]
+        },
+        {
+          id: 'R000008',
+          orderNo: 'CZ202403120001',
+          userId: 1008,
+          userEmail: 'zhengshi@example.com',
+          amount: 1500.00,
+          fee: 15.00,
+          status: 'pending',
+          paymentMethod: 'other',
+          createTime: '2024-03-12 08:30:00',
+          withdrawalStatus: 'not_withdrawn',
+          logs: [
+            { time: '2024-03-12 08:30:00', action: '创建订单', operator: '系统' }
+          ]
+        },
+        {
+          id: 'R000009',
+          orderNo: 'CZ202403120002',
+          userId: 1009,
+          userEmail: 'wangshi@example.com',
+          amount: 2500.00,
+          fee: 25.00,
+          status: 'paid',
+          paymentMethod: 'usdt',
+          transactionId: '2024031200002',
+          createTime: '2024-03-12 10:15:00',
+          payTime: '2024-03-12 10:20:45',
+          withdrawalStatus: 'withdrawn',
+          logs: [
+            { time: '2024-03-12 10:15:00', action: '创建订单', operator: '系统' },
+            { time: '2024-03-12 10:20:45', action: '支付成功', operator: '系统' },
+            { time: '2024-03-12 11:30:00', action: '提款 ¥2500.00', operator: '管理员' }
+          ]
+        },
+        {
+          id: 'R000010',
+          orderNo: 'CZ202403120003',
+          userId: 1010,
+          userEmail: 'lishi@example.com',
+          amount: 3500.00,
+          fee: 35.00,
+          status: 'cancelled',
+          paymentMethod: 'other',
+          refunded: true,
+          createTime: '2024-03-12 14:00:00',
+          payTime: '2024-03-12 14:05:33',
+          withdrawalStatus: 'not_withdrawn',
+          logs: [
+            { time: '2024-03-12 14:00:00', action: '创建订单', operator: '系统' },
+            { time: '2024-03-12 14:05:33', action: '支付成功', operator: '系统' },
+            { time: '2024-03-12 16:45:00', action: '退款 ¥3500.00 - 系统错误', operator: '管理员' }
+          ]
+        },
+        {
+          id: 'R000011',
+          orderNo: 'CZ202403130001',
+          userId: 1011,
+          userEmail: 'zhangshiyi@example.com',
+          amount: 6000.00,
+          fee: 60.00,
+          status: 'paid',
+          paymentMethod: 'usdt',
+          transactionId: '2024031300001',
+          createTime: '2024-03-13 09:00:00',
+          payTime: '2024-03-13 09:10:15',
+          withdrawalStatus: 'not_withdrawn',
+          logs: [
+            { time: '2024-03-13 09:00:00', action: '创建订单', operator: '系统' },
+            { time: '2024-03-13 09:10:15', action: '支付成功', operator: '系统' }
+          ]
+        },
+        {
+          id: 'R000012',
+          orderNo: 'CZ202403130002',
+          userId: 1012,
+          userEmail: 'lishier@example.com',
+          amount: 4000.00,
+          fee: 40.00,
+          status: 'pending',
+          paymentMethod: 'other',
+          createTime: '2024-03-13 11:20:00',
+          withdrawalStatus: 'not_withdrawn',
+          logs: [
+            { time: '2024-03-13 11:20:00', action: '创建订单', operator: '系统' }
           ]
         }
       ]
@@ -743,8 +914,9 @@ const submitRefundForm = async () => {
   })
 }
 
-// 添加导出订单功能
-const exportOrders = () => {
+// 添加导出所有订单的方法
+const exportAllOrders = () => {
+  // 导出所有订单
   if (orderList.value.length === 0) {
     ElMessage.warning('没有可导出的订单数据')
     return
@@ -774,7 +946,7 @@ const exportOrders = () => {
   
   // 设置下载属性
   link.setAttribute('href', url)
-  link.setAttribute('download', `充值订单_${new Date().toISOString().split('T')[0]}.csv`)
+  link.setAttribute('download', `全部充值订单_${new Date().toISOString().split('T')[0]}.csv`)
   link.style.visibility = 'hidden'
   
   // 添加到文档并触发点击
@@ -785,7 +957,53 @@ const exportOrders = () => {
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
   
-  ElMessage.success('订单导出成功')
+  ElMessage.success('成功导出全部订单数据')
+}
+
+// 修改导出订单功能，区分是否有选中订单
+const exportOrders = () => {
+  // 确定要导出的订单列表
+  if (multipleSelection.value.length === 0) {
+    ElMessage.warning('请先选择要导出的订单')
+    return
+  }
+  
+  // 创建CSV内容
+  let csvContent = '订单号,用户邮箱,充值金额,手续费,支付方式,订单状态,提款状态,创建时间,支付时间\n'
+  
+  multipleSelection.value.forEach(order => {
+    const status = order.status === 'pending' ? '待支付' : 
+                  (order.status === 'paid' && !order.refunded) ? '已支付' : 
+                  (order.status === 'cancelled' && order.refunded) ? '已退款' : '已取消'
+    
+    const paymentMethod = order.paymentMethod === 'usdt' ? 'USDT' : '其他方式'
+    
+    const withdrawalStatus = order.withdrawalStatus === 'withdrawn' ? '已提款' : '未提款'
+    
+    csvContent += `"${order.orderNo}","${order.userEmail}",${order.amount.toFixed(2)},${order.fee ? order.fee.toFixed(2) : '0.00'},"${paymentMethod}","${status}","${withdrawalStatus}","${order.createTime}","${order.payTime || ''}"\n`
+  })
+  
+  // 创建Blob对象
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  
+  // 创建下载链接
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  
+  // 设置下载属性
+  link.setAttribute('href', url)
+  link.setAttribute('download', `选中充值订单_${new Date().toISOString().split('T')[0]}.csv`)
+  link.style.visibility = 'hidden'
+  
+  // 添加到文档并触发点击
+  document.body.appendChild(link)
+  link.click()
+  
+  // 清理
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+  
+  ElMessage.success(`成功导出选中订单数据`)
 }
 
 // 处理删除订单
@@ -812,6 +1030,56 @@ const handleDelete = (row: RechargeOrder) => {
     })
 }
 
+// 添加总提款功能
+const handleWithdrawal = () => {
+  // 获取所有已支付但未提款的订单
+  const ordersToWithdraw = orderList.value.filter(
+    order => order.status === 'paid' && 
+    !order.refunded && 
+    (order.withdrawalStatus === 'not_withdrawn' || !order.withdrawalStatus)
+  )
+  
+  if (ordersToWithdraw.length === 0) {
+    ElMessage.warning('没有可提款的订单')
+    return
+  }
+  
+  const totalAmount = ordersToWithdraw.reduce((sum, order) => sum + order.amount, 0)
+  
+  ElMessageBox.confirm(
+    `确定要提取总金额 ¥${totalAmount.toFixed(2)} 吗？共 ${ordersToWithdraw.length} 笔订单`,
+    '总提款确认',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(() => {
+    // 更新订单的提款状态
+    ordersToWithdraw.forEach(order => {
+      const index = orderList.value.findIndex(item => item.id === order.id)
+      if (index !== -1) {
+        orderList.value[index].withdrawalStatus = 'withdrawn'
+        
+        // 添加提款记录到日志
+        if (!orderList.value[index].logs) {
+          orderList.value[index].logs = []
+        }
+        
+        orderList.value[index].logs.push({
+          time: new Date().toLocaleString(),
+          action: `提款 ¥${order.amount.toFixed(2)}`,
+          operator: '管理员'
+        })
+      }
+    })
+    
+    ElMessage.success(`已成功提取 ¥${totalAmount.toFixed(2)}`)
+  }).catch(() => {
+    ElMessage.info('已取消提款操作')
+  })
+}
+
 onMounted(() => {
   fetchOrders()
 })
@@ -830,6 +1098,11 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
 }
 
 .page-description {

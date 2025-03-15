@@ -74,6 +74,11 @@
             </div>
           </template>
         </el-table-column>
+        <el-table-column label="成本价" width="100">
+          <template #default="scope">
+            <span class="cost-price">¥{{ scope.row.costPrice ? scope.row.costPrice.toFixed(2) : '0.00' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="stock" label="库存" width="80">
           <template #default="scope">
             <span :class="{ 'low-stock': scope.row.stock < (scope.row.stockWarning || 50) }">{{ scope.row.stock }}</span>
@@ -657,7 +662,10 @@ const tableData = ref([
       { quantity: 100, price: 4.80 }
     ],
     templateMode: 'bind',
-    templateId: 2
+    templateId: 2,
+    costPrice: 3.20,
+    stockWarning: 10,
+    remark: '高质量账号，适合长期使用'
   },
   { 
     id: 'P000004',
@@ -678,7 +686,10 @@ const tableData = ref([
       { quantity: 100, price: 6.75 }
     ],
     templateMode: 'custom',
-    templateId: 0
+    templateId: 0,
+    costPrice: 4.50,
+    stockWarning: 100,
+    remark: '半年以上老号，稳定性高'
   },
   { 
     id: 'P000005',
@@ -694,7 +705,10 @@ const tableData = ref([
     statusBool: true,
     createTime: '2024-03-05 08:00:00',
     templateMode: 'custom',
-    templateId: 0
+    templateId: 0,
+    costPrice: 6.00,
+    stockWarning: 200,
+    remark: '美国地区IP，适合海外用户'
   },
   { 
     id: 'P000006',
@@ -710,7 +724,10 @@ const tableData = ref([
     statusBool: true,
     createTime: '2024-03-06 08:00:00',
     templateMode: 'custom',
-    templateId: 0
+    templateId: 0,
+    costPrice: 7.50,
+    stockWarning: 150,
+    remark: '一年以上老号，高质量稳定账号'
   },
   { 
     id: 'P000007',
@@ -726,7 +743,10 @@ const tableData = ref([
     statusBool: true,
     createTime: '2024-03-07 08:00:00',
     templateMode: 'custom',
-    templateId: 0
+    templateId: 0,
+    costPrice: 9.50,
+    stockWarning: 30,
+    remark: '美国老号，高质量稀缺资源'
   },
   { 
     id: 'P000008',
@@ -742,7 +762,10 @@ const tableData = ref([
     statusBool: true,
     createTime: '2024-03-08 08:00:00',
     templateMode: 'custom',
-    templateId: 0
+    templateId: 0,
+    costPrice: 8.00,
+    stockWarning: 20,
+    remark: '2022年注册的老号，稳定性极高'
   }
 ])
 
@@ -1658,6 +1681,10 @@ const validateCostPrice = () => {
   padding: 20px;
 }
 
+.box-card {
+  margin-bottom: 20px;
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -1666,10 +1693,10 @@ const validateCostPrice = () => {
 
 .page-description {
   margin-bottom: 20px;
-  padding: 10px;
-  background-color: #ecf8ff;
+  padding: 10px 15px;
+  background-color: #f0f9eb;
   border-radius: 4px;
-  border-left: 5px solid #50bfff;
+  border-left: 4px solid #67c23a;
 }
 
 .page-description p {
@@ -1681,17 +1708,6 @@ const validateCostPrice = () => {
 
 .search-area {
   margin-bottom: 20px;
-  padding: 15px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
-}
-
-.price-input {
-  width: 120px;
-}
-
-.price-separator {
-  margin: 0 5px;
 }
 
 .price-container {
@@ -1706,12 +1722,18 @@ const validateCostPrice = () => {
 
 .original-price {
   color: #909399;
-  font-size: 12px;
   text-decoration: line-through;
+  font-size: 12px;
+}
+
+.cost-price {
+  color: #67c23a;
+  font-weight: bold;
 }
 
 .low-stock {
   color: #f56c6c;
+  font-weight: bold;
 }
 
 .status-text {
