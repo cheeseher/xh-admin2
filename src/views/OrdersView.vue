@@ -60,16 +60,6 @@
               <el-option label="待发货" value="待发货"></el-option>
               <el-option label="已完成" value="已完成"></el-option>
               <el-option label="已取消" value="已取消"></el-option>
-              <el-option label="已退款" value="已退款"></el-option>
-              <el-option label="申请退款中" value="申请退款中"></el-option>
-             <el-option label="已拒绝退款" value="已拒绝退款"></el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="提款状态">
-            <el-select v-model="searchForm.withdrawalStatus" placeholder="请选择" clearable style="width: 168px;">
-              <el-option label="全部" value=""></el-option>
-              <el-option label="已提款" value="withdrawn"></el-option>
-              <el-option label="未提款" value="not_withdrawn"></el-option>
             </el-select>
           </el-form-item>
           <el-form-item label="下单时间">
@@ -170,12 +160,6 @@
             <el-tag :type="getStatusType(scope.row.status)">{{ scope.row.status }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="withdrawalStatus" label="提款状态" width="120">
-          <template #default="scope">
-            <el-tag v-if="scope.row.withdrawalStatus === 'withdrawn'" type="success">已提款</el-tag>
-            <el-tag v-else type="info">未提款</el-tag>
-          </template>
-        </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="scope">
@@ -186,18 +170,6 @@
                 type="success" 
                 @click="handleDeliver(scope.row)"
               >发货</el-button>
-              <el-button 
-                v-if="['待付款', '待发货'].includes(scope.row.status)" 
-                size="small" 
-                type="warning" 
-                @click="handleRefund(scope.row)"
-              >退款</el-button>
-              <el-button 
-                v-if="scope.row.status === '申请退款中'" 
-                size="small" 
-                type="danger" 
-                @click="handleApproveRefund(scope.row)"
-              >审核退款</el-button>
               <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
             </div>
           </template>
@@ -333,7 +305,6 @@ const searchForm = reactive({
   payMethod: '',
   deliveryMethod: '',
   status: '',
-  withdrawalStatus: '',
   dateRange: [] as string[]
 })
 
@@ -386,7 +357,6 @@ interface OrderItem {
   remark?: string;
   createTime: string;
   refundInfo: RefundInfo | null;
-  withdrawalStatus?: 'withdrawn' | 'not_withdrawn';
 }
 
 // 表格数据
@@ -405,8 +375,7 @@ const orderList = ref<OrderItem[]>([{
     userEmail: 'buyer1@example.com',
     payMethod: 'usdt',
     deliveryMethod: '自动发货',
-    status: '申请退款中',
-    withdrawalStatus: 'not_withdrawn',
+    status: '已完成',
     createTime: '2023-09-01 10:00:00',
     refundInfo: null
   },
@@ -426,7 +395,6 @@ const orderList = ref<OrderItem[]>([{
     payMethod: 'usdt',
     deliveryMethod: '手动发货',
     status: '待发货',
-    withdrawalStatus: 'not_withdrawn',
     createTime: '2023-09-01 11:00:00',
     refundInfo: null
   },
@@ -445,15 +413,10 @@ const orderList = ref<OrderItem[]>([{
     userEmail: 'user777@example.com',
     payMethod: 'usdt',
     deliveryMethod: '自动发货',
-    status: '申请退款中',
+    status: '已完成',
     remark: '账号无法正常使用',
     createTime: '2024-03-15 18:30:00',
-    withdrawalStatus: 'not_withdrawn',
-    refundInfo: {
-      refundAmount: 199.99,
-      refundRemark: '账号登录异常，无法正常使用',
-      refundTime: '2024-03-15 19:45:00'
-    }
+    refundInfo: null
   },
   {
     id: 'S000001',
@@ -473,7 +436,6 @@ const orderList = ref<OrderItem[]>([{
     status: '已完成',
     remark: '客户要求稳定可用的账号',
     createTime: '2024-03-15 10:00:00',
-    withdrawalStatus: 'withdrawn',
     refundInfo: null
   },
   {
@@ -494,7 +456,6 @@ const orderList = ref<OrderItem[]>([{
     status: '待发货',
     remark: '客户需要美国地区的账号',
     createTime: '2024-03-15 11:30:00',
-    withdrawalStatus: 'not_withdrawn',
     refundInfo: null
   },
   {
@@ -515,7 +476,6 @@ const orderList = ref<OrderItem[]>([{
     status: '待发货',
     remark: '',
     createTime: '2024-03-15 14:20:00',
-    withdrawalStatus: 'not_withdrawn',
     refundInfo: null
   },
   {
@@ -536,7 +496,6 @@ const orderList = ref<OrderItem[]>([{
     status: '待付款',
     remark: '',
     createTime: '2024-03-15 16:45:00',
-    withdrawalStatus: 'not_withdrawn',
     refundInfo: null
   },
   {
@@ -554,8 +513,7 @@ const orderList = ref<OrderItem[]>([{
     userEmail: 'user202@example.com',
     payMethod: 'usdt',
     deliveryMethod: '手动发货',
-    withdrawalStatus: 'not_withdrawn',
-    status: '已退款',
+    status: '已完成',
     remark: '客户申请退款',
     createTime: '2024-03-15 09:15:00',
     refundInfo: {
@@ -603,7 +561,6 @@ const orderList = ref<OrderItem[]>([{
     status: '已完成',
     remark: '客户需要美国地区的账号',
     createTime: '2024-03-16 08:15:00',
-    withdrawalStatus: 'not_withdrawn',
     refundInfo: null
   },
   {
@@ -621,10 +578,9 @@ const orderList = ref<OrderItem[]>([{
     userEmail: 'user999@example.com',
     payMethod: 'usdt',
     deliveryMethod: '自动发货',
-    status: '已拒绝退款',
+    status: '已完成',
     remark: '客户申请退款但不符合条件',
     createTime: '2024-03-16 09:30:00',
-    withdrawalStatus: 'not_withdrawn',
     refundInfo: {
       refundAmount: 79.98,
       refundRemark: '客户表示不再需要此账号，但已超过退款期限',
@@ -646,10 +602,9 @@ const orderList = ref<OrderItem[]>([{
     userEmail: 'business@company.com',
     payMethod: 'other',
     deliveryMethod: '手动发货',
-    status: '已发货',
+    status: '已完成',
     remark: '企业批量采购',
     createTime: '2024-03-16 11:20:00',
-    withdrawalStatus: 'not_withdrawn',
     refundInfo: null
   },
   {
@@ -667,10 +622,9 @@ const orderList = ref<OrderItem[]>([{
     userEmail: 'premium@example.com',
     payMethod: 'usdt',
     deliveryMethod: '手动发货',
-    status: '已取消',
+    status: '已完成',
     remark: '客户主动取消订单',
     createTime: '2024-03-16 13:45:00',
-    withdrawalStatus: 'not_withdrawn',
     refundInfo: null
   },
   {
@@ -691,7 +645,6 @@ const orderList = ref<OrderItem[]>([{
     status: '已完成',
     remark: '批发客户，享受折扣',
     createTime: '2024-03-16 15:30:00',
-    withdrawalStatus: 'not_withdrawn',
     refundInfo: null
   },
   {
@@ -712,7 +665,6 @@ const orderList = ref<OrderItem[]>([{
     status: '待发货',
     remark: '特殊账号，需人工审核',
     createTime: '2024-03-16 16:45:00',
-    withdrawalStatus: 'not_withdrawn',
     refundInfo: null
   },
   {
@@ -733,7 +685,6 @@ const orderList = ref<OrderItem[]>([{
     status: '待付款',
     remark: '高级认证账号',
     createTime: '2024-03-16 17:30:00',
-    withdrawalStatus: 'not_withdrawn',
     refundInfo: null
   },
   {
@@ -754,7 +705,6 @@ const orderList = ref<OrderItem[]>([{
     status: '已完成',
     remark: '游戏账号',
     createTime: '2024-03-16 18:15:00',
-    withdrawalStatus: 'withdrawn',
     refundInfo: null
   },
   {
@@ -772,10 +722,9 @@ const orderList = ref<OrderItem[]>([{
     userEmail: 'overseas@example.com',
     payMethod: 'usdt',
     deliveryMethod: '自动发货',
-    status: '申请退款中',
+    status: '已完成',
     remark: '客户称账号无法登录',
     createTime: '2024-03-16 19:30:00',
-    withdrawalStatus: 'not_withdrawn',
     refundInfo: {
       refundAmount: 10.00,
       refundRemark: '账号无法登录，提示安全验证',
@@ -797,10 +746,9 @@ const orderList = ref<OrderItem[]>([{
     userEmail: 'marketing@example.com',
     payMethod: 'other',
     deliveryMethod: '手动发货',
-    status: '已发货',
+    status: '已完成',
     remark: '商业账号，含广告权限',
     createTime: '2024-03-16 21:00:00',
-    withdrawalStatus: 'not_withdrawn',
     refundInfo: null
   }
 ])
@@ -852,10 +800,6 @@ const filteredOrderList = computed(() => {
   
   if (searchForm.status) {
     result = result.filter(item => item.status === searchForm.status)
-  }
-  
-  if (searchForm.withdrawalStatus) {
-    result = result.filter(item => item.withdrawalStatus === searchForm.withdrawalStatus)
   }
   
   if (searchForm.dateRange && searchForm.dateRange.length === 2) {
@@ -912,12 +856,10 @@ const exportOrders = () => {
   }
   
   // 创建CSV内容
-  let csvContent = '订单号,商品名称,商品分类,数量,总价,手续费,用户邮箱,支付方式,发货方式,订单状态,提款状态,创建时间\n'
+  let csvContent = '订单号,商品名称,商品分类,数量,总价,手续费,用户邮箱,支付方式,发货方式,订单状态,创建时间\n'
   
   multipleSelection.value.forEach(order => {
-    const withdrawalStatus = order.withdrawalStatus === 'withdrawn' ? '已提款' : '未提款'
-    
-    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${order.userEmail}","${order.payMethod === 'usdt' ? 'USDT' : '其他方式'}","${order.deliveryMethod}","${order.status}","${withdrawalStatus}","${order.createTime}"\n`
+    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${order.userEmail}","${order.payMethod === 'usdt' ? 'USDT' : '其他方式'}","${order.deliveryMethod}","${order.status}","${order.createTime}"\n`
   })
   
   // 创建Blob对象
@@ -1021,12 +963,6 @@ const getStatusType = (status: string) => {
       return 'success'
     case '已取消':
       return 'info'
-    case '已退款':
-      return 'danger'
-    case '申请退款中':
-      return 'warning'
-    case '已拒绝退款':
-      return 'danger'
     default:
       return 'info'
   }
@@ -1040,7 +976,6 @@ const resetSearch = () => {
   searchForm.payMethod = ''
   searchForm.deliveryMethod = ''
   searchForm.status = ''
-  searchForm.withdrawalStatus = ''
   searchForm.dateRange = []
   showTotalAmount.value = false
   
@@ -1194,7 +1129,7 @@ const submitDeliverForm = async () => {
       // 更新订单状态为已发货
       const order = orderList.value.find(item => item.id === deliverForm.id)
       if (order) {
-        order.status = '已发货'
+        order.status = '已完成'
         order.cardId = deliverForm.cardId
         order.cardInfo = deliverForm.cardInfo
         if (deliverForm.remark) {
@@ -1267,33 +1202,6 @@ const handleRefund = (row: any) => {
   refundDialogVisible.value = true
 }
 
-// 处理审核退款
-const handleApproveRefund = (row: any) => {
-  // 填充退款表单数据
-  refundForm.id = row.id
-  refundForm.orderId = row.orderId
-  refundForm.productName = row.productName
-  refundForm.userEmail = row.userEmail
-  refundForm.totalPrice = parseFloat(row.totalPrice.replace('¥', ''))
-  
-  // 如果有退款信息，填充退款信息
-  if (row.refundInfo) {
-    refundForm.refundAmount = row.refundInfo.refundAmount
-    refundForm.refundRemark = row.refundInfo.refundRemark
-    refundForm.refundTime = row.refundInfo.refundTime
-  } else {
-    refundForm.refundAmount = refundForm.totalPrice
-    refundForm.refundRemark = ''
-    refundForm.refundTime = ''
-  }
-  
-  // 重置审核相关字段
-  refundForm.approved = true
-  
-  // 显示退款审核对话框
-  refundDialogVisible.value = true
-}
-
 // 提交审核结果
 const submitRefund = async () => {
   if (!refundFormRef.value) return
@@ -1305,10 +1213,10 @@ const submitRefund = async () => {
       if (index !== -1) {
         // 根据审核结果更新订单状态
         if (refundForm.approved) {
-          orderList.value[index].status = '已退款'
+          orderList.value[index].status = '已完成'
           ElMessage.success(`订单 ${refundForm.orderId} 的退款申请已通过`)
         } else {
-          orderList.value[index].status = '已拒绝退款'
+          orderList.value[index].status = '已完成'
           ElMessage.info(`订单 ${refundForm.orderId} 的退款申请已拒绝`)
         }
       }
@@ -1329,12 +1237,10 @@ const exportAllOrders = () => {
   }
   
   // 创建CSV内容
-  let csvContent = '订单号,商品名称,商品分类,数量,总价,手续费,用户邮箱,支付方式,发货方式,订单状态,提款状态,创建时间\n'
+  let csvContent = '订单号,商品名称,商品分类,数量,总价,手续费,用户邮箱,支付方式,发货方式,订单状态,创建时间\n'
   
   allOrderList.value.forEach(order => {
-    const withdrawalStatus = order.withdrawalStatus === 'withdrawn' ? '已提款' : '未提款'
-    
-    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${order.userEmail}","${order.payMethod === 'usdt' ? 'USDT' : '其他方式'}","${order.deliveryMethod}","${order.status}","${withdrawalStatus}","${order.createTime}"\n`
+    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${order.userEmail}","${order.payMethod === 'usdt' ? 'USDT' : '其他方式'}","${order.deliveryMethod}","${order.status}","${order.createTime}"\n`
   })
   
   // 创建Blob对象

@@ -32,7 +32,6 @@
               <el-option label="待支付" value="pending"></el-option>
               <el-option label="已支付" value="paid"></el-option>
               <el-option label="已取消" value="cancelled"></el-option>
-              <el-option label="已退款" value="refunded"></el-option>
             </el-select>
           </el-form-item>
           <el-form-item label="支付方式">
@@ -115,8 +114,7 @@
         <el-table-column prop="status" label="订单状态" min-width="120">
           <template #default="scope">
             <el-tag v-if="scope.row.status === 'pending'" type="warning">待支付</el-tag>
-            <el-tag v-else-if="scope.row.status === 'paid' && !scope.row.refunded" type="success">已支付</el-tag>
-            <el-tag v-else-if="scope.row.status === 'cancelled' && scope.row.refunded" type="danger">已退款</el-tag>
+            <el-tag v-else-if="scope.row.status === 'paid'" type="success">已支付</el-tag>
             <el-tag v-else-if="scope.row.status === 'cancelled'" type="info">已取消</el-tag>
           </template>
         </el-table-column>
@@ -138,12 +136,6 @@
                 type="success" 
                 @click="confirmPayment(scope.row)"
               >确认支付</el-button>
-              <el-button 
-                v-if="scope.row.status === 'paid'" 
-                size="small" 
-                type="warning" 
-                @click="handleRefund(scope.row)"
-              >退款</el-button>
               <el-button 
                 size="small" 
                 type="danger" 
@@ -184,8 +176,7 @@
           <el-descriptions-item label="手续费">¥{{ currentOrder.fee ? currentOrder.fee.toFixed(2) : '0.00' }}</el-descriptions-item>
           <el-descriptions-item label="订单状态">
             <el-tag v-if="currentOrder.status === 'pending'" type="warning">待支付</el-tag>
-            <el-tag v-else-if="currentOrder.status === 'paid' && !currentOrder.refunded" type="success">已支付</el-tag>
-            <el-tag v-else-if="currentOrder.status === 'cancelled' && currentOrder.refunded" type="danger">已退款</el-tag>
+            <el-tag v-else-if="currentOrder.status === 'paid'" type="success">已支付</el-tag>
             <el-tag v-else-if="currentOrder.status === 'cancelled'" type="info">已取消</el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="提款状态">

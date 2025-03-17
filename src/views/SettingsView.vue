@@ -68,36 +68,100 @@
         
         <!-- 邮件设置 -->
         <el-tab-pane label="邮件设置" name="email">
-          <el-form :model="emailForm" label-width="120px" :rules="emailRules" ref="emailFormRef">
+          <el-form
+            ref="emailFormRef"
+            :model="emailForm"
+            :rules="emailRules"
+            label-width="120px"
+            class="settings-form"
+          >
             <el-form-item label="SMTP服务器" prop="smtpServer">
-              <el-input v-model="emailForm.smtpServer" placeholder="请输入SMTP服务器地址"></el-input>
+              <el-input v-model="emailForm.smtpServer" placeholder="请输入SMTP服务器地址" />
             </el-form-item>
             <el-form-item label="端口" prop="smtpPort">
-              <el-input v-model="emailForm.smtpPort" placeholder="请输入端口"></el-input>
+              <el-input v-model="emailForm.smtpPort" placeholder="请输入端口" />
             </el-form-item>
-            <el-form-item label="安全协议">
-              <el-radio-group v-model="emailForm.securityProtocol">
-                <el-radio label="SSL">SSL</el-radio>
-                <el-radio label="TLS">TLS</el-radio>
-                <el-radio label="none">不加密</el-radio>
-              </el-radio-group>
+            <el-form-item label="安全协议" prop="securityProtocol">
+              <el-select v-model="emailForm.securityProtocol" placeholder="请选择安全协议">
+                <el-option label="SSL" value="SSL" />
+                <el-option label="TLS" value="TLS" />
+                <el-option label="无" value="none" />
+              </el-select>
             </el-form-item>
             <el-form-item label="用户名" prop="username">
-              <el-input v-model="emailForm.username" placeholder="请输入用户名"></el-input>
+              <el-input v-model="emailForm.username" placeholder="请输入用户名" />
             </el-form-item>
-            <el-form-item label="发件人" prop="senderEmail">
-              <el-input v-model="emailForm.senderEmail" placeholder="请输入发件人邮箱地址"></el-input>
+            <el-form-item label="发件人邮箱" prop="senderEmail">
+              <el-input v-model="emailForm.senderEmail" placeholder="请输入发件人邮箱" />
             </el-form-item>
             <el-form-item label="称呼" prop="senderName">
-              <el-input v-model="emailForm.senderName" placeholder="请输入您的称呼，可以是您的网站简称"></el-input>
+              <el-input v-model="emailForm.senderName" placeholder="请输入称呼" />
             </el-form-item>
             <el-form-item label="授权码/密码" prop="password">
-              <el-input v-model="emailForm.password" type="password" placeholder="请输入授权码/密码" show-password></el-input>
+              <el-input v-model="emailForm.password" type="password" placeholder="请输入授权码或密码" />
             </el-form-item>
             <el-form-item>
-              <el-button type="primary" @click="saveEmailSettings">保存</el-button>
-              <el-button @click="resetEmailForm">取消</el-button>
-              <el-button type="success" @click="testEmailSettings">发信测试</el-button>
+              <el-button type="primary" @click="saveEmailSettings">保存设置</el-button>
+              <el-button type="success" @click="testEmailSettings">测试邮件</el-button>
+              <el-button @click="resetEmailForm">重置</el-button>
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
+
+        <!-- 手续费设置 -->
+        <el-tab-pane label="手续费设置" name="fee">
+          <el-form
+            ref="feeFormRef"
+            :model="feeForm"
+            :rules="feeRules"
+            label-width="120px"
+            class="settings-form"
+          >
+            <!-- USDT手续费设置 -->
+            <el-form-item label="USDT手续费" prop="usdtFee">
+              <el-input-number
+                v-model="feeForm.usdtFee"
+                :min="0"
+                :max="100"
+                :precision="2"
+                :step="0.1"
+                placeholder="请输入USDT手续费率"
+              />
+              <span class="form-tip">%</span>
+              <div class="form-tip">设置USDT支付的手续费率</div>
+            </el-form-item>
+
+            <!-- 微信手续费设置 -->
+            <el-form-item label="微信手续费" prop="wechatFee">
+              <el-input-number
+                v-model="feeForm.wechatFee"
+                :min="0"
+                :max="100"
+                :precision="2"
+                :step="0.1"
+                placeholder="请输入微信手续费率"
+              />
+              <span class="form-tip">%</span>
+              <div class="form-tip">设置微信支付的手续费率</div>
+            </el-form-item>
+
+            <!-- 支付宝手续费设置 -->
+            <el-form-item label="支付宝手续费" prop="alipayFee">
+              <el-input-number
+                v-model="feeForm.alipayFee"
+                :min="0"
+                :max="100"
+                :precision="2"
+                :step="0.1"
+                placeholder="请输入支付宝手续费率"
+              />
+              <span class="form-tip">%</span>
+              <div class="form-tip">设置支付宝支付的手续费率</div>
+            </el-form-item>
+
+            <el-form-item>
+              <el-button type="primary" @click="saveFeeSettings">保存设置</el-button>
+              <el-button @click="resetFeeForm">重置</el-button>
             </el-form-item>
           </el-form>
         </el-tab-pane>
@@ -180,6 +244,27 @@ const emailRules = reactive<FormRules>({
   ],
   password: [
     { required: true, message: '请输入授权码/密码', trigger: 'blur' }
+  ]
+})
+
+// 手续费设置表单
+const feeFormRef = ref<FormInstance>()
+const feeForm = reactive({
+  usdtFee: 1.0,
+  wechatFee: 6.0,
+  alipayFee: 5.0
+})
+
+// 手续费设置表单验证规则
+const feeRules = reactive<FormRules>({
+  usdtFee: [
+    { required: true, message: '请输入USDT手续费率', trigger: 'blur' }
+  ],
+  wechatFee: [
+    { required: true, message: '请输入微信手续费率', trigger: 'blur' }
+  ],
+  alipayFee: [
+    { required: true, message: '请输入支付宝手续费率', trigger: 'blur' }
   ]
 })
 
@@ -304,6 +389,26 @@ const resetEmailForm = () => {
   }
 }
 
+// 保存手续费设置
+const saveFeeSettings = async () => {
+  if (!feeFormRef.value) return
+  
+  await feeFormRef.value.validate((valid, fields) => {
+    if (valid) {
+      ElMessage.success('手续费设置保存成功')
+    } else {
+      console.log('表单验证失败', fields)
+    }
+  })
+}
+
+// 重置手续费设置表单
+const resetFeeForm = () => {
+  if (feeFormRef.value) {
+    feeFormRef.value.resetFields()
+  }
+}
+
 onMounted(() => {
   // 初始化数据
 })
@@ -387,5 +492,17 @@ onMounted(() => {
   color: #909399;
   line-height: 1.5;
   margin-top: 5px;
+}
+
+.table-footer {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.table-tip {
+  font-size: 12px;
+  color: #909399;
 }
 </style> 
