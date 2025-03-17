@@ -43,7 +43,8 @@
             <el-select v-model="searchForm.payMethod" placeholder="请选择" clearable style="width: 168px;">
               <el-option label="全部" value=""></el-option>
               <el-option label="USDT" value="usdt"></el-option>
-              <el-option label="其他方式" value="other"></el-option>
+              <el-option label="微信" value="wechat"></el-option>
+              <el-option label="支付宝" value="alipay"></el-option>
             </el-select>
           </el-form-item>
           <el-form-item label="发货方式">
@@ -143,8 +144,8 @@
         <el-table-column prop="userEmail" label="用户邮箱" width="180"></el-table-column>
         <el-table-column prop="payMethod" label="支付方式" width="100">
           <template #default="scope">
-            <el-tag size="small" effect="plain" :type="scope.row.payMethod === 'usdt' ? 'danger' : 'info'">
-              {{ scope.row.payMethod === 'usdt' ? 'USDT' : '其他方式' }}
+            <el-tag size="small" effect="plain" :type="getPayMethodType(scope.row.payMethod)">
+              {{ getPayMethodLabel(scope.row.payMethod) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -373,7 +374,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C001',
     cardInfo: 'example@gmail.com',
     userEmail: 'buyer1@example.com',
-    payMethod: 'usdt',
+    payMethod: 'alipay',
     deliveryMethod: '自动发货',
     status: '已完成',
     createTime: '2023-09-01 10:00:00',
@@ -392,7 +393,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C002',
     cardInfo: 'instagram_user123',
     userEmail: 'buyer2@example.com',
-    payMethod: 'usdt',
+    payMethod: 'wechat',
     deliveryMethod: '手动发货',
     status: '待发货',
     createTime: '2023-09-01 11:00:00',
@@ -491,7 +492,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: '',
     cardInfo: '',
     userEmail: 'user101@example.com',
-    payMethod: 'other',
+    payMethod: 'usdt',
     deliveryMethod: '自动发货',
     status: '待付款',
     remark: '',
@@ -542,7 +543,6 @@ const orderList = ref<OrderItem[]>([{
     createTime: '2024-03-15 07:30:00',
     refundInfo: null
   },
-  // 新增各种情况的订单数据
   {
     id: 'S000008',
     orderId: 'DD20240316001', 
@@ -556,7 +556,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C000008',
     cardInfo: 'facebook@example.com|fb123456',
     userEmail: 'user888@example.com',
-    payMethod: 'other',
+    payMethod: 'usdt',
     deliveryMethod: '自动发货',
     status: '已完成',
     remark: '客户需要美国地区的账号',
@@ -600,7 +600,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C000010',
     cardInfo: '多个账号信息，请联系客服获取',
     userEmail: 'business@company.com',
-    payMethod: 'other',
+    payMethod: 'usdt',
     deliveryMethod: '手动发货',
     status: '已完成',
     remark: '企业批量采购',
@@ -660,7 +660,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C000013',
     cardInfo: 'instagram_premium@example.com|ins789xyz',
     userEmail: 'influencer@example.com',
-    payMethod: 'other',
+    payMethod: 'usdt',
     deliveryMethod: '手动发货',
     status: '待发货',
     remark: '特殊账号，需人工审核',
@@ -700,7 +700,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C000015',
     cardInfo: 'steam1@example.com|steam123\nsteam2@example.com|steam456',
     userEmail: 'gamer@example.com',
-    payMethod: 'other',
+    payMethod: 'usdt',
     deliveryMethod: '自动发货',
     status: '已完成',
     remark: '游戏账号',
@@ -744,7 +744,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C000017',
     cardInfo: 'fb_business@example.com|fbBiz789',
     userEmail: 'marketing@example.com',
-    payMethod: 'other',
+    payMethod: 'usdt',
     deliveryMethod: '手动发货',
     status: '已完成',
     remark: '商业账号，含广告权限',
@@ -834,14 +834,6 @@ const selectedTotalAmount = computed(() => {
   }, 0)
 })
 
-// 判断是否有可提款的订单
-const hasWithdrawableOrders = computed(() => {
-  return filteredOrderList.value.some(order => 
-    order.status === '已完成' && 
-    order.withdrawalStatus === 'not_withdrawn'
-  )
-})
-
 // 处理表格选择变化
 const handleSelectionChange = (selection: OrderItem[]) => {
   multipleSelection.value = selection
@@ -859,7 +851,7 @@ const exportOrders = () => {
   let csvContent = '订单号,商品名称,商品分类,数量,总价,手续费,用户邮箱,支付方式,发货方式,订单状态,创建时间\n'
   
   multipleSelection.value.forEach(order => {
-    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${order.userEmail}","${order.payMethod === 'usdt' ? 'USDT' : '其他方式'}","${order.deliveryMethod}","${order.status}","${order.createTime}"\n`
+    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${order.userEmail}","${getPayMethodLabel(order.payMethod)}","${order.deliveryMethod}","${order.status}","${order.createTime}"\n`
   })
   
   // 创建Blob对象
@@ -1066,8 +1058,8 @@ const handleView = (row: any) => {
         </div>
         <div class="detail-item">
           <span class="label">支付方式：</span>
-          <span><el-tag size="small" effect="plain" :type="row.payMethod === 'usdt' ? 'danger' : 'info'">
-            ${row.payMethod === 'usdt' ? 'USDT' : '其他方式'}
+          <span><el-tag size="small" effect="plain" :type="getPayMethodType(row.payMethod)">
+            {{ getPayMethodLabel(row.payMethod) }}
           </el-tag></span>
         </div>
       </div>
@@ -1240,7 +1232,7 @@ const exportAllOrders = () => {
   let csvContent = '订单号,商品名称,商品分类,数量,总价,手续费,用户邮箱,支付方式,发货方式,订单状态,创建时间\n'
   
   allOrderList.value.forEach(order => {
-    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${order.userEmail}","${order.payMethod === 'usdt' ? 'USDT' : '其他方式'}","${order.deliveryMethod}","${order.status}","${order.createTime}"\n`
+    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${order.userEmail}","${getPayMethodLabel(order.payMethod)}","${order.deliveryMethod}","${order.status}","${order.createTime}"\n`
   })
   
   // 创建Blob对象
@@ -1265,6 +1257,25 @@ const exportAllOrders = () => {
   URL.revokeObjectURL(url)
   
   ElMessage.success('成功导出全部订单数据')
+}
+
+// 在script部分添加以下函数
+const getPayMethodType = (method: string) => {
+  const typeMap: Record<string, string> = {
+    'usdt': 'danger',
+    'wechat': 'success',
+    'alipay': 'primary'
+  }
+  return typeMap[method] || 'danger'
+}
+
+const getPayMethodLabel = (method: string) => {
+  const labelMap: Record<string, string> = {
+    'usdt': 'USDT',
+    'wechat': '微信',
+    'alipay': '支付宝'
+  }
+  return labelMap[method] || 'USDT'
 }
 </script>
 

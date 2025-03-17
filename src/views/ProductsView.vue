@@ -138,6 +138,19 @@
             </div>
           </template>
         </el-table-column>
+        <el-table-column prop="payMethods" label="支付方式" width="200">
+          <template #default="scope">
+            <el-tag 
+              v-for="method in scope.row.payMethods" 
+              :key="method"
+              :type="getPayMethodType(method)"
+              effect="plain"
+              class="mx-1"
+            >
+              {{ getPayMethodLabel(method) }}
+            </el-tag>
+          </template>
+        </el-table-column>
       </el-table>
       
       <!-- 分页区域 -->
@@ -538,6 +551,13 @@
         <el-form-item label="备注" prop="remark">
           <el-input v-model="productForm.remark" type="textarea" :rows="2" placeholder="请输入商品备注信息"></el-input>
         </el-form-item>
+        <el-form-item label="支付方式" prop="payMethods">
+          <el-checkbox-group v-model="productForm.payMethods">
+            <el-checkbox label="usdt">USDT</el-checkbox>
+            <el-checkbox label="wechat">微信</el-checkbox>
+            <el-checkbox label="alipay">支付宝</el-checkbox>
+          </el-checkbox-group>
+        </el-form-item>
       </el-form>
       
       <!-- 预览对话框 -->
@@ -607,7 +627,8 @@ const tableData = ref([
     templateMode: 'bind',
     templateId: 2,
     costPrice: 2.50,
-    remark: '优质账号，稳定性高'
+    remark: '优质账号，稳定性高',
+    payMethods: ['usdt', 'wechat', 'alipay']
   },
   { 
     id: 'P000002',
@@ -636,7 +657,8 @@ const tableData = ref([
     templateMode: 'custom',
     templateId: 0,
     costPrice: 1.50,
-    remark: '热销产品，适合批量采购'
+    remark: '热销产品，适合批量采购',
+    payMethods: ['usdt', 'wechat', 'alipay']
   },
   { 
     id: 'P000003',
@@ -665,7 +687,8 @@ const tableData = ref([
     templateId: 2,
     costPrice: 3.20,
     stockWarning: 10,
-    remark: '高质量账号，适合长期使用'
+    remark: '高质量账号，适合长期使用',
+    payMethods: ['usdt', 'wechat', 'alipay']
   },
   { 
     id: 'P000004',
@@ -689,7 +712,8 @@ const tableData = ref([
     templateId: 0,
     costPrice: 4.50,
     stockWarning: 100,
-    remark: '半年以上老号，稳定性高'
+    remark: '半年以上老号，稳定性高',
+    payMethods: ['usdt', 'wechat', 'alipay']
   },
   { 
     id: 'P000005',
@@ -708,66 +732,9 @@ const tableData = ref([
     templateId: 0,
     costPrice: 6.00,
     stockWarning: 200,
-    remark: '美国地区IP，适合海外用户'
-  },
-  { 
-    id: 'P000006',
-    name: 'Gmail邮箱-一年以上', 
-    category: '谷歌邮箱',
-    currentPrice: 12.00,
-    originalPrice: 15.00,
-    stock: 872,
-    sales: 142,
-    deliveryMethod: '自动发货',
-    feature: '一年以上',
-    status: '上架中',
-    statusBool: true,
-    createTime: '2024-03-06 08:00:00',
-    templateMode: 'custom',
-    templateId: 0,
-    costPrice: 7.50,
-    stockWarning: 150,
-    remark: '一年以上老号，高质量稳定账号'
-  },
-  { 
-    id: 'P000007',
-    name: 'Gmail美国老号 (6个月+)', 
-    category: '谷歌邮箱',
-    currentPrice: 16.88,
-    originalPrice: 30.00,
-    stock: 138,
-    sales: 98,
-    deliveryMethod: '自动发货',
-    feature: '老号',
-    status: '上架中',
-    statusBool: true,
-    createTime: '2024-03-07 08:00:00',
-    templateMode: 'custom',
-    templateId: 0,
-    costPrice: 9.50,
-    stockWarning: 30,
-    remark: '美国老号，高质量稀缺资源'
-  },
-  { 
-    id: 'P000008',
-    name: '2022年老号账号-谷歌邮箱', 
-    category: '谷歌邮箱',
-    currentPrice: 14.00,
-    originalPrice: 20.00,
-    stock: 52,
-    sales: 76,
-    deliveryMethod: '自动发货',
-    feature: '老号',
-    status: '上架中',
-    statusBool: true,
-    createTime: '2024-03-08 08:00:00',
-    templateMode: 'custom',
-    templateId: 0,
-    costPrice: 8.00,
-    stockWarning: 20,
-    remark: '2022年注册的老号，稳定性极高'
-  }
-])
+    remark: '美国地区IP，适合海外用户',
+    payMethods: ['usdt', 'wechat', 'alipay']
+  }])
 
 // 分页相关
 const currentPage = ref(1)
@@ -802,7 +769,8 @@ const productForm = reactive({
   templateId: 0,
   costPrice: 0, // 添加成本价字段
   stockWarning: 0, // 添加库存预警值字段
-  remark: '' // 添加备注字段
+  remark: '', // 添加备注字段
+  payMethods: [] as string[]
 })
 
 // 确保productForm.wholesalePrices始终是一个数组
@@ -1048,6 +1016,7 @@ const resetProductForm = () => {
   productForm.costPrice = 0 // 初始化成本价
   productForm.stockWarning = 0 // 初始化库存预警值
   productForm.remark = '' // 初始化备注
+  productForm.payMethods = [] // 初始化支付方式
 }
 
 // 编辑商品
@@ -1673,6 +1642,25 @@ const validateCostPrice = () => {
     productForm.costPrice = productForm.currentPrice;
     ElMessage.warning('成本价不能高于当前价格，已自动调整');
   }
+}
+
+// 在script setup部分添加以下函数
+const getPayMethodType = (method: string) => {
+  const typeMap: Record<string, string> = {
+    'usdt': 'danger',
+    'wechat': 'success',
+    'alipay': 'primary'
+  }
+  return typeMap[method] || 'info'
+}
+
+const getPayMethodLabel = (method: string) => {
+  const labelMap: Record<string, string> = {
+    'usdt': 'USDT',
+    'wechat': '微信',
+    'alipay': '支付宝'
+  }
+  return labelMap[method] || '未知'
 }
 </script>
 

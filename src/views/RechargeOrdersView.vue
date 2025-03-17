@@ -4,8 +4,8 @@
       <template #header>
         <div class="card-header">
           <span>充值订单列表</span>
-          <div class="header-actions">
-            <el-button type="success" @click="exportAllOrders">
+          <div class="header-buttons">
+            <el-button type="primary" @click="exportAllOrders">
               <el-icon><Download /></el-icon>
               导出所有订单
             </el-button>
@@ -21,27 +21,27 @@
       <div class="search-area">
         <el-form :inline="true" :model="searchForm" class="demo-form-inline">
           <el-form-item label="订单号">
-            <el-input v-model="searchForm.orderNo" placeholder="请输入订单号" clearable></el-input>
+            <el-input v-model="searchForm.orderId" placeholder="请输入订单号" clearable></el-input>
           </el-form-item>
           <el-form-item label="用户邮箱">
             <el-input v-model="searchForm.userEmail" placeholder="请输入用户邮箱" clearable></el-input>
-          </el-form-item>
-          <el-form-item label="订单状态">
-            <el-select v-model="searchForm.status" placeholder="请选择" clearable style="width: 168px;">
-              <el-option label="全部" value=""></el-option>
-              <el-option label="待支付" value="pending"></el-option>
-              <el-option label="已支付" value="paid"></el-option>
-              <el-option label="已取消" value="cancelled"></el-option>
-            </el-select>
           </el-form-item>
           <el-form-item label="支付方式">
             <el-select v-model="searchForm.paymentMethod" placeholder="请选择" clearable style="width: 168px;">
               <el-option label="全部" value=""></el-option>
               <el-option label="USDT" value="usdt"></el-option>
-              <el-option label="其他方式" value="other"></el-option>
+              <el-option label="微信" value="wechat"></el-option>
+              <el-option label="支付宝" value="alipay"></el-option>
             </el-select>
           </el-form-item>
-          <el-form-item label="充值时间">
+          <el-form-item label="订单状态">
+            <el-select v-model="searchForm.status" placeholder="请选择" clearable style="width: 168px;">
+              <el-option label="全部" value=""></el-option>
+              <el-option label="未支付" value="unpaid"></el-option>
+              <el-option label="已支付" value="paid"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="下单时间">
             <el-date-picker
               v-model="searchForm.dateRange"
               type="daterange"
@@ -51,23 +51,16 @@
               value-format="YYYY-MM-DD"
             ></el-date-picker>
           </el-form-item>
-          <el-form-item label="提款状态">
-            <el-select v-model="searchForm.withdrawalStatus" placeholder="请选择" clearable style="width: 168px;">
-              <el-option label="全部" value=""></el-option>
-              <el-option label="已提款" value="withdrawn"></el-option>
-              <el-option label="未提款" value="not_withdrawn"></el-option>
-            </el-select>
-          </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetSearch">重置</el-button>
           </el-form-item>
         </el-form>
         
-        <!-- 添加总充值金额和导出按钮 -->
+        <!-- 添加总金额和导出按钮 -->
         <div class="search-summary">
           <div class="total-amount">
-            <span>筛选结果总充值金额：</span>
+            <span>筛选结果总金额：</span>
             <span class="amount-value">¥{{ totalAmount.toFixed(2) }}</span>
             <span v-if="multipleSelection.length > 0" style="margin-left: 20px;">已选择：{{ multipleSelection.length }}笔订单</span>
             <span v-if="multipleSelection.length > 0" class="amount-value">¥{{ selectedTotalAmount.toFixed(2) }}</span>
@@ -84,14 +77,14 @@
       <!-- 表格区域 -->
       <el-table
         v-loading="loading"
-        :data="orderList"
+        :data="filteredOrderList"
         border
         stripe
         style="width: 100%"
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="id" label="充值订单ID" min-width="100" />
+        <el-table-column prop="id" label="订单ID" min-width="100" />
         <el-table-column prop="orderNo" label="订单号" min-width="180" />
         <el-table-column prop="userEmail" label="用户邮箱" min-width="180" />
         <el-table-column prop="amount" label="充值金额" min-width="120">
@@ -106,8 +99,8 @@
         </el-table-column>
         <el-table-column prop="paymentMethod" label="支付方式" min-width="120">
           <template #default="scope">
-            <el-tag size="small" effect="plain" :type="scope.row.paymentMethod === 'usdt' ? 'danger' : 'info'">
-              {{ scope.row.paymentMethod === 'usdt' ? 'USDT' : '其他方式' }}
+            <el-tag size="small" effect="plain" :type="getPayMethodType(scope.row.paymentMethod)">
+              {{ getPayMethodLabel(scope.row.paymentMethod) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -116,13 +109,6 @@
             <el-tag v-if="scope.row.status === 'pending'" type="warning">待支付</el-tag>
             <el-tag v-else-if="scope.row.status === 'paid'" type="success">已支付</el-tag>
             <el-tag v-else-if="scope.row.status === 'cancelled'" type="info">已取消</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="withdrawalStatus" label="提款状态" min-width="120">
-          <template #default="scope">
-            <el-tag v-if="scope.row.withdrawalStatus === 'withdrawn'" type="success">已提款</el-tag>
-            <el-tag v-else-if="scope.row.withdrawalStatus === 'not_withdrawn'" type="info">未提款</el-tag>
-            <el-tag v-else type="info">未提款</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" min-width="180" />
@@ -179,14 +165,9 @@
             <el-tag v-else-if="currentOrder.status === 'paid'" type="success">已支付</el-tag>
             <el-tag v-else-if="currentOrder.status === 'cancelled'" type="info">已取消</el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="提款状态">
-            <el-tag v-if="currentOrder.withdrawalStatus === 'withdrawn'" type="success">已提款</el-tag>
-            <el-tag v-else-if="currentOrder.withdrawalStatus === 'not_withdrawn'" type="info">未提款</el-tag>
-            <el-tag v-else type="info">未提款</el-tag>
-          </el-descriptions-item>
           <el-descriptions-item label="支付方式">
-            <el-tag size="small" effect="plain" :type="currentOrder.paymentMethod === 'usdt' ? 'danger' : 'info'">
-              {{ currentOrder.paymentMethod === 'usdt' ? 'USDT' : '其他方式' }}
+            <el-tag size="small" effect="plain" :type="getPayMethodType(currentOrder.paymentMethod)">
+              {{ getPayMethodLabel(currentOrder.paymentMethod) }}
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="交易流水号">{{ currentOrder.transactionId || '暂无' }}</el-descriptions-item>
@@ -298,7 +279,7 @@ interface RechargeOrder {
   amount: number
   fee?: number
   status: 'pending' | 'paid' | 'cancelled'
-  paymentMethod: 'usdt' | 'other' | string
+  paymentMethod: 'usdt' | 'wechat' | 'alipay' | string
   transactionId?: string
   createTime: string
   payTime?: string
@@ -308,17 +289,15 @@ interface RechargeOrder {
     operator: string
   }>
   refunded?: boolean
-  withdrawalStatus?: 'withdrawn' | 'not_withdrawn'
 }
 
 // 搜索表单
 const searchForm = reactive({
-  orderNo: '',
+  orderId: '',
   userEmail: '',
-  status: '',
   paymentMethod: '',
-  dateRange: [] as string[],
-  withdrawalStatus: ''
+  status: '',
+  dateRange: [] as string[]
 })
 
 // 表格数据
@@ -333,8 +312,7 @@ const orderList = ref<RechargeOrder[]>([
     fee: 10.00,
     status: 'pending',
     paymentMethod: 'usdt',
-    createTime: '2023-09-01 09:00:00',
-    withdrawalStatus: 'not_withdrawn'
+    createTime: '2023-09-01 09:00:00'
   },
   {
     id: '2002',
@@ -348,7 +326,6 @@ const orderList = ref<RechargeOrder[]>([
     transactionId: 'TX001',
     createTime: '2023-09-01 10:00:00',
     payTime: '2023-09-01 10:05:00',
-    withdrawalStatus: 'not_withdrawn',
     refunded: false
   }
 ])
@@ -390,14 +367,6 @@ const totalAmount = computed(() => {
   return orderList.value.reduce((sum, order) => sum + order.amount, 0)
 })
 
-// 添加总提款金额计算
-const totalWithdrawal = computed(() => {
-  return orderList.value.reduce((sum, order) => {
-    // 这里可以根据实际业务逻辑调整计算规则
-    return sum + (order.status === 'paid' ? order.amount : 0)
-  }, 0)
-})
-
 // 多选相关
 const multipleSelection = ref<RechargeOrder[]>([])
 
@@ -409,6 +378,40 @@ const handleSelectionChange = (selection: RechargeOrder[]) => {
 // 计算选中订单的总金额
 const selectedTotalAmount = computed(() => {
   return multipleSelection.value.reduce((sum, order) => sum + order.amount, 0)
+})
+
+// 筛选订单列表
+const filteredOrderList = computed(() => {
+  let filteredList = [...orderList.value]
+  
+  if (searchForm.orderId) {
+    filteredList = filteredList.filter(item => item.orderNo.includes(searchForm.orderId))
+  }
+  
+  if (searchForm.userEmail) {
+    filteredList = filteredList.filter(item => item.userEmail.toLowerCase().includes(searchForm.userEmail.toLowerCase()))
+  }
+  
+  if (searchForm.paymentMethod) {
+    filteredList = filteredList.filter(item => item.paymentMethod === searchForm.paymentMethod)
+  }
+  
+  if (searchForm.status) {
+    filteredList = filteredList.filter(item => item.status === searchForm.status)
+  }
+  
+  if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+    const startDate = new Date(searchForm.dateRange[0])
+    const endDate = new Date(searchForm.dateRange[1])
+    endDate.setHours(23, 59, 59, 999)
+    
+    filteredList = filteredList.filter(item => {
+      const createTime = new Date(item.createTime)
+      return createTime >= startDate && createTime <= endDate
+    })
+  }
+  
+  return filteredList
 })
 
 // 获取订单列表
@@ -431,7 +434,6 @@ const fetchOrders = async () => {
           transactionId: '2024031012345678',
           createTime: '2024-03-10 10:00:00',
           payTime: '2024-03-10 10:05:23',
-          withdrawalStatus: 'withdrawn',
           logs: [
             { time: '2024-03-10 10:00:00', action: '创建订单', operator: '系统' },
             { time: '2024-03-10 10:05:23', action: '支付成功', operator: '系统' },
@@ -448,7 +450,6 @@ const fetchOrders = async () => {
           status: 'pending',
           paymentMethod: 'usdt',
           createTime: '2024-03-10 11:30:00',
-          withdrawalStatus: 'not_withdrawn',
           logs: [
             { time: '2024-03-10 11:30:00', action: '创建订单', operator: '系统' }
           ]
@@ -461,9 +462,8 @@ const fetchOrders = async () => {
           amount: 500.00,
           fee: 5.00,
           status: 'cancelled',
-          paymentMethod: 'other',
+          paymentMethod: 'wechat',
           createTime: '2024-03-10 14:20:00',
-          withdrawalStatus: 'not_withdrawn',
           logs: [
             { time: '2024-03-10 14:20:00', action: '创建订单', operator: '系统' },
             { time: '2024-03-10 15:30:00', action: '取消订单', operator: '管理员' }
@@ -481,7 +481,6 @@ const fetchOrders = async () => {
           transactionId: '2024031087654321',
           createTime: '2024-03-10 16:00:00',
           payTime: '2024-03-10 16:05:12',
-          withdrawalStatus: 'not_withdrawn',
           logs: [
             { time: '2024-03-10 16:00:00', action: '创建订单', operator: '系统' },
             { time: '2024-03-10 16:05:12', action: '支付成功', operator: '系统' }
@@ -495,11 +494,10 @@ const fetchOrders = async () => {
           amount: 3000.00,
           fee: 30.00,
           status: 'paid',
-          paymentMethod: 'other',
+          paymentMethod: 'alipay',
           transactionId: '2024031100001',
           createTime: '2024-03-11 09:15:00',
           payTime: '2024-03-11 09:20:35',
-          withdrawalStatus: 'not_withdrawn',
           logs: [
             { time: '2024-03-11 09:15:00', action: '创建订单', operator: '系统' },
             { time: '2024-03-11 09:20:35', action: '支付成功', operator: '系统' }
@@ -517,7 +515,6 @@ const fetchOrders = async () => {
           refunded: true,
           createTime: '2024-03-11 10:30:00',
           payTime: '2024-03-11 10:35:22',
-          withdrawalStatus: 'not_withdrawn',
           logs: [
             { time: '2024-03-11 10:30:00', action: '创建订单', operator: '系统' },
             { time: '2024-03-11 10:35:22', action: '支付成功', operator: '系统' },
@@ -532,11 +529,10 @@ const fetchOrders = async () => {
           amount: 800.00,
           fee: 8.00,
           status: 'paid',
-          paymentMethod: 'other',
+          paymentMethod: 'wechat',
           transactionId: '2024031100003',
           createTime: '2024-03-11 13:45:00',
           payTime: '2024-03-11 13:50:18',
-          withdrawalStatus: 'withdrawn',
           logs: [
             { time: '2024-03-11 13:45:00', action: '创建订单', operator: '系统' },
             { time: '2024-03-11 13:50:18', action: '支付成功', operator: '系统' },
@@ -551,9 +547,8 @@ const fetchOrders = async () => {
           amount: 1500.00,
           fee: 15.00,
           status: 'pending',
-          paymentMethod: 'other',
+          paymentMethod: 'alipay',
           createTime: '2024-03-12 08:30:00',
-          withdrawalStatus: 'not_withdrawn',
           logs: [
             { time: '2024-03-12 08:30:00', action: '创建订单', operator: '系统' }
           ]
@@ -570,7 +565,6 @@ const fetchOrders = async () => {
           transactionId: '2024031200002',
           createTime: '2024-03-12 10:15:00',
           payTime: '2024-03-12 10:20:45',
-          withdrawalStatus: 'withdrawn',
           logs: [
             { time: '2024-03-12 10:15:00', action: '创建订单', operator: '系统' },
             { time: '2024-03-12 10:20:45', action: '支付成功', operator: '系统' },
@@ -585,11 +579,10 @@ const fetchOrders = async () => {
           amount: 3500.00,
           fee: 35.00,
           status: 'cancelled',
-          paymentMethod: 'other',
+          paymentMethod: 'alipay',
           refunded: true,
           createTime: '2024-03-12 14:00:00',
           payTime: '2024-03-12 14:05:33',
-          withdrawalStatus: 'not_withdrawn',
           logs: [
             { time: '2024-03-12 14:00:00', action: '创建订单', operator: '系统' },
             { time: '2024-03-12 14:05:33', action: '支付成功', operator: '系统' },
@@ -608,7 +601,6 @@ const fetchOrders = async () => {
           transactionId: '2024031300001',
           createTime: '2024-03-13 09:00:00',
           payTime: '2024-03-13 09:10:15',
-          withdrawalStatus: 'not_withdrawn',
           logs: [
             { time: '2024-03-13 09:00:00', action: '创建订单', operator: '系统' },
             { time: '2024-03-13 09:10:15', action: '支付成功', operator: '系统' }
@@ -622,9 +614,8 @@ const fetchOrders = async () => {
           amount: 4000.00,
           fee: 40.00,
           status: 'pending',
-          paymentMethod: 'other',
+          paymentMethod: 'wechat',
           createTime: '2024-03-13 11:20:00',
-          withdrawalStatus: 'not_withdrawn',
           logs: [
             { time: '2024-03-13 11:20:00', action: '创建订单', operator: '系统' }
           ]
@@ -650,8 +641,8 @@ const handleSearch = () => {
   setTimeout(() => {
     let filteredList = [...orderList.value]
     
-    if (searchForm.orderNo) {
-      filteredList = filteredList.filter(item => item.orderNo.includes(searchForm.orderNo))
+    if (searchForm.orderId) {
+      filteredList = filteredList.filter(item => item.orderNo.includes(searchForm.orderId))
     }
     
     if (searchForm.userEmail) {
@@ -684,10 +675,6 @@ const handleSearch = () => {
         const createTime = new Date(item.createTime)
         return createTime >= startDate && createTime <= endDate
       })
-    }
-    
-    if (searchForm.withdrawalStatus) {
-      filteredList = filteredList.filter(item => item.withdrawalStatus === searchForm.withdrawalStatus)
     }
     
     orderList.value = filteredList
@@ -847,18 +834,16 @@ const exportAllOrders = () => {
   }
   
   // 创建CSV内容
-  let csvContent = '订单号,用户邮箱,充值金额,手续费,支付方式,订单状态,提款状态,创建时间,支付时间\n'
+  let csvContent = '订单号,用户邮箱,充值金额,手续费,支付方式,订单状态,创建时间,支付时间\n'
   
   orderList.value.forEach(order => {
     const status = order.status === 'pending' ? '待支付' : 
                   (order.status === 'paid' && !order.refunded) ? '已支付' : 
                   (order.status === 'cancelled' && order.refunded) ? '已退款' : '已取消'
     
-    const paymentMethod = order.paymentMethod === 'usdt' ? 'USDT' : '其他方式'
+    const paymentMethod = getPayMethodLabel(order.paymentMethod)
     
-    const withdrawalStatus = order.withdrawalStatus === 'withdrawn' ? '已提款' : '未提款'
-    
-    csvContent += `"${order.orderNo}","${order.userEmail}",${order.amount.toFixed(2)},${order.fee ? order.fee.toFixed(2) : '0.00'},"${paymentMethod}","${status}","${withdrawalStatus}","${order.createTime}","${order.payTime || ''}"\n`
+    csvContent += `"${order.orderNo}","${order.userEmail}",${order.amount.toFixed(2)},${order.fee ? order.fee.toFixed(2) : '0.00'},"${paymentMethod}","${status}","${order.createTime}","${order.payTime || ''}"\n`
   })
   
   // 创建Blob对象
@@ -893,18 +878,16 @@ const exportOrders = () => {
   }
   
   // 创建CSV内容
-  let csvContent = '订单号,用户邮箱,充值金额,手续费,支付方式,订单状态,提款状态,创建时间,支付时间\n'
+  let csvContent = '订单号,用户邮箱,充值金额,手续费,支付方式,订单状态,创建时间,支付时间\n'
   
   multipleSelection.value.forEach(order => {
     const status = order.status === 'pending' ? '待支付' : 
                   (order.status === 'paid' && !order.refunded) ? '已支付' : 
                   (order.status === 'cancelled' && order.refunded) ? '已退款' : '已取消'
     
-    const paymentMethod = order.paymentMethod === 'usdt' ? 'USDT' : '其他方式'
+    const paymentMethod = getPayMethodLabel(order.paymentMethod)
     
-    const withdrawalStatus = order.withdrawalStatus === 'withdrawn' ? '已提款' : '未提款'
-    
-    csvContent += `"${order.orderNo}","${order.userEmail}",${order.amount.toFixed(2)},${order.fee ? order.fee.toFixed(2) : '0.00'},"${paymentMethod}","${status}","${withdrawalStatus}","${order.createTime}","${order.payTime || ''}"\n`
+    csvContent += `"${order.orderNo}","${order.userEmail}",${order.amount.toFixed(2)},${order.fee ? order.fee.toFixed(2) : '0.00'},"${paymentMethod}","${status}","${order.createTime}","${order.payTime || ''}"\n`
   })
   
   // 创建Blob对象
@@ -952,6 +935,22 @@ const handleDelete = (row: RechargeOrder) => {
     .catch(() => {
       ElMessage.info('已取消删除操作')
     })
+}
+
+// 获取支付方式类型
+const getPayMethodType = (method: string) => {
+  if (method === 'usdt') return 'danger'
+  if (method === 'wechat') return 'success'
+  if (method === 'alipay') return 'primary'
+  return 'info'
+}
+
+// 获取支付方式标签
+const getPayMethodLabel = (method: string) => {
+  if (method === 'usdt') return 'USDT'
+  if (method === 'wechat') return '微信'
+  if (method === 'alipay') return '支付宝'
+  return '其他方式'
 }
 
 onMounted(() => {
