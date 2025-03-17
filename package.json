@@ -2,11 +2,19 @@
   "name": "xinghai-admin",
   "version": "1.0.0",
   "description": "星海后台管理系统",
+<<<<<<< HEAD
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+=======
   "scripts": {
     "dev": "cd xinghai-admin && npm run dev",
     "build": "bash vercel-build.sh",
     "preview": "cd xinghai-admin && npm run preview",
     "install": "cd xinghai-admin && npm install"
+>>>>>>> 735e886c7a224ecb614db9569b2c62c3be8cbd19
   },
   "keywords": [
     "vue",
@@ -15,5 +23,30 @@
     "dashboard"
   ],
   "author": "",
+<<<<<<< HEAD
+  "license": "ISC",
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
+    "@vueup/vue-quill": "^1.2.0",
+    "@wangeditor/editor": "^5.1.23",
+    "@wangeditor/editor-for-vue": "^5.1.12",
+    "axios": "^1.6.7",
+    "echarts": "^5.5.0",
+    "element-plus": "^2.5.6",
+    "pinia": "^2.1.7",
+    "quill": "^2.0.3",
+    "vue": "^3.4.19",
+    "vue-router": "^4.2.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.19",
+    "@vitejs/plugin-vue": "^5.0.4",
+    "terser": "^5.39.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.4"
+  }
+}
+=======
   "license": "ISC"
 } 
+>>>>>>> 735e886c7a224ecb614db9569b2c62c3be8cbd19

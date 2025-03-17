@@ -35,3 +35,6 @@ pnpm-debug.log*
 */.vite/
 xinghai-admin/.vite/
 xinghai-admin/node_modules/.vite/ 
+node_modules
+node_modules
+node_modules
