@@ -2,11 +2,19 @@
   "name": "xinghai-admin",
   "version": "1.0.0",
   "description": "星海后台管理系统",
+<<<<<<< HEAD
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
+=======
+  "scripts": {
+    "dev": "cd xinghai-admin && npm run dev",
+    "build": "bash vercel-build.sh",
+    "preview": "cd xinghai-admin && npm run preview",
+    "install": "cd xinghai-admin && npm install"
+>>>>>>> 735e886c7a224ecb614db9569b2c62c3be8cbd19
   },
   "keywords": [
     "vue",
@@ -15,6 +23,7 @@
     "dashboard"
   ],
   "author": "",
+<<<<<<< HEAD
   "license": "ISC",
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
@@ -37,3 +46,7 @@
     "vite": "^5.1.4"
   }
 }
+=======
+  "license": "ISC"
+} 
+>>>>>>> 735e886c7a224ecb614db9569b2c62c3be8cbd19
