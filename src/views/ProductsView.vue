@@ -138,19 +138,6 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="payMethods" label="支付方式" width="200">
-          <template #default="scope">
-            <el-tag 
-              v-for="method in scope.row.payMethods" 
-              :key="method"
-              :type="getPayMethodType(method)"
-              effect="plain"
-              class="mx-1"
-            >
-              {{ getPayMethodLabel(method) }}
-            </el-tag>
-          </template>
-        </el-table-column>
       </el-table>
       
       <!-- 分页区域 -->
@@ -414,12 +401,25 @@
           </el-card>
         </el-form-item>
         
+        <el-form-item label="特殊备注" prop="remark">
+          <el-input v-model="productForm.remark" placeholder="特殊备注信息" />
+        </el-form-item>
+        
         <el-form-item label="发货方式" prop="deliveryMethod">
           <el-radio-group v-model="productForm.deliveryMethod">
             <el-radio label="自动发货">自动发货</el-radio>
             <el-radio label="手动发货">手动发货</el-radio>
           </el-radio-group>
         </el-form-item>
+        
+        <el-form-item label="状态">
+          <el-switch
+            v-model="productForm.statusBool"
+            active-text="上架"
+            inactive-text="下架"
+          ></el-switch>
+        </el-form-item>
+        
         <el-form-item label="商品详情" prop="description">
           <div class="editor-container">
             <div class="editor-header">
@@ -538,10 +538,6 @@
             </div>
           </div>
         </el-form-item>
-        <el-form-item label="状态">
-          <el-switch v-model="productForm.statusBool" :active-value="true" :inactive-value="false"></el-switch>
-          <span class="status-text">{{ productForm.statusBool ? '上架' : '下架' }}</span>
-        </el-form-item>
         
         <el-form-item label="库存预警值" prop="stockWarning">
           <el-input-number v-model="productForm.stockWarning" :min="0" :precision="0" :step="1" style="width: 100%;"></el-input-number>
@@ -549,14 +545,7 @@
         </el-form-item>
         
         <el-form-item label="备注" prop="remark">
-          <el-input v-model="productForm.remark" type="textarea" :rows="2" placeholder="请输入商品备注信息"></el-input>
-        </el-form-item>
-        <el-form-item label="支付方式" prop="payMethods">
-          <el-checkbox-group v-model="productForm.payMethods">
-            <el-checkbox label="usdt">USDT</el-checkbox>
-            <el-checkbox label="wechat">微信</el-checkbox>
-            <el-checkbox label="alipay">支付宝</el-checkbox>
-          </el-checkbox-group>
+          <el-input type="textarea" v-model="productForm.remark" placeholder="请输入备注信息" :rows="3"></el-input>
         </el-form-item>
       </el-form>
       
@@ -747,12 +736,14 @@ const dialogVisible = ref(false)
 const dialogType = ref<'add' | 'edit'>('add')
 const productFormRef = ref<FormInstance>()
 const productForm = reactive({
-  id: 0,
+  id: '',
   name: '',
   category: '',
   currentPrice: 0,
   originalPrice: 0,
+  costPrice: 0,
   stock: 0,
+  stockWarning: 10,
   sales: 0,
   deliveryMethod: '自动发货',
   feature: '',
@@ -764,12 +755,10 @@ const productForm = reactive({
   status: '上架中',
   statusBool: true,
   createTime: '',
-  wholesalePrices: [] as Array<{quantity: number, price: number}>,
-  templateMode: 'custom',
-  templateId: 0,
-  costPrice: 0, // 添加成本价字段
-  stockWarning: 0, // 添加库存预警值字段
-  remark: '', // 添加备注字段
+  templateMode: 'custom' as 'custom' | 'bind',
+  templateId: '',
+  remark: '',
+  wholesalePrices: [] as { quantity: number, price: number }[],
   payMethods: [] as string[]
 })
 
@@ -993,7 +982,7 @@ const handleAddProduct = () => {
 
 // 重置商品表单
 const resetProductForm = () => {
-  productForm.id = 0
+  productForm.id = ''
   productForm.name = ''
   productForm.category = ''
   productForm.currentPrice = 0
@@ -1012,11 +1001,11 @@ const resetProductForm = () => {
   productForm.createTime = ''
   productForm.wholesalePrices = []
   productForm.templateMode = 'custom'
-  productForm.templateId = 0
-  productForm.costPrice = 0 // 初始化成本价
-  productForm.stockWarning = 0 // 初始化库存预警值
-  productForm.remark = '' // 初始化备注
-  productForm.payMethods = [] // 初始化支付方式
+  productForm.templateId = ''
+  productForm.costPrice = 0
+  productForm.stockWarning = 0
+  productForm.remark = ''
+  productForm.payMethods = []
 }
 
 // 编辑商品
@@ -1072,8 +1061,8 @@ const submitForm = async () => {
       const productData = {
         ...productForm,
         // 如果是绑定模式，保存模板ID；如果是自定义模式，清空模板ID
-        templateId: productForm.templateMode === 'bind' ? productForm.templateId : 0
-      };
+        templateId: productForm.templateMode === 'bind' ? productForm.templateId : ''
+      }
       
       if (dialogType.value === 'add') {
         ElMessage.success('新增商品成功')
@@ -1253,15 +1242,12 @@ const previewContent = () => {
 // 处理模板选择
 const handleTemplateSelect = (template: any) => {
   if (productForm.templateMode === 'bind') {
-    // 绑定模式下，只保存模板ID，不直接应用内容
-    productForm.templateId = template.id;
-    // 从模板获取内容并显示（只读）
-    applyTemplateContent(template);
-    ElMessage.success(`已绑定"${template.name}"模板，商品详情将随模板更新而更新`);
+    productForm.templateId = String(template.id)
+    applyTemplateContent(template)
+    ElMessage.success(`已绑定"${template.name}"模板`)
   } else {
-    // 自定义模式下，直接应用模板内容
-    applyTemplateContent(template);
-    ElMessage.success(`已应用"${template.name}"模板内容`);
+    applyTemplateContent(template)
+    ElMessage.success(`已应用"${template.name}"模板内容`)
   }
 }
 
@@ -1277,15 +1263,15 @@ const applyTemplateContent = (template: any) => {
 
 // 插入默认模板
 const insertTemplate = () => {
-  const defaultTemplate = templateList.value.find(t => t.id === 1) || templateList.value[0];
+  const defaultTemplate = templateList.value.find(t => t.id === 1) || templateList.value[0]
   if (defaultTemplate) {
     if (productForm.templateMode === 'bind') {
-      productForm.templateId = defaultTemplate.id;
-      applyTemplateContent(defaultTemplate);
-      ElMessage.success(`已绑定"${defaultTemplate.name}"模板`);
+      productForm.templateId = String(defaultTemplate.id)
+      applyTemplateContent(defaultTemplate)
+      ElMessage.success(`已绑定"${defaultTemplate.name}"模板`)
     } else {
-      applyTemplateContent(defaultTemplate);
-      ElMessage.success(`已插入"${defaultTemplate.name}"模板内容`);
+      applyTemplateContent(defaultTemplate)
+      ElMessage.success(`已插入"${defaultTemplate.name}"模板内容`)
     }
   }
 }
@@ -1417,13 +1403,13 @@ watch(() => productForm.currentPrice, (newVal) => {
 const handleTemplateModeChange = () => {
   // 如果切换到自定义内容模式，清空模板相关信息
   if (productForm.templateMode === 'custom') {
-    productForm.templateId = 0;
+    productForm.templateId = ''
   }
 }
 
 // 获取选中的模板名称
 const getSelectedTemplateName = () => {
-  const selectedTemplate = templateList.value.find(t => t.id === productForm.templateId)
+  const selectedTemplate = templateList.value.find(t => String(t.id) === productForm.templateId)
   return selectedTemplate ? selectedTemplate.name : '未选择模板'
 }
 
