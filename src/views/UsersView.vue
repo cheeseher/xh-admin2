@@ -9,7 +9,7 @@
       </template>
       
       <div class="page-description">
-        <p>管理系统的所有用户账号，包括普通用户和各等级VIP会员。用户的会员等级会根据累计充值金额自动调整，您也可以手动设置用户的会员等级和账户余额。</p>
+        <p>管理系统的所有用户账号，您可以查看和管理用户的基本信息。</p>
       </div>
       
       <!-- 搜索区域 -->
@@ -20,17 +20,6 @@
           </el-form-item>
           <el-form-item label="邮箱">
             <el-input v-model="searchForm.email" placeholder="请输入邮箱" clearable></el-input>
-          </el-form-item>
-          <el-form-item label="会员等级">
-            <el-select v-model="searchForm.vipLevel" placeholder="请选择" clearable style="width: 168px;">
-              <el-option label="全部" value=""></el-option>
-              <el-option 
-                v-for="level in vipLevels" 
-                :key="level.level" 
-                :label="level.name" 
-                :value="level.level"
-              ></el-option>
-            </el-select>
           </el-form-item>
           <el-form-item label="用户状态">
             <el-select v-model="searchForm.status" placeholder="请选择" clearable style="width: 168px;">
@@ -61,21 +50,6 @@
         <el-table-column prop="userId" label="用户ID" width="100"></el-table-column>
         <el-table-column prop="email" label="邮箱" min-width="180"></el-table-column>
         <el-table-column prop="nickname" label="用户昵称" width="120"></el-table-column>
-        <el-table-column prop="role" label="会员等级" width="120">
-          <template #default="scope">
-            <el-tag :type="getVipLevelType(scope.row.role)">{{ getVipLevelName(scope.row.role) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="balance" label="账户余额" width="120">
-          <template #default="scope">
-            <span class="balance">¥{{ scope.row.balance }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="totalRecharge" label="累计充值" width="120">
-          <template #default="scope">
-            <span class="money">¥{{ scope.row.totalRecharge }}</span>
-          </template>
-        </el-table-column>
         <el-table-column prop="totalSpent" label="累计消费" width="120">
           <template #default="scope">
             <span class="money">¥{{ scope.row.totalSpent }}</span>
@@ -137,49 +111,6 @@
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="userForm.email" placeholder="请输入邮箱"></el-input>
         </el-form-item>
-        
-        <!-- 新增：超级VIP功能开关 -->
-        <el-form-item label="超级VIP功能">
-          <el-switch v-model="isSuperVipEnabled" @change="handleSuperVipChange"></el-switch>
-          <span class="status-text">{{ isSuperVipEnabled ? '已启用' : '已禁用' }}</span>
-          <div class="form-tip">{{ isSuperVipEnabled ? '启用后只能选择超级VIP' : '禁用后可选择VIP1/2/3' }}</div>
-        </el-form-item>
-        
-        <!-- 新增：超级VIP充值折扣 -->
-        <el-form-item label="充值折扣" v-if="isSuperVipEnabled">
-          <el-input-number 
-            v-model="userForm.rechargeDiscount" 
-            :min="0" 
-            :max="100" 
-            :precision="1" 
-            :step="0.1"
-            style="width: 168px;"
-          ></el-input-number>
-          <span class="form-tip">%（百分比，可设置0%-100%之间的充值折扣）</span>
-        </el-form-item>
-        
-        <el-form-item label="会员等级" prop="role">
-          <el-select 
-            v-model="userForm.role" 
-            placeholder="请选择会员等级" 
-            style="width: 168px;" 
-            @change="handleRoleChange"
-            :disabled="isSuperVipEnabled"
-          >
-            <el-option 
-              v-for="level in filteredVipLevels" 
-              :key="level.level" 
-              :label="level.name" 
-              :value="level.level"
-            ></el-option>
-          </el-select>
-          <span v-if="isSuperVipEnabled" class="info-text">超级VIP功能已启用，只能选择超级VIP</span>
-          <span v-if="!isSuperVipEnabled && userForm.role === 4" class="warning-text">超级VIP功能已禁用</span>
-        </el-form-item>
-        
-        <el-form-item label="账户余额" prop="balance">
-          <el-input-number v-model="userForm.balance" :min="0" :precision="2" :step="10" style="width: 100%;" @change="handleBalanceChange"></el-input-number>
-        </el-form-item>
         <el-form-item label="状态">
           <el-switch v-model="userForm.statusBool"></el-switch>
           <span class="status-text">{{ userForm.statusBool ? '正常' : '禁用' }}</span>
@@ -204,7 +135,6 @@ import type { FormInstance, FormRules } from 'element-plus'
 const searchForm = reactive({
   userId: '',
   email: '',
-  vipLevel: '',
   status: '',
   dateRange: []
 })
@@ -225,7 +155,6 @@ const tableData = ref([
     lastLoginTime: '2024-03-15 08:30:00',
     registerIp: '192.168.1.1',
     balance: 100.50,
-    totalRecharge: 1000.00,
     totalSpent: 899.50
   },
   { 
@@ -242,7 +171,6 @@ const tableData = ref([
     lastLoginTime: '2024-03-15 09:15:00',
     registerIp: '192.168.1.2',
     balance: 0,
-    totalRecharge: 0,
     totalSpent: 0
   },
   { 
@@ -259,7 +187,6 @@ const tableData = ref([
     lastLoginTime: '2024-03-14 18:20:00',
     registerIp: '192.168.1.3',
     balance: 500.75,
-    totalRecharge: 5000.00,
     totalSpent: 4499.25
   },
   { 
@@ -276,7 +203,6 @@ const tableData = ref([
     lastLoginTime: '2024-02-28 11:05:00',
     registerIp: '192.168.1.4',
     balance: 50.25,
-    totalRecharge: 200.00,
     totalSpent: 149.75
   },
   { 
@@ -293,7 +219,6 @@ const tableData = ref([
     lastLoginTime: '2024-03-15 07:40:00',
     registerIp: '192.168.1.5',
     balance: 0,
-    totalRecharge: 0,
     totalSpent: 0
   },
   { 
@@ -310,59 +235,7 @@ const tableData = ref([
     lastLoginTime: '2024-03-16 10:20:00',
     registerIp: '192.168.1.6',
     balance: 10000.00,
-    totalRecharge: 50000.00,
     totalSpent: 40000.00
-  }
-])
-
-// VIP等级数据
-const vipLevels = ref([
-  {
-    id: 1,
-    name: '普通用户',
-    level: 0,
-    condition: '默认等级',
-    minRecharge: 0,
-    discount: 100,
-    description: '所有用户的默认等级'
-  },
-  {
-    id: 2,
-    name: 'VIP1',
-    level: 1,
-    condition: '累计充值满100元',
-    minRecharge: 100,
-    discount: 95,
-    description: '储值用户享受95折优惠'
-  },
-  {
-    id: 3,
-    name: 'VIP2',
-    level: 2,
-    condition: '累计充值满1000元',
-    minRecharge: 1000,
-    discount: 90,
-    description: '稳定用户、活跃用户享受9折优惠'
-  },
-  {
-    id: 4,
-    name: 'VIP3',
-    level: 3,
-    condition: '累计充值满5000元',
-    minRecharge: 5000,
-    discount: 85,
-    description: '大客户，可定期回访与商务交流'
-  },
-  {
-    id: 5,
-    name: '超级VIP',
-    level: 4,
-    condition: '经理指定',
-    minRecharge: 0,
-    discount: 0,
-    description: '特殊客户，经理可调整折扣（0-100%）',
-    isCustomDiscount: true,
-    isEnabled: true
   }
 ])
 
@@ -371,32 +244,6 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const loading = ref(false)
-
-// 获取VIP等级对应的标签类型
-const getVipLevelType = (level: number) => {
-  if (level === 4) {
-    return 'danger'
-  }
-  const types = ['', 'success', 'warning', 'danger']
-  return types[level] || ''
-}
-
-// 获取VIP等级名称
-const getVipLevelName = (level: number) => {
-  const vipLevel = vipLevels.value.find(item => item.level === level)
-  return vipLevel ? vipLevel.name : '未知等级'
-}
-
-// 原有的角色类型函数可以保留，但不再使用
-const getRoleType = (role: string) => {
-  const roleMap: Record<string, string> = {
-    '管理员': 'danger',
-    'VIP用户': 'warning',
-    '普通用户': 'success',
-    '游客': 'info'
-  }
-  return roleMap[role] || 'info'
-}
 
 // 查询
 const handleSearch = () => {
@@ -408,7 +255,6 @@ const handleSearch = () => {
 const handleReset = () => {
   searchForm.userId = ''
   searchForm.email = ''
-  searchForm.vipLevel = ''
   searchForm.status = ''
   searchForm.dateRange = []
   currentPage.value = 1
@@ -467,10 +313,6 @@ const handleView = (row: any) => {
           <span>¥${row.balance}</span>
         </div>
         <div class="detail-item">
-          <span class="label">累计充值：</span>
-          <span>¥${row.totalRecharge}</span>
-        </div>
-        <div class="detail-item">
           <span class="label">累计消费：</span>
           <span>¥${row.totalSpent}</span>
         </div>
@@ -506,18 +348,6 @@ const dialogVisible = ref(false)
 const dialogType = ref<'add' | 'edit'>('add')
 const userFormRef = ref<FormInstance>()
 const captchaUrl = ref('https://cube.elemecdn.com/9/3f/2c0938b93c591b218c1beaf08de07jpeg.jpeg')
-
-// 超级VIP功能是否启用
-const isSuperVipEnabled = ref(true)
-
-// 过滤后的VIP等级列表（根据超级VIP启用状态过滤）
-const filteredVipLevels = computed(() => {
-  if (isSuperVipEnabled.value) {
-    return [vipLevels.value.find(level => level.level === 4)!]
-  } else {
-    return vipLevels.value.filter(level => level.level !== 4)
-  }
-})
 
 const userForm = reactive({
   userId: '',
@@ -599,62 +429,6 @@ const handleAddUser = () => {
   refreshCaptcha()
 }
 
-// 自动计算的会员等级
-const autoVipLevel = ref(0)
-
-// 处理余额变化，自动计算会员等级
-const handleBalanceChange = (value: number) => {
-  // 仅计算会员等级，但不自动更新表单中的会员等级
-  const level = calculateVipLevel(value)
-  autoVipLevel.value = level
-  
-  // 不再自动更新表单中的会员等级
-  // userForm.role = level
-}
-
-// 根据充值金额计算会员等级
-const calculateVipLevel = (balance: number) => {
-  // 从高到低遍历会员等级，找到第一个满足条件的等级
-  for (let i = vipLevels.value.length - 1; i >= 0; i--) {
-    const level = vipLevels.value[i]
-    if (balance >= level.minRecharge) {
-      return level.level
-    }
-  }
-  return 0 // 默认为普通用户
-}
-
-// 处理会员等级变化
-const handleRoleChange = (value: number) => {
-  // 如果超级VIP功能已启用，只能选择超级VIP
-  if (isSuperVipEnabled.value && value !== 4) {
-    ElMessage.warning('超级VIP功能已启用，只能选择超级VIP')
-    userForm.role = 4
-    return
-  }
-  
-  // 如果选择了超级VIP但功能已禁用，显示警告
-  if (value === 4 && !isSuperVipEnabled.value) {
-    ElMessage.warning('超级VIP功能已禁用，请选择其他会员等级')
-    // 可以选择自动切换到VIP3
-    userForm.role = 3
-  }
-}
-
-// 处理超级VIP功能开关变化
-const handleSuperVipChange = (value: boolean) => {
-  if (value) {
-    // 启用超级VIP功能，自动设置会员等级为超级VIP
-    userForm.role = 4
-    userForm.rechargeDiscount = 0 // 设置默认充值折扣
-    ElMessage.success('超级VIP功能已启用，会员等级已设置为超级VIP')
-  } else {
-    // 禁用超级VIP功能，自动设置会员等级为VIP3
-    userForm.role = 3
-    ElMessage.success('超级VIP功能已禁用，可选择VIP1/2/3等级')
-  }
-}
-
 // 编辑用户
 const handleEdit = (row: any) => {
   dialogType.value = 'edit'
@@ -665,9 +439,6 @@ const handleEdit = (row: any) => {
   userForm.balance = row.balance
   userForm.statusBool = row.statusBool
   userForm.rechargeDiscount = row.rechargeDiscount || 0 // 设置充值折扣
-  
-  // 设置自动计算的会员等级
-  autoVipLevel.value = calculateVipLevel(row.balance)
   
   dialogVisible.value = true
 }
@@ -730,10 +501,6 @@ const getUserList = () => {
       if (searchForm.email && !item.email.includes(searchForm.email)) {
         return false
       }
-      // 会员等级筛选
-      if (searchForm.vipLevel !== '' && item.role !== Number(searchForm.vipLevel)) {
-        return false
-      }
       // 状态筛选
       if (searchForm.status) {
         if (searchForm.status === 'normal' && item.status !== '正常') {
@@ -780,7 +547,7 @@ const handleCurrentChange = (val: number) => {
 }
 
 // 监听搜索表单变化，重置分页并重新获取数据
-watch([() => searchForm.userId, () => searchForm.email, () => searchForm.vipLevel, () => searchForm.status, () => searchForm.dateRange], () => {
+watch([() => searchForm.userId, () => searchForm.email, () => searchForm.status, () => searchForm.dateRange], () => {
   currentPage.value = 1
   getUserList()
 })
