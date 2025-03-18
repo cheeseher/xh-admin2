@@ -61,6 +61,27 @@
       <el-table :data="tableData" style="width: 100%" v-loading="loading" border stripe>
         <el-table-column prop="id" label="商品ID" width="80"></el-table-column>
         <el-table-column prop="name" label="商品名称" min-width="180"></el-table-column>
+        <el-table-column prop="image" label="商品图片" width="120">
+          <template #default="scope">
+            <el-image
+              v-if="scope.row.image"
+              :src="scope.row.image"
+              fit="cover"
+              style="width: 80px; height: 80px; border-radius: 4px;"
+              :preview-src-list="[scope.row.image]"
+            >
+              <template #error>
+                <div class="image-error">
+                  <el-icon><Picture /></el-icon>
+                </div>
+              </template>
+            </el-image>
+            <div v-else class="no-image">
+              <el-icon><Picture /></el-icon>
+              <span>暂无图片</span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="category" label="商品分类" width="100">
           <template #default="scope">
             <el-tag :type="getCategoryTag(scope.row.category)">{{ scope.row.category }}</el-tag>
@@ -181,6 +202,23 @@
             <el-option label="ProtonMail邮箱" value="ProtonMail邮箱"></el-option>
             <el-option label="其他账号" value="其他账号"></el-option>
           </el-select>
+        </el-form-item>
+        <el-form-item label="商品图片" prop="image">
+          <el-upload
+            class="product-image-uploader"
+            action="#"
+            :http-request="handleImageUpload"
+            :show-file-list="false"
+            :on-exceed="handleExceed"
+            :before-upload="beforeImageUpload"
+          >
+            <img v-if="productForm.image" :src="productForm.image" class="product-image" />
+            <div v-else class="product-image-placeholder">
+              <el-icon><Plus /></el-icon>
+              <div class="el-upload__text">点击上传图片</div>
+            </div>
+          </el-upload>
+          <div class="form-tip">请上传商品缩略图，建议尺寸 400x400 像素，最大不超过 2MB</div>
         </el-form-item>
         <el-form-item label="商品价格" prop="currentPrice">
           <el-input-number v-model="productForm.currentPrice" :min="0" :precision="2" :step="0.01" style="width: 100%;" @change="validateCostPrice"></el-input-number>
@@ -365,7 +403,7 @@ import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { Delete, QuestionFilled, Plus, Setting, ArrowDown, Lock, Check, Warning, Document, List, View, InfoFilled } from '@element-plus/icons-vue'
+import { Delete, QuestionFilled, Plus, Setting, ArrowDown, Lock, Check, Warning, Document, List, View, InfoFilled, Picture } from '@element-plus/icons-vue'
 import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
 
@@ -384,6 +422,7 @@ const tableData = ref([
     id: 'P000001',
     name: 'Gmail邮箱-稳定可用 (手工)', 
     category: '谷歌邮箱',
+    image: 'https://placekitten.com/400/400',
     currentPrice: 4.20,
     originalPrice: 6.50,
     stock: 384,
@@ -414,6 +453,7 @@ const tableData = ref([
     id: 'P000002',
     name: 'Gmail邮箱-稳定可用', 
     category: '谷歌邮箱',
+    image: 'https://placekitten.com/401/401',
     currentPrice: 2.75,
     originalPrice: 4.00,
     stock: 575,
@@ -444,6 +484,7 @@ const tableData = ref([
     id: 'P000003',
     name: 'Gmail邮箱-1月以上', 
     category: '谷歌邮箱',
+    image: 'https://placekitten.com/402/402',
     currentPrice: 5.50,
     originalPrice: 8.00,
     stock: 23,
@@ -474,6 +515,7 @@ const tableData = ref([
     id: 'P000004',
     name: 'Gmail邮箱-半年以上', 
     category: '谷歌邮箱',
+    image: 'https://placekitten.com/403/403',
     currentPrice: 7.50,
     originalPrice: 12.00,
     stock: 740,
@@ -499,6 +541,7 @@ const tableData = ref([
     id: 'P000005',
     name: 'Gmail邮箱-美国稳定', 
     category: '谷歌邮箱',
+    image: 'https://placekitten.com/404/404',
     currentPrice: 10.00,
     originalPrice: 18.00,
     stock: 1060,
@@ -530,6 +573,7 @@ const productForm = reactive({
   id: '',
   name: '',
   category: '',
+  image: '',
   currentPrice: 0,
   originalPrice: 0,
   costPrice: 0,
@@ -699,9 +743,19 @@ const handleView = (row: any) => {
     wholesalePricesHtml += '</div>'
   }
 
+  // 构建商品图片HTML
+  let imageHtml = '<div class="no-image-preview">暂无图片</div>'
+  if (row.image) {
+    imageHtml = `<div class="image-preview"><img src="${row.image}" alt="${row.name}" /></div>`
+  }
+
   ElMessageBox.alert(
     `<div class="product-detail">
       <h3>${row.name}</h3>
+      <div class="detail-item">
+        <span class="label">商品图片：</span>
+        ${imageHtml}
+      </div>
       <div class="detail-item">
         <span class="label">商品分类：</span>
         <span>${row.category}</span>
@@ -776,6 +830,7 @@ const resetProductForm = () => {
   productForm.id = ''
   productForm.name = ''
   productForm.category = ''
+  productForm.image = ''
   productForm.currentPrice = 0
   productForm.originalPrice = 0
   productForm.stock = 0
@@ -802,16 +857,43 @@ const resetProductForm = () => {
 // 编辑商品
 const handleEditProduct = (row: any) => {
   dialogType.value = 'edit'
-  Object.assign(productForm, row)
+  Object.assign(productForm, {
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    image: row.image,
+    currentPrice: row.currentPrice,
+    originalPrice: row.originalPrice,
+    costPrice: row.costPrice,
+    stock: row.stock,
+    stockWarning: row.stockWarning,
+    sales: row.sales,
+    deliveryMethod: row.deliveryMethod,
+    feature: row.feature,
+    specialNote: row.specialNote,
+    description: row.description,
+    instructions: row.instructions,
+    afterSaleInfo: row.afterSaleInfo,
+    disclaimer: row.disclaimer,
+    status: row.status,
+    statusBool: row.statusBool,
+    remark: row.remark,
+    templateMode: row.templateMode || 'custom',
+    templateId: row.templateId || ''
+  })
   
-  // 确保成本价不高于当前价格
-  if (productForm.costPrice > productForm.currentPrice) {
-    productForm.costPrice = productForm.currentPrice
+  // 处理批发价格
+  if (row.wholesalePrices && row.wholesalePrices.length > 0) {
+    productForm.wholesalePrices = [...row.wholesalePrices]
+  } else {
+    productForm.wholesalePrices = []
   }
   
-  // 确保批发价数组存在
-  if (!productForm.wholesalePrices || !Array.isArray(productForm.wholesalePrices)) {
-    productForm.wholesalePrices = []
+  // 处理支付方式
+  if (row.payMethods && row.payMethods.length > 0) {
+    productForm.payMethods = [...row.payMethods]
+  } else {
+    productForm.payMethods = []
   }
   
   dialogVisible.value = true
@@ -1439,6 +1521,40 @@ const getPayMethodLabel = (method: string) => {
   }
   return labelMap[method] || '未知'
 }
+
+// 图片上传前的验证
+const beforeImageUpload = (file: File) => {
+  const isJPG = file.type === 'image/jpeg'
+  const isPNG = file.type === 'image/png'
+  const isLt2M = file.size / 1024 / 1024 < 2
+
+  if (!isJPG && !isPNG) {
+    ElMessage.error('上传图片只能是 JPG 或 PNG 格式!')
+    return false
+  }
+  if (!isLt2M) {
+    ElMessage.error('上传图片大小不能超过 2MB!')
+    return false
+  }
+  return true
+}
+
+// 处理图片上传限制
+const handleExceed = () => {
+  ElMessage.warning('只能上传一张商品图片')
+}
+
+// 处理图片上传
+const handleImageUpload = (options: any) => {
+  const { file } = options
+  // 这里应该调用实际的上传API，这里仅作演示，使用FileReader生成base64预览
+  const reader = new FileReader()
+  reader.readAsDataURL(file)
+  reader.onload = () => {
+    productForm.image = reader.result as string
+    ElMessage.success('图片上传成功')
+  }
+}
 </script>
 
 <style scoped>
@@ -2025,5 +2141,102 @@ const getPayMethodLabel = (method: string) => {
 :deep(.el-message-box__message p) {
   margin: 0;
   line-height: 1.5;
+}
+
+.no-image {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: #909399;
+  font-size: 12px;
+  background-color: #f5f7fa;
+  border: 1px dashed #d9d9d9;
+  border-radius: 4px;
+}
+
+.no-image .el-icon {
+  font-size: 24px;
+  margin-bottom: 5px;
+}
+
+.image-error {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #f56c6c;
+  background-color: #fef0f0;
+  border: 1px solid #fde2e2;
+  border-radius: 4px;
+}
+
+.product-image-uploader {
+  display: block;
+  width: 100%;
+}
+
+.product-image-uploader .el-upload {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.product-image-uploader .el-upload:hover {
+  border-color: #409EFF;
+}
+
+.product-image-placeholder {
+  width: 180px;
+  height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: #8c939d;
+}
+
+.product-image-placeholder .el-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.product-image {
+  width: 180px;
+  height: 180px;
+  display: block;
+  object-fit: cover;
+}
+
+.image-preview {
+  max-width: 200px;
+  margin-top: 5px;
+}
+
+.image-preview img {
+  width: 100%;
+  max-height: 150px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #ebeef5;
+}
+
+.no-image-preview {
+  width: 150px;
+  height: 100px;
+  margin-top: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #909399;
+  background-color: #f5f7fa;
+  border: 1px dashed #d9d9d9;
+  border-radius: 4px;
 }
 </style> 
