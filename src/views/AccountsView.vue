@@ -21,17 +21,6 @@
           <el-form-item label="用户名">
             <el-input v-model="searchForm.username" placeholder="请输入用户名" clearable></el-input>
           </el-form-item>
-          <el-form-item label="角色">
-            <el-select v-model="searchForm.role" placeholder="请选择" clearable style="width: 168px;">
-              <el-option label="全部" value=""></el-option>
-              <el-option 
-                v-for="role in roleOptions" 
-                :key="role.value" 
-                :label="role.label" 
-                :value="role.value"
-              ></el-option>
-            </el-select>
-          </el-form-item>
           <el-form-item label="状态">
             <el-select v-model="searchForm.status" placeholder="请选择" clearable style="width: 168px;">
               <el-option label="全部" value=""></el-option>
@@ -50,11 +39,6 @@
       <el-table :data="tableData" style="width: 100%" v-loading="loading" border stripe>
         <el-table-column prop="accountId" label="账户ID" width="100"></el-table-column>
         <el-table-column prop="username" label="用户名" width="120"></el-table-column>
-        <el-table-column prop="role" label="角色" width="120">
-          <template #default="scope">
-            <el-tag :type="getRoleType(scope.row.role)">{{ scope.row.role }}</el-tag>
-          </template>
-        </el-table-column>
         <el-table-column prop="email" label="邮箱" min-width="180"></el-table-column>
         <el-table-column prop="lastLoginTime" label="最后登录时间" width="180"></el-table-column>
         <el-table-column prop="remark" label="备注" min-width="150"></el-table-column>
@@ -64,7 +48,6 @@
               v-model="scope.row.statusBool"
               :active-value="true"
               :inactive-value="false"
-              :disabled="scope.row.role === '超级管理员'"
               @change="(val: boolean) => handleStatusChange(val, scope.row)"
             ></el-switch>
             <span class="status-text">{{ scope.row.statusBool ? '正常' : '禁用' }}</span>
@@ -74,12 +57,7 @@
           <template #default="scope">
             <div class="action-buttons">
               <el-button size="small" type="primary" @click="handleEdit(scope.row)">编辑</el-button>
-              <el-button 
-                size="small" 
-                type="danger" 
-                @click="handleDelete(scope.row)"
-                v-if="scope.row.role !== '超级管理员'"
-              >删除</el-button>
+              <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
             </div>
           </template>
         </el-table-column>
@@ -113,34 +91,23 @@
         <el-form-item 
           label="密码" 
           prop="password" 
-          v-if="dialogType === 'add' || (dialogType === 'edit' && accountForm.role !== '超级管理员')"
+          v-if="dialogType === 'add'"
         >
           <el-input v-model="accountForm.password" type="password" placeholder="请输入密码"></el-input>
         </el-form-item>
         <el-form-item 
           label="确认密码" 
           prop="confirmPassword" 
-          v-if="dialogType === 'add' || (dialogType === 'edit' && accountForm.role !== '超级管理员')"
+          v-if="dialogType === 'add'"
         >
           <el-input v-model="accountForm.confirmPassword" type="password" placeholder="请再次输入密码"></el-input>
         </el-form-item>
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="accountForm.email" placeholder="请输入邮箱"></el-input>
         </el-form-item>
-        <el-form-item label="角色" prop="role">
-          <el-select v-model="accountForm.role" placeholder="请选择角色" style="width: 168px;">
-            <el-option 
-              v-for="role in roleOptions" 
-              :key="role.value" 
-              :label="role.label" 
-              :value="role.value"
-            ></el-option>
-          </el-select>
-        </el-form-item>
         <el-form-item label="状态">
           <el-switch 
             v-model="accountForm.statusBool"
-            :disabled="accountForm.role === '超级管理员'"
           ></el-switch>
           <span class="status-text">{{ accountForm.statusBool ? '正常' : '禁用' }}</span>
         </el-form-item>
@@ -167,18 +134,8 @@ import type { FormInstance, FormRules } from 'element-plus'
 const searchForm = reactive({
   accountId: '',
   username: '',
-  role: '',
   status: ''
 })
-
-// 角色选项
-const roleOptions = ref([
-  { value: '超级管理员', label: '超级管理员' },
-  { value: '管理员', label: '管理员' },
-  { value: '运营', label: '运营' },
-  { value: '客服', label: '客服' },
-  { value: '财务', label: '财务' }
-])
 
 // 表格数据
 const tableData = ref([
@@ -186,7 +143,6 @@ const tableData = ref([
     accountId: 'A10001',
     username: 'admin',
     realName: '张三',
-    role: '超级管理员',
     email: 'admin@example.com',
     phone: '138****1234',
     lastLoginTime: '2024-03-15 08:30:00',
@@ -199,7 +155,6 @@ const tableData = ref([
     accountId: 'A10002',
     username: 'operator',
     realName: '李四',
-    role: '运营',
     email: 'operator@example.com',
     phone: '139****5678',
     lastLoginTime: '2024-03-14 16:45:00',
@@ -212,7 +167,6 @@ const tableData = ref([
     accountId: 'A10003',
     username: 'service',
     realName: '王五',
-    role: '客服',
     email: 'service@example.com',
     phone: '137****9012',
     lastLoginTime: '2024-03-15 09:15:00',
@@ -225,7 +179,6 @@ const tableData = ref([
     accountId: 'A10004',
     username: 'finance',
     realName: '赵六',
-    role: '财务',
     email: 'finance@example.com',
     phone: '136****3456',
     lastLoginTime: '2024-03-14 14:20:00',
@@ -238,7 +191,6 @@ const tableData = ref([
     accountId: 'A10005',
     username: 'test',
     realName: '测试账号',
-    role: '管理员',
     email: 'test@example.com',
     phone: '135****7890',
     lastLoginTime: '2024-03-10 11:30:00',
@@ -277,7 +229,6 @@ const handleSearch = () => {
 const handleReset = () => {
   searchForm.accountId = ''
   searchForm.username = ''
-  searchForm.role = ''
   searchForm.status = ''
   currentPage.value = 1
   getAccountList()
@@ -285,11 +236,6 @@ const handleReset = () => {
 
 // 状态变更
 const handleStatusChange = (val: boolean, row: any) => {
-  if (row.role === '超级管理员') {
-    ElMessage.warning('超级管理员账户不能被禁用')
-    row.statusBool = true
-    return
-  }
   const statusText = val ? '启用' : '禁用'
   ElMessage.success(`账户"${row.username}"已${statusText}`)
   row.status = val ? '正常' : '禁用'
@@ -312,10 +258,6 @@ const handleView = (row: any) => {
         <div class="detail-item">
           <span class="label">真实姓名：</span>
           <span>${row.realName}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">角色：</span>
-          <span><el-tag size="small" type="${getRoleType(row.role)}">${row.role}</el-tag></span>
         </div>
         <div class="detail-item">
           <span class="label">状态：</span>
@@ -420,9 +362,6 @@ const rules = reactive<FormRules>({
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
   ],
-  role: [
-    { required: true, message: '请选择角色', trigger: 'change' }
-  ],
   remark: [
     { max: 200, message: '长度不能超过 200 个字符', trigger: 'blur' }
   ]
@@ -480,10 +419,6 @@ const submitForm = async () => {
 
 // 删除
 const handleDelete = (row: any) => {
-  if (row.role === '超级管理员') {
-    ElMessage.warning('超级管理员账户不能被删除')
-    return
-  }
   ElMessageBox.confirm(
     `确定要删除账户"${row.username}"吗？`,
     '警告',
@@ -520,10 +455,6 @@ const getAccountList = () => {
       }
       // 用户名筛选
       if (searchForm.username && !item.username.includes(searchForm.username)) {
-        return false
-      }
-      // 角色筛选
-      if (searchForm.role && item.role !== searchForm.role) {
         return false
       }
       // 状态筛选
@@ -563,7 +494,7 @@ const handleCurrentChange = (val: number) => {
 }
 
 // 监听搜索表单变化，重置分页并重新获取数据
-watch([() => searchForm.accountId, () => searchForm.username, () => searchForm.role, () => searchForm.status], () => {
+watch([() => searchForm.accountId, () => searchForm.username, () => searchForm.status], () => {
   currentPage.value = 1
   getAccountList()
 })
