@@ -2,7 +2,7 @@
   <div class="data-container">
     <!-- 数据概览卡片 - 第一行 -->
     <el-row :gutter="20">
-      <el-col :span="8">
+      <el-col :span="12">
         <el-card shadow="hover" class="data-card sales-card">
           <div class="card-header">
             <div class="title">总销售额</div>
@@ -34,45 +34,7 @@
           </div>
         </el-card>
       </el-col>
-      <el-col :span="8">
-        <el-card shadow="hover" class="data-card flow-card">
-          <div class="card-header">
-            <div class="title">总流水额</div>
-            <div class="actions">
-              <el-radio-group v-model="flowTimeRange" size="small">
-                <el-radio-button label="total">总计</el-radio-button>
-                <el-radio-button label="today">今日</el-radio-button>
-                <el-radio-button label="yesterday">昨日</el-radio-button>
-              </el-radio-group>
-            </div>
-          </div>
-          <div class="data-card-content">
-            <div class="icon-container purple">
-              <el-icon><Connection /></el-icon>
-            </div>
-            <div class="data-info">
-              <div class="data-value">¥{{ formatNumber(getFlowData.flow) }}</div>
-              <div class="data-extra-info">
-                <div class="data-extra-item">
-                  <span class="label">总充值：</span>
-                  <span class="value green-text">¥{{ formatNumber(getFlowData.recharge) }}</span>
-                </div>
-                <div class="flow-info-row">
-                  <div class="flow-info-item">
-                    <span class="label">总提款：</span>
-                    <span class="value red-text">¥{{ formatNumber(getFlowData.withdrawal) }}</span>
-                  </div>
-                  <div class="flow-info-item">
-                    <span class="label">顺差：</span>
-                    <span class="value blue-text">¥{{ formatNumber(getFlowData.surplus) }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
+      <el-col :span="12">
         <el-card shadow="hover" class="data-card payment-card">
           <div class="card-header">
             <div class="title">支付笔数</div>

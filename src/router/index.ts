@@ -19,6 +19,15 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/data',
+    name: 'data',
+    component: () => import('../views/DataView.vue'),
+    meta: {
+      title: '数据概览',
+      requiresAuth: true
+    }
+  },
+  {
     path: '/user',
     name: 'user',
     redirect: '/user/profile',
@@ -47,29 +56,11 @@ const routes: Array<RouteRecordRaw> = [
     ]
   },
   {
-    path: '/data',
-    name: 'data',
-    component: () => import('../views/DataView.vue'),
-    meta: {
-      title: '数据概览',
-      requiresAuth: true
-    }
-  },
-  {
     path: '/orders',
     name: 'orders',
     component: () => import('../views/OrdersView.vue'),
     meta: {
       title: '商品订单管理',
-      requiresAuth: true
-    }
-  },
-  {
-    path: '/recharge-orders',
-    name: 'rechargeOrders',
-    component: () => import('../views/RechargeOrdersView.vue'),
-    meta: {
-      title: '充值订单管理',
       requiresAuth: true
     }
   },
@@ -106,15 +97,6 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/UsersView.vue'),
     meta: {
       title: '用户管理',
-      requiresAuth: true
-    }
-  },
-  {
-    path: '/roles',
-    name: 'roles',
-    component: () => import('../views/RolesView.vue'),
-    meta: {
-      title: '角色管理',
       requiresAuth: true
     }
   },
@@ -173,15 +155,6 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
-    path: '/members',
-    name: 'members',
-    component: () => import('../views/MemberSettingsView.vue'),
-    meta: {
-      title: '会员设置',
-      requiresAuth: true
-    }
-  },
-  {
     path: '/info',
     name: 'info',
     redirect: '/info/faq',
@@ -208,15 +181,6 @@ const routes: Array<RouteRecordRaw> = [
         }
       }
     ]
-  },
-  {
-    path: '/docs',
-    name: 'docs',
-    component: () => import('../views/info/HelpView.vue'),
-    meta: {
-      title: '文档设置',
-      requiresAuth: true
-    }
   },
   {
     path: '/:pathMatch(.*)*',
@@ -248,13 +212,12 @@ router.beforeEach((to, from, next) => {
       // 未登录，跳转到登录页面
       next({
         path: '/login',
-        query: { redirect: to.fullPath } // 将要跳转的路由path作为参数，登录成功后跳转到该路由
+        query: { redirect: to.fullPath }
       })
     } else {
       next()
     }
   } else {
-    // 不需要登录权限的路由直接放行
     next()
   }
 })

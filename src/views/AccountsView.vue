@@ -193,7 +193,7 @@ const tableData = ref([
     status: '正常',
     statusBool: true,
     remark: '系统超级管理员',
-    permissions: ['data', 'orders', 'products', 'categories', 'users', 'members', 'templates', 'settings']
+    permissions: ['data', 'orders', 'products', 'categories', 'users', 'templates', 'settings']
   },
   { 
     accountId: 'A10002',
@@ -245,7 +245,7 @@ const tableData = ref([
     status: '禁用',
     statusBool: false,
     remark: '测试账号，已禁用',
-    permissions: ['data', 'orders', 'products', 'categories', 'users', 'members', 'templates']
+    permissions: ['data', 'orders', 'products', 'categories', 'users', 'templates']
   }
 ])
 
@@ -345,7 +345,6 @@ const handleView = (row: any) => {
               'products': '商品管理',
               'categories': '分类管理',
               'users': '用户管理',
-              'members': '会员设置',
               'templates': '模板设置',
               'settings': '系统设置'
             };

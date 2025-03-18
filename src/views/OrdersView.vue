@@ -114,14 +114,9 @@
             <el-tag :type="getCategoryTag(scope.row.category)">{{ scope.row.category }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="originalPrice" label="线上价格" width="100">
+        <el-table-column prop="originalPrice" label="商品价格" width="100">
           <template #default="scope">
-            <span class="original-price">{{ scope.row.originalPrice }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="purchasePrice" label="购买价格（折后）" width="130">
-          <template #default="scope">
-            <span class="purchase-price">{{ scope.row.purchasePrice }}</span>
+            <span class="price">{{ scope.row.originalPrice }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="quantity" label="数量" width="80"></el-table-column>
@@ -1432,7 +1427,6 @@ const getPayMethodLabel = (method: string) => {
 
 .original-price {
   color: #909399;
-  text-decoration: line-through;
 }
 
 .purchase-price {

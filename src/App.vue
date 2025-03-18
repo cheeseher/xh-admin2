@@ -36,10 +36,6 @@
               <el-icon><ShoppingCart /></el-icon>
               <template #title>商品订单</template>
             </el-menu-item>
-            <el-menu-item index="/recharge-orders">
-              <el-icon><Wallet /></el-icon>
-              <template #title>充值订单</template>
-            </el-menu-item>
           </el-sub-menu>
           
           <!-- 商品管理 -->
@@ -68,12 +64,6 @@
             <template #title>用户管理</template>
           </el-menu-item>
           
-          <!-- 会员设置 -->
-          <el-menu-item index="/members">
-            <el-icon><UserFilled /></el-icon>
-            <template #title>会员设置</template>
-          </el-menu-item>
-          
           <!-- 内容管理 -->
           <el-sub-menu index="content-management">
             <template #title>
@@ -100,10 +90,6 @@
               <el-icon><Management /></el-icon>
               <span>权限管理</span>
             </template>
-            <el-menu-item index="/roles">
-              <el-icon><User /></el-icon>
-              <template #title>角色管理</template>
-            </el-menu-item>
             <el-menu-item index="/accounts">
               <el-icon><Lock /></el-icon>
               <template #title>账户管理</template>
