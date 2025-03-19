@@ -28,7 +28,8 @@ import {
   Box, 
   Lock, 
   List, 
-  UserFilled
+  UserFilled,
+  QuestionFilled
 } from '@element-plus/icons-vue'
 
 // 路由映射表
@@ -45,6 +46,7 @@ const routeMap: Record<string, { title: string; icon: string }> = {
   '/docs': { title: '系统文档设置', icon: 'Document' },
   '/templates': { title: '模板设置', icon: 'Document' },
   '/messages': { title: '站内信', icon: 'ChatLineSquare' },
+  '/help-center': { title: '帮助中心', icon: 'QuestionFilled' },
   '/user/profile': { title: '个人信息', icon: 'User' },
   '/user/reset-password': { title: '修改密码', icon: 'Lock' }
 }
@@ -63,6 +65,7 @@ const menuHierarchy: Record<string, { parent: string; title: string; icon: strin
   // 内容管理
   '/templates': { parent: 'content-management', title: '内容管理', icon: 'Document' },
   '/messages': { parent: 'content-management', title: '内容管理', icon: 'Document' },
+  '/help-center': { parent: 'content-management', title: '内容管理', icon: 'Document' },
   
   // 系统管理
   '/settings': { parent: 'system-management', title: '系统管理', icon: 'Setting' },
@@ -90,7 +93,8 @@ const iconMap: Record<string, any> = {
   Lock,
   List,
   ChatLineSquare,
-  Wallet
+  Wallet,
+  QuestionFilled
 }
 
 const route = useRoute()

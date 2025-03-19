@@ -183,6 +183,15 @@ const routes: Array<RouteRecordRaw> = [
     ]
   },
   {
+    path: '/help-center',
+    name: 'helpCenter',
+    component: () => import('../views/HelpCenterView.vue'),
+    meta: {
+      title: '帮助中心',
+      requiresAuth: true
+    }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('../views/NotFoundView.vue'),

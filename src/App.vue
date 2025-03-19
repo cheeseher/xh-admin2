@@ -79,6 +79,10 @@
               <el-icon><ChatLineSquare /></el-icon>
               <template #title>站内信</template>
             </el-menu-item>
+            <el-menu-item index="/help-center">
+              <el-icon><QuestionFilled /></el-icon>
+              <template #title>帮助中心</template>
+            </el-menu-item>
           </el-sub-menu>
           
           <!-- 系统管理 -->
@@ -170,7 +174,8 @@ import {
   Document,
   ChatLineSquare,
   List,
-  Lock
+  Lock,
+  QuestionFilled
 } from '@element-plus/icons-vue'
 import Breadcrumb from './components/Breadcrumb.vue'
 
