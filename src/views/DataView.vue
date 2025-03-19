@@ -20,16 +20,6 @@
             </div>
             <div class="data-info">
               <div class="data-value">¥{{ formatNumber(getSalesData.sales) }}</div>
-              <div class="data-extra-info">
-                <div class="data-extra-item">
-                  <span class="label">总退款：</span>
-                  <span class="value red-text">¥{{ formatNumber(getSalesData.refunds) }}</span>
-                </div>
-                <div class="data-extra-item">
-                  <span class="label">总预收益：</span>
-                  <span class="value green-text">¥{{ formatNumber(getSalesData.netRevenue) }}</span>
-                </div>
-              </div>
             </div>
           </div>
         </el-card>

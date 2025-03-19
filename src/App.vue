@@ -71,10 +71,6 @@
               <el-icon><Document /></el-icon>
               <span>内容管理</span>
             </template>
-            <el-menu-item index="/document-settings">
-              <el-icon><Document /></el-icon>
-              <template #title>文档设置</template>
-            </el-menu-item>
             <el-menu-item index="/templates">
               <el-icon><Document /></el-icon>
               <template #title>模板设置</template>
@@ -94,6 +90,10 @@
             <el-menu-item index="/settings">
               <el-icon><Setting /></el-icon>
               <template #title>系统设置</template>
+            </el-menu-item>
+            <el-menu-item index="/document-settings">
+              <el-icon><Document /></el-icon>
+              <template #title>系统文档设置</template>
             </el-menu-item>
             <el-menu-item index="/accounts">
               <el-icon><Lock /></el-icon>
