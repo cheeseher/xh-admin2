@@ -114,30 +114,6 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="批发价" width="120">
-          <template #default="scope">
-            <el-popover
-              placement="top"
-              :width="200"
-              trigger="hover"
-              v-if="scope.row.wholesalePrices && scope.row.wholesalePrices.length > 0"
-            >
-              <template #default>
-                <div class="wholesale-popover">
-                  <div class="wholesale-popover-title">批发价格设置</div>
-                  <div class="wholesale-popover-item" v-for="(item, index) in scope.row.wholesalePrices" :key="index">
-                    <span class="wholesale-popover-quantity">≥{{ item.quantity }}</span>
-                    <span class="wholesale-popover-price">¥{{ item.price.toFixed(2) }}</span>
-                  </div>
-                </div>
-              </template>
-              <template #reference>
-                <el-tag type="warning" effect="plain">查看批发价</el-tag>
-              </template>
-            </el-popover>
-            <span v-else class="no-data">无批发价</span>
-          </template>
-        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
             <el-switch
