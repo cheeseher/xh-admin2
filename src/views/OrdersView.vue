@@ -139,7 +139,7 @@
         <el-table-column prop="userEmail" label="用户邮箱" width="180"></el-table-column>
         <el-table-column prop="payMethod" label="支付方式" width="100">
           <template #default="scope">
-            <el-tag size="small" effect="plain" :type="getPayMethodType(scope.row.payMethod)">
+            <el-tag :type="getPayMethodType(scope.row.payMethod)">
               {{ getPayMethodLabel(scope.row.payMethod) }}
             </el-tag>
           </template>
@@ -157,11 +157,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="120">
-          <template #default="scope">
-            <span>{{ scope.row.remark || '-' }}</span>
-          </template>
-        </el-table-column>
+        <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
