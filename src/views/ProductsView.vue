@@ -37,7 +37,7 @@
             </el-select>
           </el-form-item>
           <el-form-item label="状态">
-            <el-select v-model="searchForm.status" placeholder="请选择" clearable style="width: 168px;">
+            <el-select v-model="searchForm.status" placeholder="请选择" clearable>
               <el-option label="全部" value=""></el-option>
               <el-option label="上架中" value="on"></el-option>
               <el-option label="已下架" value="off"></el-option>
@@ -127,10 +127,11 @@
         </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="250" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
               <el-button size="small" type="primary" @click="handleEditProduct(scope.row)">编辑</el-button>
+              <el-button size="small" type="success" @click="handleInventory(scope.row)">库存管理</el-button>
               <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
             </div>
           </template>
@@ -371,6 +372,178 @@
         </span>
       </template>
     </el-dialog>
+    
+    <!-- 库存管理抽屉 -->
+    <el-drawer
+      v-model="inventoryDrawerVisible"
+      :title="`${selectedProduct?.name || ''} - 库存管理`"
+      size="90%"
+      :destroy-on-close="true"
+    >
+      <template #default>
+        <div class="inventory-container">
+          <div class="page-description">
+            <p>管理该商品的库存账号，包括添加新库存、导入库存、编辑和删除等操作。</p>
+          </div>
+          
+          <!-- 操作按钮 -->
+          <div class="operation-buttons">
+            <el-button type="primary" @click="handleImportInventory">批量导入</el-button>
+            <el-button type="success" @click="handleAddInventory">新增库存</el-button>
+          </div>
+          
+          <!-- 搜索区域 -->
+          <div class="search-area">
+            <el-form :inline="true" :model="inventorySearchForm" class="demo-form-inline">
+              <el-form-item label="销售状态">
+                <el-select v-model="inventorySearchForm.status" placeholder="请选择" clearable>
+                  <el-option label="未售出" value="unsold"></el-option>
+                  <el-option label="已售出" value="sold"></el-option>
+                </el-select>
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" @click="handleInventorySearch">查询</el-button>
+                <el-button @click="resetInventorySearch">重置</el-button>
+              </el-form-item>
+            </el-form>
+          </div>
+          
+          <!-- 库存表格 -->
+          <el-table :data="inventoryTableData" style="width: 100%" v-loading="inventoryLoading" border stripe>
+            <el-table-column type="selection" width="55"></el-table-column>
+            <el-table-column prop="cardId" label="卡密ID" width="120"></el-table-column>
+            <el-table-column prop="status" label="状态" width="100">
+              <template #default="scope">
+                <el-tag :type="scope.row.status === 'unsold' ? 'success' : 'info'">
+                  {{ scope.row.status === 'unsold' ? '未售出' : '已售出' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="cardInfo" label="卡密信息" min-width="200">
+              <template #default="scope">
+                <el-button link type="primary" @click="showCardInfo(scope.row)">查看</el-button>
+              </template>
+            </el-table-column>
+            <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
+            <el-table-column label="操作" width="150" fixed="right">
+              <template #default="scope">
+                <el-button size="small" type="primary" @click="handleEditInventoryItem(scope.row)">编辑</el-button>
+                <el-button size="small" type="danger" @click="handleDeleteInventoryItem(scope.row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          
+          <!-- 分页和批量操作 -->
+          <div class="pagination-container">
+            <div class="batch-actions">
+              <el-button type="success" @click="handleExportInventory">导出数据</el-button>
+              <el-button type="danger" @click="handleBatchDeleteInventory">批量删除</el-button>
+            </div>
+            <el-pagination
+              v-model:current-page="inventoryCurrentPage"
+              v-model:page-size="inventoryPageSize"
+              :page-sizes="[10, 20, 50, 100]"
+              layout="total, sizes, prev, pager, next, jumper"
+              :total="inventoryTotal"
+              @size-change="handleInventorySizeChange"
+              @current-change="handleInventoryCurrentChange"
+              :background="true"
+            ></el-pagination>
+          </div>
+        </div>
+      </template>
+    </el-drawer>
+    
+    <!-- 新增库存弹窗 -->
+    <el-dialog
+      v-model="addInventoryDialogVisible"
+      title="新增库存"
+      width="600px"
+      :destroy-on-close="true"
+    >
+      <el-form :model="inventoryForm" label-width="100px" :rules="inventoryRules" ref="inventoryFormRef">
+        <el-form-item label="卡密信息" prop="cardInfo" required>
+          <el-input
+            type="textarea"
+            v-model="inventoryForm.cardInfo"
+            :rows="4"
+            placeholder="请输入卡密信息，格式：用户名----密码----注册邮箱----邮箱密码"
+          ></el-input>
+        </el-form-item>
+        <el-form-item label="状态" required>
+          <el-select v-model="inventoryForm.status" placeholder="请选择状态" style="width: 100%;">
+            <el-option label="未售出" value="unsold"></el-option>
+            <el-option label="已售出" value="sold"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input
+            type="textarea"
+            v-model="inventoryForm.remark"
+            :rows="2"
+            placeholder="请输入备注信息"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="addInventoryDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitInventoryForm">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 批量导入弹窗 -->
+    <el-dialog
+      v-model="importInventoryDialogVisible"
+      title="批量导入库存"
+      width="500px"
+      :destroy-on-close="true"
+      class="import-dialog"
+    >
+      <el-form :model="importForm" label-width="100px">
+        <el-form-item label="备注">
+          <el-input
+            type="textarea"
+            v-model="importForm.remark"
+            :rows="2"
+            placeholder="请输入备注信息"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <div class="import-description">
+        <h4>导入说明：</h4>
+        <ol>
+          <li>请按照以下格式准备txt文件：每行一个卡密</li>
+          <li>支持txt文件导入，文件大小不超过2MB</li>
+          <li>导入时将自动过滤重复的卡密信息</li>
+        </ol>
+      </div>
+      <el-upload
+        class="import-uploader"
+        drag
+        action="#"
+        :auto-upload="false"
+        :on-change="handleImportFileChange"
+        :limit="1"
+        accept=".txt,.csv"
+      >
+        <div class="upload-content">
+          <el-icon class="upload-icon"><Upload /></el-icon>
+          <div class="upload-text">将文件拖到此处，或<em>点击上传</em></div>
+        </div>
+        <div class="upload-tip">支持 .txt、.csv 格式文件，且不超过 2MB</div>
+      </el-upload>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="importInventoryDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitImportInventory" :loading="importing">
+            {{ importing ? '导入中...' : '开始导入' }}
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -379,7 +552,7 @@ import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { Delete, QuestionFilled, Plus, Setting, ArrowDown, Lock, Check, Warning, Document, List, View, InfoFilled, Picture } from '@element-plus/icons-vue'
+import { Delete, QuestionFilled, Plus, Setting, ArrowDown, Lock, Check, Warning, Document, List, View, InfoFilled, Picture, Upload, UploadFilled } from '@element-plus/icons-vue'
 import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
 
@@ -1531,6 +1704,433 @@ const handleImageUpload = (options: any) => {
     ElMessage.success('图片上传成功')
   }
 }
+
+// 库存管理相关
+const inventoryDrawerVisible = ref(false)
+const selectedProduct = ref<any>(null)
+const inventorySearchForm = reactive({
+  status: ''
+})
+const inventoryTableData = ref([])
+const inventoryLoading = ref(false)
+const inventoryCurrentPage = ref(1)
+const inventoryPageSize = ref(10)
+const inventoryTotal = ref(0)
+
+// 新增库存相关
+const addInventoryDialogVisible = ref(false)
+const inventoryForm = reactive({
+  cardInfo: '',
+  productId: '',
+  status: 'unsold',
+  remark: ''
+})
+const inventoryFormRef = ref<FormInstance>()
+const inventoryRules = reactive<FormRules>({
+  cardInfo: [
+    { required: true, message: '请输入卡密信息', trigger: 'blur' }
+  ],
+  productId: [
+    { required: true, message: '请选择关联商品', trigger: 'change' }
+  ],
+  status: [
+    { required: true, message: '请选择状态', trigger: 'change' }
+  ]
+})
+
+// 批量导入相关
+const importInventoryDialogVisible = ref(false)
+const importing = ref(false)
+const importFile = ref<File | null>(null)
+
+// 编辑相关
+const editInventoryDialogVisible = ref(false)
+const editInventoryFormRef = ref<FormInstance>()
+const editInventoryForm = reactive({
+  id: '',
+  cardInfo: '',
+  status: 'unsold',
+  remark: ''
+})
+
+// 处理新增库存
+const handleAddInventory = () => {
+  addInventoryDialogVisible.value = true
+  inventoryForm.cardInfo = ''
+  inventoryForm.productId = ''
+  inventoryForm.status = 'unsold'
+  inventoryForm.remark = ''
+}
+
+// 提交新增库存表单
+const submitInventoryForm = async () => {
+  if (!inventoryFormRef.value) return
+  
+  await inventoryFormRef.value.validate((valid) => {
+    if (valid) {
+      // TODO: 调用API保存库存信息
+      ElMessage.success('添加库存成功')
+      addInventoryDialogVisible.value = false
+      // 刷新库存列表
+      loadInventoryData()
+    }
+  })
+}
+
+// 处理批量导入
+const handleImportInventory = () => {
+  importInventoryDialogVisible.value = true
+  importFile.value = null
+}
+
+// 处理文件选择
+const handleImportFileChange = (file: any) => {
+  if (file.size > 2 * 1024 * 1024) {
+    ElMessage.error('文件大小不能超过2MB')
+    return false
+  }
+  importFile.value = file.raw
+}
+
+// 提交导入
+const submitImportInventory = async () => {
+  if (!importFile.value) {
+    ElMessage.warning('请选择要导入的文件')
+    return
+  }
+  
+  importing.value = true
+  try {
+    // TODO: 调用API上传文件并导入库存
+    await new Promise(resolve => setTimeout(resolve, 1500)) // 模拟上传过程
+    ElMessage.success('导入成功')
+    importInventoryDialogVisible.value = false
+    // 刷新库存列表
+    loadInventoryData()
+  } catch (error) {
+    ElMessage.error('导入失败，请重试')
+  } finally {
+    importing.value = false
+  }
+}
+
+// 打开库存管理抽屉
+const handleInventory = (row: any) => {
+  selectedProduct.value = row
+  inventoryDrawerVisible.value = true
+  // 加载库存数据
+  loadInventoryData()
+}
+
+const loadInventoryData = () => {
+  inventoryLoading.value = true
+  // 模拟加载数据
+  setTimeout(() => {
+    inventoryTableData.value = [
+      {
+        cardId: 'CARD001',
+        status: 'unsold',
+        cardInfo: 'username----password----email----emailpass',
+        createTime: '2024-03-20 10:00:00',
+        remark: '测试账号'
+      },
+      {
+        cardId: 'CARD002',
+        status: 'sold',
+        cardInfo: 'username2----password2----email2----emailpass2',
+        createTime: '2024-03-20 11:00:00',
+        remark: '已售出账号'
+      }
+    ]
+    inventoryTotal.value = 2
+    inventoryLoading.value = false
+  }, 500)
+}
+
+const handleInventorySearch = () => {
+  loadInventoryData()
+}
+
+const resetInventorySearch = () => {
+  inventorySearchForm.status = ''
+  loadInventoryData()
+}
+
+const handleInventorySizeChange = (val: number) => {
+  inventoryPageSize.value = val
+  loadInventoryData()
+}
+
+const handleInventoryCurrentChange = (val: number) => {
+  inventoryCurrentPage.value = val
+  loadInventoryData()
+}
+
+const handleEditInventoryItem = (row: any) => {
+  editInventoryForm.id = row.cardId
+  editInventoryForm.cardInfo = row.cardInfo
+  editInventoryForm.status = row.status
+  editInventoryForm.remark = row.remark
+  editInventoryDialogVisible.value = true
+}
+
+const handleDeleteInventoryItem = (row: any) => {
+  ElMessageBox.confirm(
+    '确定要删除这条库存记录吗？',
+    '警告',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  )
+    .then(() => {
+      ElMessage({
+        type: 'success',
+        message: '删除成功',
+      })
+      loadInventoryData()
+    })
+    .catch(() => {
+      ElMessage({
+        type: 'info',
+        message: '已取消删除',
+      })
+    })
+}
+
+// 查看卡密信息
+const showCardInfo = (row: any) => {
+  ElMessageBox.alert(
+    `<div class="card-info-container">
+      <div class="card-info-item">
+        <span class="label">卡密ID：</span>
+        <span class="value">${row.cardId}</span>
+      </div>
+      <div class="card-info-item">
+        <span class="label">卡密信息：</span>
+        <span class="value">${row.cardInfo}</span>
+      </div>
+      <div class="card-info-item">
+        <span class="label">创建时间：</span>
+        <span class="value">${row.createTime}</span>
+      </div>
+      <div class="card-info-item">
+        <span class="label">状态：</span>
+        <span class="value ${row.status === 'unsold' ? 'text-success' : 'text-info'}">
+          ${row.status === 'unsold' ? '未售出' : '已售出'}
+        </span>
+      </div>
+      <div class="card-info-item">
+        <span class="label">备注：</span>
+        <span class="value">${row.remark || '无'}</span>
+      </div>
+    </div>`,
+    '卡密详细信息',
+    {
+      dangerouslyUseHTMLString: true,
+      confirmButtonText: '关闭',
+      customClass: 'card-info-dialog'
+    }
+  )
+}
+
+// 导出数据
+const handleExportInventory = () => {
+  ElMessageBox.confirm(
+    '确定要导出选中的库存数据吗？',
+    '提示',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'info'
+    }
+  )
+    .then(() => {
+      ElMessage({
+        type: 'success',
+        message: '导出成功，请在下载中查看文件'
+      })
+    })
+    .catch(() => {
+      ElMessage({
+        type: 'info',
+        message: '已取消导出'
+      })
+    })
+}
+
+// 批量删除
+const handleBatchDeleteInventory = () => {
+  ElMessageBox.confirm(
+    '确定要批量删除选中的库存记录吗？此操作不可恢复！',
+    '警告',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  )
+    .then(() => {
+      ElMessage({
+        type: 'success',
+        message: '批量删除成功'
+      })
+      loadInventoryData()
+    })
+    .catch(() => {
+      ElMessage({
+        type: 'info',
+        message: '已取消删除'
+      })
+    })
+}
+
+// 添加样式
+const styleContent = `
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.drawer-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #303133;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.inventory-drawer-content {
+  padding: 20px;
+}
+
+.page-description {
+  margin-bottom: 20px;
+  padding: 10px;
+  background-color: #ecf8ff;
+  border-radius: 4px;
+  border-left: 5px solid #50bfff;
+}
+
+.page-description p {
+  margin: 0;
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.search-area {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.batch-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.import-dialog {
+  .import-description {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f5f7fa;
+    border-radius: 4px;
+    border-left: 4px solid #409eff;
+
+    h4 {
+      margin: 0 0 10px;
+      color: #303133;
+      font-size: 16px;
+    }
+
+    ol {
+      margin: 0;
+      padding-left: 20px;
+      color: #606266;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+  }
+
+  .import-uploader {
+    margin-top: 20px;
+
+    :deep(.el-upload) {
+      width: 100%;
+    }
+
+    :deep(.el-upload-dragger) {
+      width: 100%;
+      height: 180px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      border: 2px dashed #dcdfe6;
+      border-radius: 6px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: border-color .3s;
+
+      &:hover {
+        border-color: #409eff;
+      }
+
+      .upload-content {
+        text-align: center;
+
+        .upload-icon {
+          font-size: 48px;
+          color: #909399;
+          margin-bottom: 10px;
+        }
+
+        .upload-text {
+          color: #606266;
+          font-size: 14px;
+          line-height: 1.6;
+
+          em {
+            color: #409eff;
+            font-style: normal;
+          }
+        }
+      }
+    }
+
+    :deep(.upload-tip) {
+      margin-top: 10px;
+      color: #909399;
+      font-size: 12px;
+      line-height: 1.5;
+      text-align: center;
+    }
+  }
+}
+`
+
+// 导入相关的变量声明
+const importForm = reactive({
+  productId: '',
+  remark: ''
+})
 </script>
 
 <style scoped>
@@ -1658,12 +2258,14 @@ const handleImageUpload = (options: any) => {
 
 .action-buttons {
   display: flex;
-  gap: 5px;
+  gap: 8px;
 }
 
 .action-buttons .el-button {
   margin-left: 0 !important;
   margin-right: 0 !important;
+  padding-left: 12px;
+  padding-right: 12px;
 }
 
 /* 富文本编辑器样式 */
@@ -1977,6 +2579,14 @@ const handleImageUpload = (options: any) => {
   font-style: italic;
 }
 
+.search-area .el-form-item .el-select {
+  width: 158px !important;
+}
+
+.search-area :deep(.el-form-item[label="状态"] .el-select) {
+  width: 158px !important;
+}
+
 /* 批发价格弹出框样式 */
 .wholesale-popover {
   padding: 5px 0;
@@ -2215,4 +2825,286 @@ const handleImageUpload = (options: any) => {
   border: 1px dashed #d9d9d9;
   border-radius: 4px;
 }
-</style> 
+
+/* 库存管理样式 */
+.inventory-container {
+  padding: 20px;
+}
+
+.operation-buttons {
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.inventory-container .page-description {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+.inventory-container .page-description p {
+  margin: 0;
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.inventory-container .search-area {
+  margin-bottom: 20px;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+.inventory-container .pagination-container {
+  margin-top: 20px;
+  padding: 10px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.batch-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* 卡密信息弹窗样式 */
+:deep(.card-info-dialog) {
+  max-width: 500px;
+  width: 100%;
+}
+
+:deep(.card-info-container) {
+  padding: 10px;
+}
+
+:deep(.card-info-item) {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+}
+
+:deep(.card-info-item .label) {
+  width: 80px;
+  color: #606266;
+  font-weight: bold;
+}
+
+:deep(.card-info-item .value) {
+  flex: 1;
+  word-break: break-all;
+}
+
+:deep(.card-info-item .text-success) {
+  color: #67c23a;
+}
+
+:deep(.card-info-item .text-info) {
+  color: #909399;
+}
+
+/* 表格内容样式 */
+.el-table .unsold {
+  color: #67c23a;
+}
+
+.el-table .sold {
+  color: #909399;
+}
+
+.import-tips {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+.import-tips h4 {
+  margin: 0 0 10px 0;
+  color: #303133;
+}
+
+.import-tips p {
+  margin: 5px 0;
+  color: #606266;
+  font-size: 14px;
+}
+
+.import-uploader {
+  text-align: center;
+  padding: 20px;
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: border-color .3s;
+}
+
+.import-uploader:hover {
+  border-color: #409eff;
+}
+
+.el-upload__tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 10px;
+}
+
+/* 添加上传区域样式 */
+.upload-area {
+  margin: 20px 0;
+}
+
+.upload-content {
+  padding: 20px 0;
+  text-align: center;
+}
+
+.upload-icon {
+  font-size: 48px;
+  color: #909399;
+  margin-bottom: 10px;
+}
+
+.upload-text {
+  color: #606266;
+  font-size: 14px;
+}
+
+.upload-tip {
+  margin-top: 10px;
+  padding: 10px;
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.upload-tip p {
+  margin: 5px 0;
+}
+
+/* 导入弹窗样式 */
+.import-form {
+  padding: 0 20px;
+}
+
+.upload-wrapper {
+  margin: 20px 0;
+}
+
+.upload-area {
+  width: 100%;
+}
+
+:deep(.el-upload-dragger) {
+  width: 100%;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-content {
+  text-align: center;
+}
+
+.upload-icon {
+  font-size: 48px;
+  color: #909399;
+  margin-bottom: 10px;
+}
+
+.upload-text {
+  color: #606266;
+  font-size: 14px;
+}
+
+.upload-text em {
+  color: #409EFF;
+  font-style: normal;
+}
+
+.upload-tip {
+  margin-top: 15px;
+  padding: 10px;
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.upload-tip p {
+  margin: 5px 0;
+}
+
+/* 导入弹窗样式 */
+.import-dialog {
+  :deep(.el-dialog__body) {
+    padding: 20px 30px;
+  }
+}
+
+.import-description {
+  margin-bottom: 20px;
+}
+
+.import-description h4 {
+  font-size: 14px;
+  color: #333;
+  margin: 0 0 10px 0;
+}
+
+.import-description ol {
+  margin: 0;
+  padding-left: 20px;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.import-uploader {
+  text-align: center;
+  padding: 20px;
+  background: #fafafa;
+  border: 1px dashed #d9d9d9;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  transition: border-color .3s;
+}
+
+.import-uploader:hover {
+  border-color: #409eff;
+}
+
+.select-file-btn {
+  display: inline-block;
+  margin-bottom: 10px;
+}
+
+.upload-tip {
+  font-size: 12px;
+  color: #666;
+  margin-top: 10px;
+}
+
+:deep(.el-upload-dragger) {
+  width: 100%;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+
+:deep(.el-upload) {
+  width: 100%;
+}
+
+:deep(.el-upload-dragger:hover) {
+  border: none;
+  background: none;
+}
+</style>

@@ -26,87 +26,49 @@
             <el-icon><DataAnalysis /></el-icon>
             <template #title>数据概览</template>
           </el-menu-item>
-          
-          <!-- 订单管理 -->
-          <el-sub-menu index="order-management">
+
+          <el-sub-menu index="/orders">
             <template #title>
               <el-icon><ShoppingCart /></el-icon>
               <span>订单管理</span>
             </template>
-            <el-menu-item index="/orders">
-              <el-icon><ShoppingCart /></el-icon>
-              <template #title>商品订单</template>
-            </el-menu-item>
+            <el-menu-item index="/orders">商品订单</el-menu-item>
           </el-sub-menu>
-          
-          <!-- 商品管理 -->
-          <el-sub-menu index="product-management">
+
+          <el-sub-menu index="/products">
             <template #title>
               <el-icon><Goods /></el-icon>
               <span>商品管理</span>
             </template>
-            <el-menu-item index="/products">
-              <el-icon><Goods /></el-icon>
-              <template #title>商品列表</template>
-            </el-menu-item>
-            <el-menu-item index="/categories">
-              <el-icon><Menu /></el-icon>
-              <template #title>分类管理</template>
-            </el-menu-item>
-            <el-menu-item index="/inventory">
-              <el-icon><Box /></el-icon>
-              <template #title>库存管理</template>
-            </el-menu-item>
+            <el-menu-item index="/products">商品列表</el-menu-item>
+            <el-menu-item index="/categories">分类管理</el-menu-item>
           </el-sub-menu>
-          
-          <!-- 用户管理 -->
+
           <el-menu-item index="/users">
             <el-icon><User /></el-icon>
             <template #title>用户管理</template>
           </el-menu-item>
-          
-          <!-- 内容管理 -->
-          <el-sub-menu index="content-management">
+
+          <el-sub-menu index="/content">
             <template #title>
               <el-icon><Document /></el-icon>
               <span>内容管理</span>
             </template>
-            <el-menu-item index="/templates">
-              <el-icon><Document /></el-icon>
-              <template #title>模板设置</template>
-            </el-menu-item>
-            <el-menu-item index="/messages">
-              <el-icon><ChatLineSquare /></el-icon>
-              <template #title>站内信</template>
-            </el-menu-item>
-            <el-menu-item index="/help-center">
-              <el-icon><QuestionFilled /></el-icon>
-              <template #title>帮助中心</template>
+            <el-menu-item index="/content/template">模板设置</el-menu-item>
+            <el-menu-item index="/content/messages">站内信</el-menu-item>
+            <el-menu-item index="/content/help">
+              <span>帮助中心</span>
             </el-menu-item>
           </el-sub-menu>
-          
-          <!-- 系统管理 -->
-          <el-sub-menu index="system-management">
+          <el-sub-menu index="/system">
             <template #title>
               <el-icon><Setting /></el-icon>
               <span>系统管理</span>
             </template>
-            <el-menu-item index="/settings">
-              <el-icon><Setting /></el-icon>
-              <template #title>系统设置</template>
-            </el-menu-item>
-            <el-menu-item index="/document-settings">
-              <el-icon><Document /></el-icon>
-              <template #title>系统文档设置</template>
-            </el-menu-item>
-            <el-menu-item index="/accounts">
-              <el-icon><Lock /></el-icon>
-              <template #title>账户管理</template>
-            </el-menu-item>
-            <el-menu-item index="/logs">
-              <el-icon><List /></el-icon>
-              <template #title>操作日志</template>
-            </el-menu-item>
+            <el-menu-item index="/system/settings">系统设置</el-menu-item>
+            <el-menu-item index="/system/docs">系统文档设置</el-menu-item>
+            <el-menu-item index="/system/accounts">账户管理</el-menu-item>
+            <el-menu-item index="/system/logs">操作日志</el-menu-item>
           </el-sub-menu>
         </el-menu>
       </el-aside>
@@ -175,7 +137,8 @@ import {
   ChatLineSquare,
   List,
   Lock,
-  QuestionFilled
+  QuestionFilled,
+  Files
 } from '@element-plus/icons-vue'
 import Breadcrumb from './components/Breadcrumb.vue'
 
@@ -236,7 +199,13 @@ const handleCommand = (command: string) => {
 .sidebar-container {
   background-color: #001529;
   transition: width 0.3s;
-  overflow: hidden;
+  height: 100vh;
+  overflow-y: auto;
+
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 1000;
 }
 
 .logo {
@@ -270,6 +239,8 @@ const handleCommand = (command: string) => {
 .header-left {
   display: flex;
   align-items: center;
+  position: relative;
+  z-index: 1001;
 }
 
 .collapse-btn {
@@ -298,7 +269,6 @@ const handleCommand = (command: string) => {
   background-color: #f0f2f5;
   padding: 20px;
 }
-
 :deep(.el-menu) {
   border-right: none;
 }
@@ -334,5 +304,41 @@ const handleCommand = (command: string) => {
       background-color: #1890ff20;
     }
   }
+}
+.app-container {
+  height: 100vh;
+  display: flex;
+}
+
+:deep(.el-container) {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex: 1;
+}
+
+:deep(.el-container .el-container) {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex: 1;
+}
+
+:deep(.el-container .el-aside) {
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+  border: none;
+}
+
+:deep(.el-container .el-main) {
+  margin: 0;
+  padding: 20px;
+  flex: 1;
+}
+.el-container .el-main {
+  flex: 1;
+  padding: 20px;
+  background-color: #f0f2f5;
 }
 </style>

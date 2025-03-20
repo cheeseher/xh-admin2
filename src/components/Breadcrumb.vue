@@ -38,15 +38,14 @@ const routeMap: Record<string, { title: string; icon: string }> = {
   '/orders': { title: '商品订单', icon: 'ShoppingCart' },
   '/products': { title: '商品列表', icon: 'Goods' },
   '/categories': { title: '分类管理', icon: 'Menu' },
-  '/inventory': { title: '库存管理', icon: 'Box' },
   '/users': { title: '用户管理', icon: 'User' },
-  '/accounts': { title: '账户管理', icon: 'Lock' },
-  '/settings': { title: '系统设置', icon: 'Setting' },
-  '/logs': { title: '操作日志', icon: 'List' },
-  '/docs': { title: '系统文档设置', icon: 'Document' },
-  '/templates': { title: '模板设置', icon: 'Document' },
-  '/messages': { title: '站内信', icon: 'ChatLineSquare' },
-  '/help-center': { title: '帮助中心', icon: 'QuestionFilled' },
+  '/content/template': { title: '模板设置', icon: 'Document' },
+  '/content/messages': { title: '站内信', icon: 'ChatLineSquare' },
+  '/content/help': { title: '帮助中心', icon: 'QuestionFilled' },
+  '/system/settings': { title: '系统设置', icon: 'Setting' },
+  '/system/docs': { title: '系统文档设置', icon: 'Document' },
+  '/system/accounts': { title: '账户管理', icon: 'Lock' },
+  '/system/logs': { title: '操作日志', icon: 'List' },
   '/user/profile': { title: '个人信息', icon: 'User' },
   '/user/reset-password': { title: '修改密码', icon: 'Lock' }
 }
@@ -63,15 +62,18 @@ const menuHierarchy: Record<string, { parent: string; title: string; icon: strin
   '/inventory': { parent: 'product-management', title: '商品管理', icon: 'Goods' },
   
   // 内容管理
-  '/templates': { parent: 'content-management', title: '内容管理', icon: 'Document' },
-  '/messages': { parent: 'content-management', title: '内容管理', icon: 'Document' },
-  '/help-center': { parent: 'content-management', title: '内容管理', icon: 'Document' },
+  '/content/template': { parent: 'content-management', title: '内容管理', icon: 'Document' },
+  '/content/messages': { parent: 'content-management', title: '内容管理', icon: 'Document' },
+  '/content/help': { parent: 'content-management', title: '内容管理', icon: 'Document' },
   
   // 系统管理
   '/settings': { parent: 'system-management', title: '系统管理', icon: 'Setting' },
   '/document-settings': { parent: 'system-management', title: '系统管理', icon: 'Setting' },
   '/accounts': { parent: 'system-management', title: '系统管理', icon: 'Setting' },
   '/logs': { parent: 'system-management', title: '系统管理', icon: 'Setting' },
+  
+  // 内容管理相关
+  '/content/help': { parent: '/content', title: '文档设置', icon: 'QuestionFilled' },
   
   // 用户相关
   '/user/profile': { parent: '/user', title: '用户', icon: 'User' },
@@ -233,4 +235,4 @@ watch(() => route.path, () => {
   color: #303133;
   font-weight: 600;
 }
-</style> 
+</style>

@@ -74,15 +74,6 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
-    path: '/inventory',
-    name: 'inventory',
-    component: () => import('../views/InventoryView.vue'),
-    meta: {
-      title: '库存管理',
-      requiresAuth: true
-    }
-  },
-  {
     path: '/categories',
     name: 'categories',
     component: () => import('../views/CategoriesView.vue'),
@@ -101,95 +92,87 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
-    path: '/accounts',
-    name: 'accounts',
-    component: () => import('../views/AccountsView.vue'),
-    meta: {
-      title: '账户管理',
-      requiresAuth: true
-    }
-  },
-  {
-    path: '/logs',
-    name: 'logs',
-    component: () => import('../views/LogsView.vue'),
-    meta: {
-      title: '操作日志',
-      requiresAuth: true
-    }
-  },
-  {
-    path: '/messages',
-    name: 'messages',
-    component: () => import('../views/MessagesView.vue'),
-    meta: {
-      title: '站内信',
-      requiresAuth: true
-    }
-  },
-  {
-    path: '/settings',
-    name: 'settings',
-    component: () => import('../views/SettingsView.vue'),
-    meta: {
-      title: '系统设置',
-      requiresAuth: true
-    }
-  },
-  {
-    path: '/document-settings',
-    name: 'documentSettings',
-    component: () => import('../views/system/DocumentSettingsView.vue'),
-    meta: {
-      title: '系统文档设置',
-      requiresAuth: true
-    }
-  },
-  {
-    path: '/templates',
-    name: 'templates',
-    component: () => import('../views/TemplateSettingsView.vue'),
-    meta: {
-      title: '模板设置',
-      requiresAuth: true
-    }
-  },
-  {
-    path: '/info',
-    name: 'info',
-    redirect: '/info/faq',
+    path: '/system',
+    name: 'system',
+    redirect: '/system/settings',
     meta: {
       requiresAuth: true
     },
     children: [
       {
-        path: 'faq',
-        name: 'faq',
-        component: () => import('../views/info/FaqView.vue'),
+        path: 'settings',
+        name: 'settings',
+        component: () => import('../views/SettingsView.vue'),
         meta: {
-          title: '常见问题',
+          title: '系统设置',
           requiresAuth: true
         }
       },
       {
-        path: 'help',
-        name: 'help',
-        component: () => import('../views/info/HelpView.vue'),
+        path: 'docs',
+        name: 'documentSettings',
+        component: () => import('../views/system/DocumentSettingsView.vue'),
         meta: {
-          title: '帮助文档',
+          title: '系统文档设置',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'accounts',
+        name: 'accounts',
+        component: () => import('../views/AccountsView.vue'),
+        meta: {
+          title: '账户管理',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'logs',
+        name: 'logs',
+        component: () => import('../views/LogsView.vue'),
+        meta: {
+          title: '操作日志',
           requiresAuth: true
         }
       }
     ]
   },
   {
-    path: '/help-center',
-    name: 'helpCenter',
-    component: () => import('../views/HelpCenterView.vue'),
+    path: '/content',
+    name: 'content',
+    redirect: '/content/template',
     meta: {
-      title: '帮助中心',
       requiresAuth: true
-    }
+    },
+    children: [
+      {
+        path: 'template',
+        name: 'template',
+        component: () => import('../views/TemplateSettingsView.vue'),
+        meta: {
+          title: '模板设置',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'messages',
+        name: 'messages',
+        component: () => import('../views/MessagesView.vue'),
+        meta: {
+          title: '站内信',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'help',
+        name: 'helpCenter',
+        component: () => import('../views/info/HelpView.vue'),
+        meta: {
+          title: '帮助中心',
+          requiresAuth: true
+        }
+      }
+    ]
   },
   {
     path: '/:pathMatch(.*)*',
@@ -231,4 +214,4 @@ router.beforeEach((to, from, next) => {
   }
 })
 
-export default router 
+export default router
