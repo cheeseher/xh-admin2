@@ -64,16 +64,13 @@ const menuHierarchy: Record<string, { parent: string; title: string; icon: strin
   // 内容管理
   '/content/template': { parent: 'content-management', title: '内容管理', icon: 'Document' },
   '/content/messages': { parent: 'content-management', title: '内容管理', icon: 'Document' },
-  '/content/help': { parent: 'content-management', title: '内容管理', icon: 'Document' },
+  '/content/help': { parent: 'content-management', title: '帮助中心', icon: 'QuestionFilled' },
   
   // 系统管理
   '/settings': { parent: 'system-management', title: '系统管理', icon: 'Setting' },
   '/document-settings': { parent: 'system-management', title: '系统管理', icon: 'Setting' },
   '/accounts': { parent: 'system-management', title: '系统管理', icon: 'Setting' },
   '/logs': { parent: 'system-management', title: '系统管理', icon: 'Setting' },
-  
-  // 内容管理相关
-  '/content/help': { parent: '/content', title: '文档设置', icon: 'QuestionFilled' },
   
   // 用户相关
   '/user/profile': { parent: '/user', title: '用户', icon: 'User' },
