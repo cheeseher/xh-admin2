@@ -165,6 +165,35 @@
             </el-form-item>
           </el-form>
         </el-tab-pane>
+
+        <!-- USDT比率设置 -->
+        <el-tab-pane label="USDT比率设置" name="usdtRate">
+          <el-form
+            ref="usdtRateFormRef"
+            :model="usdtRateForm"
+            :rules="usdtRateRules"
+            label-width="120px"
+            class="settings-form"
+          >
+            <el-form-item label="USDT兑人民币比率" prop="usdtRate">
+              <el-input-number
+                v-model="usdtRateForm.usdtRate"
+                :min="0"
+                :max="100"
+                :precision="2"
+                :step="0.01"
+                placeholder="请输入USDT兑人民币比率"
+              />
+              <span class="form-text">元</span>
+              <div class="form-tip">设置1USDT等于多少人民币，用于系统内货币转换计算</div>
+            </el-form-item>
+
+            <el-form-item>
+              <el-button type="primary" @click="saveUsdtRateSettings">保存设置</el-button>
+              <el-button @click="resetUsdtRateForm">重置</el-button>
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
       </el-tabs>
     </el-card>
   </div>
@@ -265,6 +294,19 @@ const feeRules = reactive<FormRules>({
   ],
   alipayFee: [
     { required: true, message: '请输入支付宝手续费率', trigger: 'blur' }
+  ]
+})
+
+// USDT比率设置表单
+const usdtRateFormRef = ref<FormInstance>()
+const usdtRateForm = reactive({
+  usdtRate: 7.2
+})
+
+// USDT比率设置表单验证规则
+const usdtRateRules = reactive<FormRules>({
+  usdtRate: [
+    { required: true, message: '请输入USDT兑人民币比率', trigger: 'blur' }
   ]
 })
 
@@ -406,6 +448,26 @@ const saveFeeSettings = async () => {
 const resetFeeForm = () => {
   if (feeFormRef.value) {
     feeFormRef.value.resetFields()
+  }
+}
+
+// 保存USDT比率设置
+const saveUsdtRateSettings = async () => {
+  if (!usdtRateFormRef.value) return
+  
+  await usdtRateFormRef.value.validate((valid, fields) => {
+    if (valid) {
+      ElMessage.success('USDT比率设置保存成功')
+    } else {
+      console.log('表单验证失败', fields)
+    }
+  })
+}
+
+// 重置USDT比率设置表单
+const resetUsdtRateForm = () => {
+  if (usdtRateFormRef.value) {
+    usdtRateFormRef.value.resetFields()
   }
 }
 
