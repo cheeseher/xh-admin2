@@ -111,23 +111,32 @@
         <el-table-column prop="productName" label="商品名称" min-width="180"></el-table-column>
         <el-table-column prop="category" label="商品分类" width="100">
           <template #default="scope">
-            <el-tag :type="getCategoryTag(scope.row.category)">{{ scope.row.category }}</el-tag>
+            {{ scope.row.category }}
           </template>
         </el-table-column>
         <el-table-column prop="originalPrice" label="商品价格" width="100">
           <template #default="scope">
-            <span class="price">{{ scope.row.originalPrice }}</span>
+            <div class="price-container">
+              <span class="price">{{ scope.row.originalPrice }}</span>
+              <span v-if="scope.row.payMethod === 'usdt'" class="usdt-price">{{ convertToUSDT(scope.row.originalPrice) }} USDT</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="quantity" label="数量" width="80"></el-table-column>
         <el-table-column prop="totalPrice" label="总价" width="100">
           <template #default="scope">
-            <span class="price">{{ scope.row.totalPrice }}</span>
+            <div class="price-container">
+              <span class="price">{{ scope.row.totalPrice }}</span>
+              <span v-if="scope.row.payMethod === 'usdt'" class="usdt-price">{{ convertToUSDT(scope.row.totalPrice) }} USDT</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="fee" label="手续费" width="100">
           <template #default="scope">
-            <span class="fee">{{ scope.row.fee || '¥0.00' }}</span>
+            <div class="price-container">
+              <span class="fee">{{ scope.row.fee || '¥0.00' }}</span>
+              <span v-if="scope.row.payMethod === 'usdt'" class="usdt-price">{{ convertToUSDT(scope.row.fee || '¥0.00') }} USDT</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="cardId" label="卡密ID" width="100"></el-table-column>
@@ -1273,6 +1282,15 @@ const getPayMethodLabel = (method: string) => {
   }
   return labelMap[method] || 'USDT'
 }
+
+// 添加 USDT 转换函数
+const convertToUSDT = (price: string): string => {
+  // 移除人民币符号并转换为数字
+  const numPrice = parseFloat(price.replace('¥', ''))
+  // 假设汇率为 1 CNY = 0.14 USDT
+  const usdtPrice = (numPrice * 0.14).toFixed(2)
+  return usdtPrice
+}
 </script>
 
 <style>
@@ -1660,5 +1678,17 @@ const getPayMethodLabel = (method: string) => {
 :deep(.el-table .el-checkbox.is-checked .el-checkbox__inner) {
   background-color: #67c23a;
   border-color: #67c23a;
+}
+
+.price-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.usdt-price {
+  color: #67c23a;
+  font-size: 12px;
+  font-weight: bold;
 }
 </style>

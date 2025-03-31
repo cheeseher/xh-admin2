@@ -20,6 +20,16 @@
             </div>
             <div class="data-info">
               <div class="data-value">¥{{ formatNumber(getSalesData.sales) }}</div>
+              <div class="data-extra-info">
+                <div class="data-extra-item">
+                  <span class="label">人民币销售额：</span>
+                  <span class="value red-text">¥{{ formatNumber(getSalesData.sales) }}</span>
+                </div>
+                <div class="data-extra-item">
+                  <span class="label">USDT销售额：</span>
+                  <span class="value green-text">{{ formatNumber(getSalesData.sales * 0.14) }} USDT</span>
+                </div>
+              </div>
             </div>
           </div>
         </el-card>

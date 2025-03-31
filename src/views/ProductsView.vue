@@ -84,20 +84,21 @@
         </el-table-column>
         <el-table-column prop="category" label="商品分类" width="100">
           <template #default="scope">
-            <el-tag :type="getCategoryTag(scope.row.category)">{{ scope.row.category }}</el-tag>
+            {{ scope.row.category }}
           </template>
         </el-table-column>
         <el-table-column label="价格" width="120">
           <template #default="scope">
             <div class="price-container">
               <span class="current-price">¥{{ scope.row.currentPrice }}</span>
+              <span class="usdt-price">{{ (scope.row.currentPrice * 0.14).toFixed(2) }} USDT</span>
               <span class="original-price" v-if="scope.row.originalPrice">¥{{ scope.row.originalPrice }}</span>
             </div>
           </template>
         </el-table-column>
         <el-table-column label="成本价" width="100">
           <template #default="scope">
-            <span class="cost-price">¥{{ scope.row.costPrice ? scope.row.costPrice.toFixed(2) : '0.00' }}</span>
+            <span>¥{{ scope.row.costPrice ? scope.row.costPrice.toFixed(2) : '0.00' }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="stock" label="库存" width="80">
@@ -2175,6 +2176,11 @@ const importForm = reactive({
 .current-price {
   color: #f56c6c;
   font-weight: bold;
+}
+
+.usdt-price {
+  color: #67c23a;
+  font-size: 12px;
 }
 
 .original-price {
