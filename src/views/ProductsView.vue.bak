@@ -678,45 +678,33 @@
                   :label="'文件上传'" 
                   :prop="'packages.' + index + '.file'"
                 >
-                  <!-- Button to simulate upload if no file is selected and not currently uploading -->
-                  <el-button
-                    v-if="!pkg.uploading && !pkg.fileName"
-                    type="primary"
-                    @click="simulateFileUpload(index)"
-                  >
-                    点击上传文件
-                  </el-button>
-                  <!-- Tip, visible only when the upload button is visible -->
-                  <div v-if="!pkg.uploading && !pkg.fileName" class="el-upload__tip" style="margin-top: 5px;">
-                    支持.apk, .ipa, .exe等格式，不超过500MB
-                  </div>
-
-                  <!-- Progress bar if currently uploading -->
-                  <div v-if="pkg.uploading" style="display: flex; align-items: center; gap: 10px; width: 100%;">
-                    <el-progress
-                      :percentage="pkg.uploadProgress || 0"
-                      status="success"
-                      :text-inside="true"
-                      :stroke-width="12"
-                      style="flex-grow: 1; margin-top: 10px;"
-                    ></el-progress>
-                    <el-button 
-                      type="danger" 
-                      circle 
-                      size="small" 
-                      :icon="Delete" 
-                      @click="cancelSimulatedUpload(index)"
-                    />
-                  </div>
-
-                  <!-- File info if file is "uploaded" (fileName exists) and not currently uploading -->
-                  <div v-if="pkg.fileName && !pkg.uploading" class="file-info">
-                    <el-icon><Document /></el-icon>
-                    <span>{{ pkg.fileName }}</span>
-                    <el-button type="danger" link @click="removePackageFile(index)">
-                      <el-icon><Delete /></el-icon>
-                    </el-button>
-                  </div>
+                  <template v-if="uploadingIndex === index && isUploading">
+                    <div class="upload-progress-container">
+                      <el-progress 
+                        :percentage="uploadProgress" 
+                        :stroke-width="15"
+                        status="primary"
+                      ></el-progress>
+                      <div class="upload-progress-text">
+                        {{ uploadProgress < 100 ? '文件上传中...' : '上传完成，处理中...' }}
+                      </div>
+                    </div>
+                  </template>
+                  <template v-else-if="pkg.fileName">
+                    <div class="file-info">
+                      <el-icon><Document /></el-icon>
+                      <span>{{ pkg.fileName }}</span>
+                      <el-button type="danger" link @click="removePackageFile(index)">
+                        <el-icon><Delete /></el-icon>
+                      </el-button>
+                    </div>
+                  </template>
+                  <template v-else>
+                    <el-button type="primary" @click="simulateFileUpload(index)">点击上传文件</el-button>
+                    <div class="el-upload__tip">
+                      支持.apk, .ipa, .exe等格式，不超过500MB，最多上传1个文件
+                    </div>
+                  </template>
                 </el-form-item>
               </div>
             </div>
@@ -752,7 +740,7 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import type { FormInstance, FormRules, UploadRequestOptions } from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
 import { Delete, QuestionFilled, Plus, Setting, ArrowDown, Lock, Check, Warning, Document, List, View, InfoFilled, Picture, Upload, UploadFilled } from '@element-plus/icons-vue'
 import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
@@ -995,8 +983,7 @@ const productForm = reactive({
     type: 'percent', // 'percent'百分比 或 'fixed'固定数量
     value: 20, // 百分比值或固定数量值
     enabled: false // 是否启用购买限制
-  },
-  packages: [] // Ensure packages are initialized for new products if needed
+  }
 })
 
 // 确保productForm.wholesalePrices始终是一个数组
@@ -1259,7 +1246,6 @@ const resetProductForm = () => {
     value: 20,
     enabled: false
   }
-  productForm.packages = [] // Reset packages
 }
 
 // 编辑商品
@@ -1981,7 +1967,7 @@ const selectedProduct = ref<any>(null)
 const inventorySearchForm = reactive({
   status: ''
 })
-const inventoryTableData = ref<InventoryTableItem[]>([]) // Typed the ref
+const inventoryTableData = ref([])
 const inventoryLoading = ref(false)
 const inventoryCurrentPage = ref(1)
 const inventoryPageSize = ref(10)
@@ -2402,6 +2388,19 @@ const importForm = reactive({
   remark: ''
 })
 
+// 添加包对象的接口定义
+interface PackageItem {
+  name: string;
+  icon: string;
+  type: string;
+  link: string;
+  file: any;
+  fileName: string;
+  visible: boolean;
+  uploading?: boolean;
+  uploadProgress?: number;
+}
+
 // 安装包管理相关
 const packageDialogVisible = ref(false)
 const packageFormRef = ref<FormInstance>()
@@ -2414,9 +2413,7 @@ const packageForm = reactive({
       link: '',
       file: null,
       fileName: '',
-      visible: true,
-      uploading: false,
-      uploadProgress: 0
+      visible: true
     }
   ]
 })
@@ -2429,8 +2426,8 @@ const handlePackageManager = (row: any) => {
     packageForm.packages = JSON.parse(JSON.stringify(row.packages)).map((pkg: any) => ({
       ...pkg,
       visible: pkg.visible !== undefined ? pkg.visible : true, // 确保visible字段存在
-      uploading: false, 
-      uploadProgress: 0
+      uploading: false, // 添加上传状态字段
+      uploadProgress: 0 // 添加上传进度字段
     }))
   } else {
     packageForm.packages = [
@@ -2442,7 +2439,7 @@ const handlePackageManager = (row: any) => {
         file: null,
         fileName: '',
         visible: true,
-        uploading: false, 
+        uploading: false,
         uploadProgress: 0
       }
     ]
@@ -2473,8 +2470,8 @@ const removePackage = (index: number) => {
 }
 
 // 上传图标处理
-const handleIconUpload = (options: UploadRequestOptions, index: number) => {
-  const fileObj = options.file
+const handleIconUpload = (file: any, index: number) => {
+  const fileObj = file.file
   // 验证文件类型和大小
   const isImage = fileObj.type.startsWith('image/')
   const isLt2M = fileObj.size / 1024 / 1024 < 2
@@ -2511,8 +2508,8 @@ const beforeIconUpload = (file: File) => {
 }
 
 // 上传安装包文件处理
-const handleFileUpload = (options: UploadRequestOptions, index: number) => {
-  const fileObj = options.file; // Removed type assertion as target is any
+const handleFileUpload = (file: any, index: number) => {
+  const fileObj = file.file
   // 验证文件大小
   const isLt500M = fileObj.size / 1024 / 1024 < 500
 
@@ -2544,33 +2541,15 @@ const beforePackageFileUpload = (file: File) => {
 
 // 移除已上传的安装包文件
 const removePackageFile = (index: number) => {
-  const pkg = packageForm.packages[index];
-  pkg.file = null
-  pkg.fileName = ''
-  pkg.link = ''
-  pkg.uploading = false;
-  pkg.uploadProgress = 0;
+  packageForm.packages[index].file = null
+  packageForm.packages[index].fileName = ''
+  packageForm.packages[index].link = ''
 }
 
-// 新增：模拟文件上传函数
-const simulateFileUpload = (index: number) => {
-  const pkg = packageForm.packages[index];
-  pkg.fileName = 'simulated_package.apk'; // Mock file name
-  pkg.uploading = true;
-  pkg.uploadProgress = 0;
-
-  // Simulate progress
-  const interval = setInterval(() => {
-    if (pkg.uploadProgress < 100) {
-      pkg.uploadProgress += 20; // Increment progress
-      if (pkg.uploadProgress > 100) pkg.uploadProgress = 100; // Cap at 100
-    } else {
-      clearInterval(interval);
-      pkg.uploading = false;
-      ElMessage.success(`"${pkg.fileName}" 上传完成 (模拟)`);
-    }
-  }, 300); // Adjust interval for speed
-};
+// 修复格式化进度显示的函数，添加类型定义
+const formatProgress = (percentage: number) => {
+  return `上传中 ${percentage}%`
+}
 
 // 保存安装包配置
 const savePackages = () => {
@@ -2586,7 +2565,7 @@ const savePackages = () => {
       return
     }
     if (pkg.type === 'file' && !pkg.fileName) {
-      ElMessage.error(`安装包 #${i + 1} 需要上传文件`)
+      ElMessage.error(`安装包 #${i + 1} a需要上传文件`)
       return
     }
   }
@@ -2612,9 +2591,6 @@ const savePackages = () => {
 
 // 计算最大购买数量
 const calculateMaxPurchase = (stock: number, purchaseLimit: any) => {
-  if (!purchaseLimit || typeof purchaseLimit.value === 'undefined') {
-    return stock; // Or some other default if purchaseLimit is not properly defined
-  }
   if (purchaseLimit.type === 'percent') {
     return Math.floor(stock * (purchaseLimit.value / 100))
   } else if (purchaseLimit.type === 'fixed') {
@@ -2624,29 +2600,80 @@ const calculateMaxPurchase = (stock: number, purchaseLimit: any) => {
   }
 }
 
-// 定义接口
-interface InventoryTableItem {
-  cardId: string;
-  status: 'unsold' | 'sold';
-  cardInfo: string;
-  createTime: string;
-  remark?: string;
+// 在script部分添加以下变量
+const isUploading = ref(false)
+const uploadingIndex = ref(-1)
+const uploadProgress = ref(0)
+
+// 模拟文件上传 - 完全重写
+const simulateFileUpload = (index: number) => {
+  // 模拟一个随机文件名
+  const mockFileNames = [
+    'setup_v1.2.5.exe', 
+    'app-release_3.0.1.apk', 
+    'install_package_2.1.dmg', 
+    'software_bundle_1.0.pkg',
+    'application_setup.zip'
+  ]
+  const randomFileName = mockFileNames[Math.floor(Math.random() * mockFileNames.length)]
+  
+  // 设置上传状态
+  isUploading.value = true
+  uploadingIndex.value = index
+  uploadProgress.value = 0
+  
+  // 显示进度条
+  const progressInterval = setInterval(() => {
+    // 随机增加进度，但确保不超过100
+    const increment = Math.floor(Math.random() * 10) + 5
+    uploadProgress.value = Math.min(uploadProgress.value + increment, 100)
+    
+    if (uploadProgress.value >= 100) {
+      clearInterval(progressInterval)
+      
+      // 延迟一会再完成，模拟服务器处理时间
+      setTimeout(() => {
+        // 上传完成，设置文件信息
+        packageForm.packages[index].fileName = randomFileName
+        packageForm.packages[index].file = null // 这里改成null，避免类型错误
+        packageForm.packages[index].link = '模拟文件上传链接：' + randomFileName
+        isUploading.value = false
+        uploadingIndex.value = -1
+        ElMessage.success('文件上传成功')
+      }, 800)
+    }
+  }, 300)
 }
 
-interface CustomUploadRawFile extends File {
-  uid: number;
+// 移除已上传的安装包文件 - 简化版本
+const removePackageFile = (index: number) => {
+  packageForm.packages[index].file = null
+  packageForm.packages[index].fileName = ''
+  packageForm.packages[index].link = ''
 }
 
-interface PackageItem {
-  name: string;
-  icon: string;
-  type: 'link' | 'file';
-  link: string;
-  file: any; // Changed to any
-  fileName: string;
-  visible: boolean;
-  uploading: boolean;
-  uploadProgress: number;
+// 移除已上传的安装包文件
+const removePackageFile = (index: number) => {
+  packageForm.packages[index].file = null
+  packageForm.packages[index].fileName = ''
+  packageForm.packages[index].link = ''
+}
+
+.file-upload-progress {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.upload-progress-container {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.upload-progress-text {
+  margin-top: 8px;
+  color: #606266;
+  font-size: 12px;
+  text-align: center;
 }
 </script>
 
@@ -3822,6 +3849,28 @@ interface PackageItem {
 
 .no-limit {
   color: #909399;
+  font-size: 12px;
+}
+
+.file-upload-wrapper {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.file-upload-progress {
+  display: flex;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.upload-progress-container {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.upload-progress-text {
+  margin-left: 10px;
+  color: #606266;
   font-size: 12px;
 }
 </style>
