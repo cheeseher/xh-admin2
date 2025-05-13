@@ -108,6 +108,17 @@
         </el-table-column>
         <el-table-column prop="stockWarning" label="库存预警值" width="100"></el-table-column>
         <el-table-column prop="sales" label="销量" width="80"></el-table-column>
+        <el-table-column label="单笔购买限制" width="120">
+          <template #default="scope">
+            <span v-if="scope.row.purchaseLimit && scope.row.purchaseLimit.enabled">
+              <el-tag size="small" type="warning">
+                {{ scope.row.purchaseLimit.type === 'percent' ? 
+                  `${scope.row.purchaseLimit.value}%` : `${scope.row.purchaseLimit.value}件` }}
+              </el-tag>
+            </span>
+            <span v-else class="no-limit">不限制</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="deliveryMethod" label="发货方式" width="100">
           <template #default="scope">
             <el-tag :type="scope.row.deliveryMethod === '自动发货' ? 'success' : 'info'">
@@ -128,10 +139,11 @@
         </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
-        <el-table-column label="操作" width="250" fixed="right">
+        <el-table-column label="操作" width="300" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
               <el-button size="small" type="primary" @click="handleEditProduct(scope.row)">编辑</el-button>
+              <el-button size="small" type="warning" @click="handlePackageManager(scope.row)">包管理</el-button>
               <el-button size="small" type="success" @click="handleInventory(scope.row)">库存管理</el-button>
               <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
             </div>
@@ -351,6 +363,44 @@
           <div class="form-tip">当库存低于此值时将发出预警提醒</div>
         </el-form-item>
         
+        <el-form-item label="单笔购买限制">
+          <div class="purchase-limit-container">
+            <el-switch
+              v-model="productForm.purchaseLimit.enabled"
+              active-text="启用"
+              inactive-text="不限制"
+            />
+            
+            <template v-if="productForm.purchaseLimit.enabled">
+              <div class="purchase-limit-settings">
+                <el-radio-group v-model="productForm.purchaseLimit.type" class="limit-type-group">
+                  <el-radio label="percent">库存百分比</el-radio>
+                  <el-radio label="fixed">固定数量</el-radio>
+                </el-radio-group>
+                
+                <div class="limit-value-container">
+                  <el-input-number 
+                    v-model="productForm.purchaseLimit.value" 
+                    :min="1" 
+                    :max="productForm.purchaseLimit.type === 'percent' ? 100 : undefined"
+                    :precision="0" 
+                    :step="1"
+                    style="width: 120px;"
+                  />
+                  <span class="limit-unit">{{ productForm.purchaseLimit.type === 'percent' ? '%' : '件' }}</span>
+                </div>
+              </div>
+              
+              <div class="purchase-limit-preview" v-if="productForm.stock > 0">
+                <span>示例: 若当前库存为 {{ productForm.stock }} 件，单笔最多可购买 
+                  <strong class="highlight-text">{{ calculateMaxPurchase(productForm.stock, productForm.purchaseLimit) }}</strong> 件
+                </span>
+              </div>
+            </template>
+          </div>
+          <div class="form-tip">设置用户单笔订单最大购买数量限制</div>
+        </el-form-item>
+        
         <el-form-item label="备注" prop="remark">
           <el-input type="textarea" v-model="productForm.remark" placeholder="请输入备注信息" :rows="3"></el-input>
         </el-form-item>
@@ -545,6 +595,139 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 安装包管理对话框 -->
+    <el-dialog
+      v-model="packageDialogVisible"
+      title="安装包管理"
+      width="780px"
+      class="package-dialog"
+    >
+      <el-form :model="packageForm" label-width="100px" ref="packageFormRef">
+        <el-form-item label="商品名称">
+          <el-input v-model="selectedProduct.name" disabled></el-input>
+        </el-form-item>
+        
+        <div class="package-list">
+          <div v-for="(pkg, index) in packageForm.packages" :key="index" class="package-item">
+            <div class="package-header">
+              <h3>安装包 #{{ index + 1 }}</h3>
+              <el-button 
+                v-if="packageForm.packages.length > 1" 
+                type="danger" 
+                circle 
+                size="small" 
+                @click="removePackage(index)"
+                :disabled="packageForm.packages.length <= 1"
+              >
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </div>
+            
+            <div class="package-content">
+              <div class="package-left">
+                <el-form-item :label="'图标'" :prop="'packages.' + index + '.icon'" class="icon-upload-item">
+                  <el-upload
+                    class="package-icon-uploader"
+                    action="#"
+                    :http-request="(file) => handleIconUpload(file, index)"
+                    :show-file-list="false"
+                    :on-exceed="handleExceed"
+                    :before-upload="beforeIconUpload"
+                  >
+                    <img v-if="pkg.icon" :src="pkg.icon" class="package-icon" />
+                    <div v-else class="package-icon-placeholder">
+                      <el-icon><Plus /></el-icon>
+                      <div class="el-upload__text">点击上传图标</div>
+                    </div>
+                  </el-upload>
+                  <div class="form-tip">建议尺寸64x64像素</div>
+                </el-form-item>
+              </div>
+              
+              <div class="package-right">
+                <el-form-item :label="'在前台显示'" :prop="'packages.' + index + '.visible'" class="visible-switch">
+                  <el-switch
+                    v-model="pkg.visible"
+                    active-text="显示"
+                    inactive-text="隐藏"
+                  ></el-switch>
+                </el-form-item>
+              
+                <el-form-item :label="'名称'" :prop="'packages.' + index + '.name'">
+                  <el-input v-model="pkg.name" placeholder="请输入安装包名称"></el-input>
+                </el-form-item>
+                
+                <el-form-item :label="'类型'" :prop="'packages.' + index + '.type'">
+                  <el-radio-group v-model="pkg.type">
+                    <el-radio label="file">文件上传</el-radio>
+                    <el-radio label="link">链接地址</el-radio>
+                  </el-radio-group>
+                </el-form-item>
+                
+                <el-form-item 
+                  v-if="pkg.type === 'link'" 
+                  :label="'下载链接'" 
+                  :prop="'packages.' + index + '.link'"
+                >
+                  <el-input v-model="pkg.link" placeholder="请输入安装包下载链接"></el-input>
+                </el-form-item>
+                
+                <el-form-item 
+                  v-if="pkg.type === 'file'" 
+                  :label="'文件上传'" 
+                  :prop="'packages.' + index + '.file'"
+                >
+                  <el-upload
+                    class="package-file-uploader"
+                    action="#"
+                    :http-request="(file) => handleFileUpload(file, index)"
+                    :on-exceed="handleExceed"
+                    :before-upload="beforePackageFileUpload"
+                    :limit="1"
+                  >
+                    <el-button type="primary">点击上传文件</el-button>
+                    <template #tip>
+                      <div class="el-upload__tip">
+                        支持.apk, .ipa, .exe等格式，不超过500MB
+                      </div>
+                    </template>
+                  </el-upload>
+                  <div v-if="pkg.fileName" class="file-info">
+                    <el-icon><Document /></el-icon>
+                    <span>{{ pkg.fileName }}</span>
+                    <el-button type="danger" link @click="removePackageFile(index)">
+                      <el-icon><Delete /></el-icon>
+                    </el-button>
+                  </div>
+                </el-form-item>
+              </div>
+            </div>
+            
+            <el-divider v-if="index < packageForm.packages.length - 1"></el-divider>
+          </div>
+        </div>
+        
+        <div class="package-actions">
+          <el-button 
+            type="primary" 
+            @click="addPackage" 
+            :disabled="packageForm.packages.length >= 3"
+          >
+            <el-icon><Plus /></el-icon> 添加安装包
+          </el-button>
+          <div v-if="packageForm.packages.length >= 3" class="limit-tip">
+            最多支持3个安装包
+          </div>
+        </div>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="packageDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="savePackages">保存</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -597,7 +780,22 @@ const tableData = ref([
     templateId: 2,
     costPrice: 2.50,
     remark: '优质账号，稳定性高',
-    payMethods: ['usdt', 'wechat', 'alipay']
+    payMethods: ['usdt', 'wechat', 'alipay'],
+    packages: [
+      {
+        name: 'Gmail官方安卓应用',
+        icon: 'https://placekitten.com/128/128',
+        type: 'link',
+        link: 'https://play.google.com/store/apps/details?id=com.google.android.gm',
+        fileName: '',
+        visible: true
+      }
+    ],
+    purchaseLimit: {
+      type: 'percent',
+      value: 20,
+      enabled: true
+    }
   },
   { 
     id: 'P000002',
@@ -628,7 +826,12 @@ const tableData = ref([
     templateId: 0,
     costPrice: 1.50,
     remark: '热销产品，适合批量采购',
-    payMethods: ['usdt', 'wechat', 'alipay']
+    payMethods: ['usdt', 'wechat', 'alipay'],
+    purchaseLimit: {
+      type: 'fixed',
+      value: 50,
+      enabled: true
+    }
   },
   { 
     id: 'P000003',
@@ -706,7 +909,33 @@ const tableData = ref([
     costPrice: 6.00,
     stockWarning: 200,
     remark: '美国地区IP，适合海外用户',
-    payMethods: ['usdt', 'wechat', 'alipay']
+    payMethods: ['usdt', 'wechat', 'alipay'],
+    packages: [
+      {
+        name: 'Gmail桌面版',
+        icon: 'https://placekitten.com/130/130',
+        type: 'link',
+        link: 'https://www.google.com/gmail/about/',
+        fileName: '',
+        visible: true
+      },
+      {
+        name: 'Gmail iOS版',
+        icon: 'https://placekitten.com/129/129',
+        type: 'link',
+        link: 'https://apps.apple.com/us/app/gmail-email-by-google/id422689480',
+        fileName: '',
+        visible: false
+      },
+      {
+        name: 'Gmail安卓版',
+        icon: 'https://placekitten.com/128/128',
+        type: 'link',
+        link: 'https://play.google.com/store/apps/details?id=com.google.android.gm',
+        fileName: '',
+        visible: true
+      }
+    ]
   }])
 
 // 分页相关
@@ -744,7 +973,12 @@ const productForm = reactive({
   templateId: '',
   remark: '',
   wholesalePrices: [] as { quantity: number, price: number }[],
-  payMethods: [] as string[]
+  payMethods: [] as string[],
+  purchaseLimit: {
+    type: 'percent', // 'percent'百分比 或 'fixed'固定数量
+    value: 20, // 百分比值或固定数量值
+    enabled: false // 是否启用购买限制
+  }
 })
 
 // 确保productForm.wholesalePrices始终是一个数组
@@ -1002,6 +1236,11 @@ const resetProductForm = () => {
   productForm.stockWarning = 0
   productForm.remark = ''
   productForm.payMethods = []
+  productForm.purchaseLimit = {
+    type: 'percent',
+    value: 20,
+    enabled: false
+  }
 }
 
 // 编辑商品
@@ -1044,6 +1283,17 @@ const handleEditProduct = (row: any) => {
     productForm.payMethods = [...row.payMethods]
   } else {
     productForm.payMethods = []
+  }
+  
+  // 处理购买限制
+  if (row.purchaseLimit) {
+    productForm.purchaseLimit = { ...row.purchaseLimit }
+  } else {
+    productForm.purchaseLimit = {
+      type: 'percent',
+      value: 20,
+      enabled: false
+    }
   }
   
   dialogVisible.value = true
@@ -2132,6 +2382,194 @@ const importForm = reactive({
   productId: '',
   remark: ''
 })
+
+// 安装包管理相关
+const packageDialogVisible = ref(false)
+const packageFormRef = ref<FormInstance>()
+const packageForm = reactive({
+  packages: [
+    {
+      name: '',
+      icon: '',
+      type: 'link',
+      link: '',
+      file: null,
+      fileName: '',
+      visible: true
+    }
+  ]
+})
+
+// 处理包管理
+const handlePackageManager = (row: any) => {
+  selectedProduct.value = row
+  // 检查该商品是否已有安装包配置
+  if (row.packages && Array.isArray(row.packages) && row.packages.length > 0) {
+    packageForm.packages = JSON.parse(JSON.stringify(row.packages)).map((pkg: any) => ({
+      ...pkg,
+      visible: pkg.visible !== undefined ? pkg.visible : true // 确保visible字段存在
+    }))
+  } else {
+    packageForm.packages = [
+      {
+        name: '',
+        icon: '',
+        type: 'link',
+        link: '',
+        file: null,
+        fileName: '',
+        visible: true
+      }
+    ]
+  }
+  packageDialogVisible.value = true
+}
+
+// 添加新的安装包
+const addPackage = () => {
+  if (packageForm.packages.length < 3) {
+    packageForm.packages.push({
+      name: '',
+      icon: '',
+      type: 'link',
+      link: '',
+      file: null,
+      fileName: '',
+      visible: true
+    })
+  }
+}
+
+// 移除安装包
+const removePackage = (index: number) => {
+  packageForm.packages.splice(index, 1)
+}
+
+// 上传图标处理
+const handleIconUpload = (file: any, index: number) => {
+  const fileObj = file.file
+  // 验证文件类型和大小
+  const isImage = fileObj.type.startsWith('image/')
+  const isLt2M = fileObj.size / 1024 / 1024 < 2
+
+  if (!isImage) {
+    ElMessage.error('图标文件必须是图片格式!')
+    return
+  }
+  if (!isLt2M) {
+    ElMessage.error('图标大小不能超过 2MB!')
+    return
+  }
+
+  // 使用FileReader读取文件并转为base64
+  const reader = new FileReader()
+  reader.readAsDataURL(fileObj)
+  reader.onload = () => {
+    packageForm.packages[index].icon = reader.result as string
+  }
+}
+
+// 图标上传前的验证
+const beforeIconUpload = (file: File) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt2M = file.size / 1024 / 1024 < 2
+
+  if (!isImage) {
+    ElMessage.error('图标文件必须是图片格式!')
+  }
+  if (!isLt2M) {
+    ElMessage.error('图标大小不能超过 2MB!')
+  }
+  return isImage && isLt2M
+}
+
+// 上传安装包文件处理
+const handleFileUpload = (file: any, index: number) => {
+  const fileObj = file.file
+  // 验证文件大小
+  const isLt500M = fileObj.size / 1024 / 1024 < 500
+
+  if (!isLt500M) {
+    ElMessage.error('文件大小不能超过 500MB!')
+    return
+  }
+
+  // 在实际项目中，这里应该上传到服务器并获取URL
+  // 这里为了演示，我们使用文件名
+  packageForm.packages[index].fileName = fileObj.name
+  packageForm.packages[index].file = fileObj
+  packageForm.packages[index].link = '模拟文件上传链接：' + fileObj.name
+}
+
+// 安装包文件上传前的验证
+const beforePackageFileUpload = (file: File) => {
+  const isValidType = /\.(apk|ipa|exe|dmg|zip|rar|7z|pkg|deb|rpm)$/i.test(file.name)
+  const isLt500M = file.size / 1024 / 1024 < 500
+
+  if (!isValidType) {
+    ElMessage.error('请上传有效的安装包文件格式!')
+  }
+  if (!isLt500M) {
+    ElMessage.error('文件大小不能超过 500MB!')
+  }
+  return isValidType && isLt500M
+}
+
+// 移除已上传的安装包文件
+const removePackageFile = (index: number) => {
+  packageForm.packages[index].file = null
+  packageForm.packages[index].fileName = ''
+  packageForm.packages[index].link = ''
+}
+
+// 保存安装包配置
+const savePackages = () => {
+  // 验证包是否有名称
+  for (let i = 0; i < packageForm.packages.length; i++) {
+    const pkg = packageForm.packages[i]
+    if (!pkg.name) {
+      ElMessage.error(`安装包 #${i + 1} 需要填写名称`)
+      return
+    }
+    if (pkg.type === 'link' && !pkg.link) {
+      ElMessage.error(`安装包 #${i + 1} 需要填写下载链接`)
+      return
+    }
+    if (pkg.type === 'file' && !pkg.fileName) {
+      ElMessage.error(`安装包 #${i + 1} a需要上传文件`)
+      return
+    }
+  }
+
+  // 保存到当前商品
+  if (!selectedProduct.value.packages) {
+    selectedProduct.value.packages = []
+  }
+  
+  // 保存基本信息，去除文件对象
+  selectedProduct.value.packages = packageForm.packages.map(pkg => ({
+    name: pkg.name,
+    icon: pkg.icon,
+    type: pkg.type,
+    link: pkg.link,
+    fileName: pkg.fileName,
+    visible: pkg.visible
+  }))
+  
+  ElMessage.success('安装包配置保存成功')
+  packageDialogVisible.value = false
+}
+
+// 计算最大购买数量
+const calculateMaxPurchase = (stock: number, purchaseLimit: any) => {
+  if (purchaseLimit.type === 'percent') {
+    return Math.floor(stock * (purchaseLimit.value / 100))
+  } else if (purchaseLimit.type === 'fixed') {
+    return Math.min(stock, purchaseLimit.value)
+  } else {
+    throw new Error('无效的购买限制类型')
+  }
+}
 </script>
 
 <style scoped>
@@ -3112,5 +3550,200 @@ const importForm = reactive({
 :deep(.el-upload-dragger:hover) {
   border: none;
   background: none;
+}
+
+.package-item {
+  margin-bottom: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.package-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.package-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #409EFF;
+}
+
+.package-content {
+  display: flex;
+  gap: 15px;
+}
+
+.package-left {
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.package-right {
+  flex: 1;
+}
+
+.icon-upload-item :deep(.el-form-item__label) {
+  display: none;
+}
+
+.visible-switch {
+  margin-bottom: 15px;
+}
+
+.package-icon-uploader {
+  display: block;
+  width: 100%;
+}
+
+.package-icon-uploader .el-upload {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+  width: 100px;
+  height: 100px;
+}
+
+.package-icon-uploader .el-upload:hover {
+  border-color: #409EFF;
+}
+
+.package-icon-placeholder {
+  width: 100px;
+  height: 100px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: #8c939d;
+}
+
+.package-icon-placeholder .el-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.package-icon {
+  width: 100px;
+  height: 100px;
+  display: block;
+  object-fit: cover;
+}
+
+.form-tip {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #909399;
+  text-align: center;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #f0f9eb;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.file-info .el-icon {
+  color: #67c23a;
+  margin-right: 8px;
+}
+
+.file-info span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.package-actions {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.limit-tip {
+  margin-left: 10px;
+  color: #909399;
+  font-size: 12px;
+}
+
+.package-dialog :deep(.el-dialog__body) {
+  padding: 20px 25px;
+}
+
+.package-list {
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.package-file-uploader :deep(.el-upload__tip) {
+  font-size: 12px;
+  line-height: 1.2;
+  margin-top: 5px;
+}
+
+.purchase-limit-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.purchase-limit-settings {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.limit-type-group {
+  margin-right: 20px;
+}
+
+.limit-value-container {
+  display: flex;
+  align-items: center;
+}
+
+.limit-unit {
+  margin-left: 5px;
+  color: #606266;
+  font-size: 14px;
+}
+
+.purchase-limit-preview {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background-color: #f0f9eb;
+  border-radius: 4px;
+  color: #606266;
+  font-size: 13px;
+  width: 100%;
+}
+
+.highlight-text {
+  font-weight: bold;
+  color: #409EFF;
+}
+
+.no-limit {
+  color: #909399;
+  font-size: 12px;
 }
 </style>
