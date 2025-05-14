@@ -49,6 +49,11 @@
             <template #title>用户管理</template>
           </el-menu-item>
 
+          <el-menu-item index="/payment-config">
+            <el-icon><Setting /></el-icon>
+            <template #title>支付配置</template>
+          </el-menu-item>
+
           <el-sub-menu index="/content">
             <template #title>
               <el-icon><Document /></el-icon>

@@ -108,64 +108,6 @@
           </el-form>
         </el-tab-pane>
 
-        <!-- 手续费设置 -->
-        <el-tab-pane label="手续费设置" name="fee">
-          <el-form
-            ref="feeFormRef"
-            :model="feeForm"
-            :rules="feeRules"
-            label-width="120px"
-            class="settings-form"
-          >
-            <!-- USDT手续费设置 -->
-            <el-form-item label="USDT手续费" prop="usdtFee">
-              <el-input-number
-                v-model="feeForm.usdtFee"
-                :min="0"
-                :max="100"
-                :precision="2"
-                :step="0.1"
-                placeholder="请输入USDT手续费率"
-              />
-              <span class="form-tip">%</span>
-              <div class="form-tip">设置USDT支付的手续费率</div>
-            </el-form-item>
-
-            <!-- 微信手续费设置 -->
-            <el-form-item label="微信手续费" prop="wechatFee">
-              <el-input-number
-                v-model="feeForm.wechatFee"
-                :min="0"
-                :max="100"
-                :precision="2"
-                :step="0.1"
-                placeholder="请输入微信手续费率"
-              />
-              <span class="form-tip">%</span>
-              <div class="form-tip">设置微信支付的手续费率</div>
-            </el-form-item>
-
-            <!-- 支付宝手续费设置 -->
-            <el-form-item label="支付宝手续费" prop="alipayFee">
-              <el-input-number
-                v-model="feeForm.alipayFee"
-                :min="0"
-                :max="100"
-                :precision="2"
-                :step="0.1"
-                placeholder="请输入支付宝手续费率"
-              />
-              <span class="form-tip">%</span>
-              <div class="form-tip">设置支付宝支付的手续费率</div>
-            </el-form-item>
-
-            <el-form-item>
-              <el-button type="primary" @click="saveFeeSettings">保存设置</el-button>
-              <el-button @click="resetFeeForm">重置</el-button>
-            </el-form-item>
-          </el-form>
-        </el-tab-pane>
-
         <!-- USDT比率设置 -->
         <el-tab-pane label="USDT比率设置" name="usdtRate">
           <el-form
@@ -273,27 +215,6 @@ const emailRules = reactive<FormRules>({
   ],
   password: [
     { required: true, message: '请输入授权码/密码', trigger: 'blur' }
-  ]
-})
-
-// 手续费设置表单
-const feeFormRef = ref<FormInstance>()
-const feeForm = reactive({
-  usdtFee: 1.0,
-  wechatFee: 6.0,
-  alipayFee: 5.0
-})
-
-// 手续费设置表单验证规则
-const feeRules = reactive<FormRules>({
-  usdtFee: [
-    { required: true, message: '请输入USDT手续费率', trigger: 'blur' }
-  ],
-  wechatFee: [
-    { required: true, message: '请输入微信手续费率', trigger: 'blur' }
-  ],
-  alipayFee: [
-    { required: true, message: '请输入支付宝手续费率', trigger: 'blur' }
   ]
 })
 
@@ -428,26 +349,6 @@ const testEmailSettings = async () => {
 const resetEmailForm = () => {
   if (emailFormRef.value) {
     emailFormRef.value.resetFields()
-  }
-}
-
-// 保存手续费设置
-const saveFeeSettings = async () => {
-  if (!feeFormRef.value) return
-  
-  await feeFormRef.value.validate((valid, fields) => {
-    if (valid) {
-      ElMessage.success('手续费设置保存成功')
-    } else {
-      console.log('表单验证失败', fields)
-    }
-  })
-}
-
-// 重置手续费设置表单
-const resetFeeForm = () => {
-  if (feeFormRef.value) {
-    feeFormRef.value.resetFields()
   }
 }
 

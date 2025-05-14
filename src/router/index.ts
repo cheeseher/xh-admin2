@@ -56,6 +56,15 @@ const routes: Array<RouteRecordRaw> = [
     ]
   },
   {
+    path: '/payment-config',
+    name: 'paymentConfig',
+    component: () => import('../views/PaymentConfigView.vue'),
+    meta: {
+      title: '支付配置',
+      requiresAuth: true
+    }
+  },
+  {
     path: '/orders',
     name: 'orders',
     component: () => import('../views/OrdersView.vue'),
