@@ -16,15 +16,15 @@ interface PaymentState {
 // 初始演示数据
 const initialChannels: PaymentChannel[] = [
   // 微信支付 - 2个通道
-  { id: 'wc1', name: '老微信通道', paymentMethodKey: 'wechat', ratio: 70, status: 'enabled', fee: 6.0 },
-  { id: 'wc2', name: '新微信通道', paymentMethodKey: 'wechat', ratio: 30, status: 'enabled', fee: 5.5 },
+  { id: 'wc1', name: '老微信通道', paymentMethodKey: 'wechat', ratio: 70, status: 'enabled', fee: 5.0 },
+  { id: 'wc2', name: '新微信通道', paymentMethodKey: 'wechat', ratio: 30, status: 'enabled', fee: 4.0 },
   
   // 支付宝支付 - 2个通道
   { id: 'ali1', name: '老支付宝通道', paymentMethodKey: 'alipay', ratio: 60, status: 'enabled', fee: 5.0 },
-  { id: 'ali2', name: '新支付宝通道', paymentMethodKey: 'alipay', ratio: 40, status: 'enabled', fee: 4.5 },
+  { id: 'ali2', name: '新支付宝通道', paymentMethodKey: 'alipay', ratio: 40, status: 'enabled', fee: 4.0 },
   
   // USDT支付 - 1个通道
-  { id: 'usdt1', name: 'USDT通道', paymentMethodKey: 'usdt', ratio: 100, status: 'enabled', fee: 1.0 },
+  { id: 'usdt1', name: 'USDT通道', paymentMethodKey: 'usdt', ratio: 100, status: 'enabled', fee: 5.0 },
 ];
 
 export const usePaymentStore = defineStore('payment', {

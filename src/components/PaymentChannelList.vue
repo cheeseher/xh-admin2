@@ -85,9 +85,13 @@
             :max="100" 
             controls-position="right"
             @change="handleDialogRatioChange"
+            :disabled="isSingleChannel"
             style="width: 168px;" /> %
           <div class="form-tip" v-if="isEditMode && otherChannelName">
             自动调整"{{ otherChannelName }}"比例为 {{ 100 - currentChannel.ratio }}%
+          </div>
+          <div class="form-tip warning-tip" v-if="isSingleChannel">
+            此支付方式仅有一个通道，送单比例固定为100%
           </div>
         </el-form-item>
         <el-form-item
@@ -142,6 +146,9 @@ const paymentStore = usePaymentStore();
 // 从store获取数据
 const channels = computed(() => paymentStore.getChannelsByMethod(props.paymentMethodKey));
 
+// 判断是否只有一个通道
+const isSingleChannel = computed(() => channels.value.length === 1);
+
 // 计算启用的通道
 const enabledChannels = computed(() => {
   return channels.value.filter(channel => channel.status === 'enabled');
@@ -193,6 +200,12 @@ const handleEditChannel = (channel: PaymentChannel) => {
   resetForm();
   isEditMode.value = true;
   Object.assign(currentChannel, JSON.parse(JSON.stringify(channel)));
+  
+  // 如果只有一个通道，确保送单比例为100%
+  if (channels.value.length === 1) {
+    currentChannel.ratio = 100;
+  }
+  
   dialogVisible.value = true;
 };
 
@@ -209,6 +222,11 @@ const submitChannelForm = async () => {
         c => c.id !== currentChannel.id && c.paymentMethodKey === currentChannel.paymentMethodKey
       );
       
+      // 如果只有一个通道，确保比例为100%
+      if (channels.value.length === 1) {
+        currentChannel.ratio = 100;
+      }
+      
       // 先处理状态变化
       if (isEditMode.value && currentChannel.id) {
         // 获取编辑前的通道数据
@@ -219,20 +237,34 @@ const submitChannelForm = async () => {
           // 获取同一支付类型下的其他启用通道
           const otherEnabledChannels = otherChannels.filter(c => c.status === 'enabled');
           
-          // 如果只有一个其他启用通道，调整比例分配为50/50
           if (otherEnabledChannels.length === 1) {
+            // 如果只有一个其他启用通道，调整比例分配为50/50
             const otherChannel = otherEnabledChannels[0];
-            // 默认分配50%/50%
             currentChannel.ratio = 50;
             otherChannel.ratio = 50;
             await paymentStore.updateChannel(otherChannel);
           } 
-          // 如果有多个其他启用通道，给当前通道分配0%
           else if (otherEnabledChannels.length > 1) {
-            currentChannel.ratio = 0; // 初始设为0，提示用户手动调整
+            // 如果有多个其他启用通道，默认为均分比例
+            const eachRatio = Math.floor(100 / (otherEnabledChannels.length + 1));
+            currentChannel.ratio = eachRatio;
+            
+            // 最后一个通道处理误差，确保总和为100%
+            let remainingRatio = 100 - eachRatio;
+            
+            for (let i = 0; i < otherEnabledChannels.length; i++) {
+              if (i === otherEnabledChannels.length - 1) {
+                // 最后一个通道分配剩余比例
+                otherEnabledChannels[i].ratio = remainingRatio;
+              } else {
+                otherEnabledChannels[i].ratio = eachRatio;
+                remainingRatio -= eachRatio;
+              }
+              await paymentStore.updateChannel(otherEnabledChannels[i]);
+            }
           }
-          // 如果没有其他启用通道，设为100%
           else {
+            // 如果没有其他启用通道，设为100%
             currentChannel.ratio = 100;
           }
         }
@@ -242,11 +274,49 @@ const submitChannelForm = async () => {
           // 获取同一支付类型下的其他启用通道
           const otherEnabledChannels = otherChannels.filter(c => c.status === 'enabled');
           
-          // 如果只有一个其他启用通道，将其比例设为100%
           if (otherEnabledChannels.length === 1) {
+            // 如果只有一个其他启用通道，将其比例设为100%
             const otherChannel = otherEnabledChannels[0];
             otherChannel.ratio = 100;
             await paymentStore.updateChannel(otherChannel);
+          }
+          else if (otherEnabledChannels.length > 1) {
+            // 如果有多个其他启用通道，按比例分配被禁用通道的比例
+            const disabledRatio = originalChannel.ratio;
+            const totalOtherRatio = otherEnabledChannels.reduce((sum, c) => sum + c.ratio, 0);
+            
+            if (totalOtherRatio > 0) {
+              // 按当前比例分配
+              let remainingRatio = 100;
+              
+              for (let i = 0; i < otherEnabledChannels.length; i++) {
+                const channel = otherEnabledChannels[i];
+                if (i === otherEnabledChannels.length - 1) {
+                  // 最后一个通道分配剩余比例，确保总和为100%
+                  channel.ratio = remainingRatio;
+                } else {
+                  // 按原比例分配新比例
+                  const newRatio = Math.round((channel.ratio / totalOtherRatio) * 100);
+                  channel.ratio = newRatio;
+                  remainingRatio -= newRatio;
+                }
+                await paymentStore.updateChannel(channel);
+              }
+            } else {
+              // 如果之前所有通道比例都是0，则平均分配
+              const eachRatio = Math.floor(100 / otherEnabledChannels.length);
+              let remainingRatio = 100;
+              
+              for (let i = 0; i < otherEnabledChannels.length; i++) {
+                if (i === otherEnabledChannels.length - 1) {
+                  otherEnabledChannels[i].ratio = remainingRatio;
+                } else {
+                  otherEnabledChannels[i].ratio = eachRatio;
+                  remainingRatio -= eachRatio;
+                }
+                await paymentStore.updateChannel(otherEnabledChannels[i]);
+              }
+            }
           }
         }
         
@@ -257,11 +327,56 @@ const submitChannelForm = async () => {
           // 获取同一支付类型下的其他启用通道
           const otherEnabledChannels = otherChannels.filter(c => c.status === 'enabled');
           
-          // 如果只有一个其他启用通道，自动调整其比例
           if (otherEnabledChannels.length === 1) {
+            // 如果只有一个其他启用通道，自动调整其比例
             const otherChannel = otherEnabledChannels[0];
             otherChannel.ratio = 100 - currentChannel.ratio;
             await paymentStore.updateChannel(otherChannel);
+          }
+          else if (otherEnabledChannels.length > 1) {
+            // 计算比例变化量
+            const ratioDiff = currentChannel.ratio - originalChannel.ratio;
+            
+            // 计算其他通道总比例
+            const totalOtherRatio = otherEnabledChannels.reduce((sum, c) => sum + c.ratio, 0);
+            
+            if (totalOtherRatio > 0) {
+              // 按比例分配变化量，对每个通道的比例进行调整
+              let remainingRatio = 100 - currentChannel.ratio;
+              
+              for (let i = 0; i < otherEnabledChannels.length; i++) {
+                const channel = otherEnabledChannels[i];
+                if (i === otherEnabledChannels.length - 1) {
+                  // 最后一个通道处理剩余比例，确保总和为100%
+                  channel.ratio = remainingRatio;
+                } else {
+                  // 按原比例分配新比例
+                  const newRatio = Math.round((channel.ratio / totalOtherRatio) * (100 - currentChannel.ratio));
+                  channel.ratio = newRatio > 0 ? newRatio : 0;
+                  remainingRatio -= channel.ratio;
+                }
+                
+                // 确保比例不小于0
+                if (channel.ratio < 0) channel.ratio = 0;
+                
+                await paymentStore.updateChannel(channel);
+              }
+            } else {
+              // 如果之前所有通道比例都是0，则平均分配剩余比例
+              const remainingRatio = 100 - currentChannel.ratio;
+              const eachRatio = Math.floor(remainingRatio / otherEnabledChannels.length);
+              let distributedRatio = 0;
+              
+              for (let i = 0; i < otherEnabledChannels.length; i++) {
+                if (i === otherEnabledChannels.length - 1) {
+                  otherEnabledChannels[i].ratio = remainingRatio - distributedRatio;
+                } else {
+                  otherEnabledChannels[i].ratio = eachRatio;
+                  distributedRatio += eachRatio;
+                }
+                await paymentStore.updateChannel(otherEnabledChannels[i]);
+              }
+            }
           }
         }
         
@@ -381,7 +496,7 @@ const handleDialogRatioChange = () => {
 // 获取其他启用通道的名称
 const otherChannelName = computed(() => {
   const otherChannels = channels.value.filter(c => c.id !== currentChannel.id && c.status === 'enabled');
-  return otherChannels.length > 0 ? otherChannels[0].name : '';
+  return otherChannels.length === 1 ? otherChannels[0].name : '';
 });
 </script>
 
@@ -409,5 +524,9 @@ const otherChannelName = computed(() => {
   font-size: 0.8em;
   color: #909399;
   margin-top: 5px;
+}
+
+.warning-tip {
+  color: #E6A23C;
 }
 </style> 
