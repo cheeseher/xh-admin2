@@ -11,6 +11,7 @@ export interface PaymentChannel {
 
 interface PaymentState {
   channels: PaymentChannel[];
+  waitingTime: number; // 支付等待时间（分钟）
 }
 
 // 初始演示数据 - ratio 现在代表权重
@@ -27,10 +28,12 @@ const initialChannels: PaymentChannel[] = [
   // USDT支付 - 1个通道
   { id: 'usdt1', name: 'USDT通道', paymentMethodKey: 'usdt', ratio: 1, status: 'enabled', fee: 5.0 },
 ];
+const DEFAULT_WAITING_TIME = 1; // 默认1分钟
 
 export const usePaymentStore = defineStore('payment', {
   state: (): PaymentState => ({
     channels: initialChannels,
+    waitingTime: DEFAULT_WAITING_TIME,
   }),
   
   getters: {
@@ -67,6 +70,9 @@ export const usePaymentStore = defineStore('payment', {
         );
         return enabledChannels.length > 0 ? 100 : 0;
       };
+    },
+    getWaitingTime(state) {
+      return state.waitingTime;
     }
   },
   
@@ -116,6 +122,15 @@ export const usePaymentStore = defineStore('payment', {
     // 删除通道
     deleteChannel(channelId: string) {
       this.channels = this.channels.filter(channel => channel.id !== channelId);
+    },
+    setWaitingTime(newTime: number) {
+      if (typeof newTime === 'number' && newTime > 0 && newTime <= 60) {
+        this.waitingTime = newTime;
+        return true;
+      } else {
+        console.error('支付等待时间需为1-60分钟之间的整数');
+        return false;
+      }
     },
   },
 }); 
