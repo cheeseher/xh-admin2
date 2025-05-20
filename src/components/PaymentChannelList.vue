@@ -24,14 +24,19 @@
       empty-text="暂无通道配置"
       style="width: 100%; margin-top: 16px;">
       <el-table-column prop="name" label="通道名称" min-width="180" />
-      <el-table-column label="送单权重" width="140" align="center">
+      <el-table-column label="送单权重" width="120" align="center">
         <template #default="{ row }">
           {{ row.ratio }}
         </template>
       </el-table-column>
-      <el-table-column prop="fee" label="手续费 (%)" width="140" align="center">
+      <el-table-column prop="fee" label="手续费 (%)" width="120" align="center">
         <template #default="{ row }">
           {{ row.fee.toFixed(2) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="单笔限额" width="160" align="center">
+        <template #default="{ row }">
+          {{ row.minAmount || 0 }} - {{ row.maxAmount ? row.maxAmount : '不限' }}
         </template>
       </el-table-column>
       <el-table-column label="状态" width="100" align="center">
@@ -118,6 +123,31 @@
             style="width: 168px;" /> %
         </el-form-item>
         
+        <el-form-item
+          label="单笔限额"
+          required
+        >
+          <div class="price-range-container">
+            <el-input-number 
+              v-model="currentChannel.minAmount" 
+              :min="0" 
+              :max="currentChannel.maxAmount ? currentChannel.maxAmount : 999999"
+              :step="10"
+              controls-position="right"
+              placeholder="最低限额"
+              style="width: 168px;" />
+            <span class="range-separator">至</span>
+            <el-input-number 
+              v-model="currentChannel.maxAmount" 
+              :min="currentChannel.minAmount || 0" 
+              :step="100"
+              controls-position="right"
+              placeholder="最高限额 (0表示不限)"
+              style="width: 168px;" />
+          </div>
+          <div class="el-form-item__extra_tip">单笔交易限额范围，0表示不限</div>
+        </el-form-item>
+        
         <el-form-item label="状态" prop="status">
           <el-switch
             v-model="currentChannel.status"
@@ -187,6 +217,8 @@ const initialChannelState = (): CurrentChannelState => ({
   ratio: 1,
   status: 'enabled',
   fee: 0,
+  minAmount: 100,
+  maxAmount: 10000,
   id: undefined // 确保 id 初始为 undefined
 });
 
@@ -211,6 +243,8 @@ const resetForm = () => {
     currentChannel.ratio = 1;
     currentChannel.status = 'enabled';
     currentChannel.fee = 0;
+    currentChannel.minAmount = 100;
+    currentChannel.maxAmount = 10000;
     currentChannel.id = undefined; // 再次确保id清除
   });
 };
@@ -243,6 +277,20 @@ const submitChannelForm = async () => {
     if (isNaN(currentChannel.ratio) || currentChannel.ratio < 0 || currentChannel.ratio > 100) {
       ElMessage.error('送单权重必须是0到100之间的数字。');
       submitLoading.value = false;
+      return;
+    }
+
+    // 验证价格区间
+    const minAmount = Number(currentChannel.minAmount);
+    const maxAmount = Number(currentChannel.maxAmount);
+    if (isNaN(minAmount) || minAmount < 0) {
+      ElMessage.error('最低限额必须是大于等于0的数字');
+      submitLoading.value = false;
+      return;
+    }
+    if (maxAmount && (isNaN(maxAmount) || maxAmount < minAmount)) {
+      ElMessage.error('最高限额必须大于或等于最低限额');
+      submitLoading.value = false; 
       return;
     }
 
@@ -333,5 +381,15 @@ const submitChannelForm = async () => {
 
 .ratio-warning-text {
   color: var(--el-color-warning); /* Element Plus 警告色 */
+}
+
+.price-range-container {
+  display: flex;
+  align-items: center;
+}
+
+.range-separator {
+  margin: 0 8px;
+  color: #909399;
 }
 </style> 

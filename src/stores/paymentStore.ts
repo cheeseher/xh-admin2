@@ -7,6 +7,8 @@ export interface PaymentChannel {
   ratio: number; // 送单权重 (例如: 1, 2, 3等整数，代表相对比例)
   status: 'enabled' | 'disabled';
   fee: number; // 手续费率 (%)
+  minAmount?: number; // 单笔最低金额
+  maxAmount?: number; // 单笔最高金额
 }
 
 interface PaymentState {
@@ -17,16 +19,16 @@ interface PaymentState {
 // 初始演示数据 - ratio 现在代表权重
 const initialChannels: PaymentChannel[] = [
   // 微信支付 - 3个通道
-  { id: 'wc1', name: '老微信通道', paymentMethodKey: 'wechat', ratio: 3, status: 'enabled', fee: 5.0 },
-  { id: 'wc2', name: '新微信通道', paymentMethodKey: 'wechat', ratio: 3, status: 'enabled', fee: 4.0 },
-  { id: 'wc3', name: '微信通道 3', paymentMethodKey: 'wechat', ratio: 3, status: 'disabled', fee: 4.0 }, // 初始禁用一个作为测试
+  { id: 'wc1', name: '老微信通道', paymentMethodKey: 'wechat', ratio: 3, status: 'enabled', fee: 5.0, minAmount: 100, maxAmount: 5000 },
+  { id: 'wc2', name: '新微信通道', paymentMethodKey: 'wechat', ratio: 3, status: 'enabled', fee: 4.0, minAmount: 200, maxAmount: 10000 },
+  { id: 'wc3', name: '微信通道 3', paymentMethodKey: 'wechat', ratio: 3, status: 'disabled', fee: 4.0, minAmount: 100, maxAmount: 3000 }, // 初始禁用一个作为测试
   
   // 支付宝支付 - 2个通道
-  { id: 'ali1', name: '老支付宝通道', paymentMethodKey: 'alipay', ratio: 6, status: 'enabled', fee: 5.0 },
-  { id: 'ali2', name: '新支付宝通道', paymentMethodKey: 'alipay', ratio: 4, status: 'enabled', fee: 4.0 },
+  { id: 'ali1', name: '老支付宝通道', paymentMethodKey: 'alipay', ratio: 6, status: 'enabled', fee: 5.0, minAmount: 50, maxAmount: 2000 },
+  { id: 'ali2', name: '新支付宝通道', paymentMethodKey: 'alipay', ratio: 4, status: 'enabled', fee: 4.0, minAmount: 100, maxAmount: 5000 },
   
   // USDT支付 - 1个通道
-  { id: 'usdt1', name: 'USDT通道', paymentMethodKey: 'usdt', ratio: 1, status: 'enabled', fee: 5.0 },
+  { id: 'usdt1', name: 'USDT通道', paymentMethodKey: 'usdt', ratio: 1, status: 'enabled', fee: 5.0, minAmount: 10, maxAmount: 1000 },
 ];
 const DEFAULT_WAITING_TIME = 1; // 默认1分钟
 
