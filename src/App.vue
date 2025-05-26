@@ -54,6 +54,11 @@
             <template #title>支付配置</template>
           </el-menu-item>
 
+          <el-menu-item index="/member-settings">
+            <el-icon><User /></el-icon>
+            <template #title>会员设置</template>
+          </el-menu-item>
+
           <el-sub-menu index="/content">
             <template #title>
               <el-icon><Document /></el-icon>
@@ -61,6 +66,7 @@
             </template>
             <el-menu-item index="/content/template">模板设置</el-menu-item>
             <el-menu-item index="/content/messages">站内信</el-menu-item>
+            <el-menu-item index="/content/notice">公告管理</el-menu-item>
             <el-menu-item index="/content/help">
               <span>帮助中心</span>
             </el-menu-item>

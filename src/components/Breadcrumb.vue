@@ -42,6 +42,7 @@ const routeMap: Record<string, { title: string; icon: string }> = {
   '/content/template': { title: '模板设置', icon: 'Document' },
   '/content/messages': { title: '站内信', icon: 'ChatLineSquare' },
   '/content/help': { title: '帮助中心', icon: 'QuestionFilled' },
+  '/content/notice': { title: '公告管理', icon: 'Document' },
   '/system/settings': { title: '系统设置', icon: 'Setting' },
   '/system/docs': { title: '系统文档设置', icon: 'Document' },
   '/system/accounts': { title: '账户管理', icon: 'Lock' },
@@ -65,6 +66,7 @@ const menuHierarchy: Record<string, { parent: string; title: string; icon: strin
   '/content/template': { parent: 'content-management', title: '内容管理', icon: 'Document' },
   '/content/messages': { parent: 'content-management', title: '内容管理', icon: 'Document' },
   '/content/help': { parent: 'content-management', title: '帮助中心', icon: 'QuestionFilled' },
+  '/content/notice': { parent: 'content-management', title: '内容管理', icon: 'Document' },
   
   // 系统管理
   '/settings': { parent: 'system-management', title: '系统管理', icon: 'Setting' },

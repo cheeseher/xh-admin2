@@ -3,15 +3,6 @@ import type { RouteRecordRaw } from 'vue-router'
 
 const routes: Array<RouteRecordRaw> = [
   {
-    path: '/login',
-    name: 'login',
-    component: () => import('../views/LoginView.vue'),
-    meta: {
-      title: '登录',
-      requiresAuth: false
-    }
-  },
-  {
     path: '/',
     redirect: '/data',
     meta: {
@@ -173,6 +164,15 @@ const routes: Array<RouteRecordRaw> = [
         }
       },
       {
+        path: 'notice',
+        name: 'notice',
+        component: () => import('../views/NoticeView.vue'),
+        meta: {
+          title: '公告管理',
+          requiresAuth: true
+        }
+      },
+      {
         path: 'help',
         name: 'helpCenter',
         component: () => import('../views/info/HelpView.vue'),
@@ -182,6 +182,15 @@ const routes: Array<RouteRecordRaw> = [
         }
       }
     ]
+  },
+  {
+    path: '/member-settings',
+    name: 'memberSettings',
+    component: () => import('../views/MemberSettingsView.vue'),
+    meta: {
+      title: '会员设置',
+      requiresAuth: true
+    }
   },
   {
     path: '/:pathMatch(.*)*',
