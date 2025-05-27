@@ -15,9 +15,6 @@
       <!-- 搜索区域 -->
       <div class="search-area">
         <el-form :inline="true" :model="searchForm" class="demo-form-inline">
-          <el-form-item label="用户ID">
-            <el-input v-model="searchForm.userId" placeholder="请输入用户ID" clearable></el-input>
-          </el-form-item>
           <el-form-item label="邮箱">
             <el-input v-model="searchForm.email" placeholder="请输入邮箱" clearable></el-input>
           </el-form-item>
@@ -26,6 +23,15 @@
               <el-option label="全部" value=""></el-option>
               <el-option label="正常" value="normal"></el-option>
               <el-option label="禁用" value="disabled"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="VIP等级">
+            <el-select v-model="searchForm.vipLevel" placeholder="请选择" clearable style="width: 168px;">
+              <el-option label="全部" value=""></el-option>
+              <el-option label="普通会员" value="0"></el-option>
+              <el-option label="银卡会员" value="1"></el-option>
+              <el-option label="金卡会员" value="2"></el-option>
+              <el-option label="钻石会员" value="3"></el-option>
             </el-select>
           </el-form-item>
           <el-form-item label="注册时间">
@@ -47,9 +53,24 @@
       
       <!-- 表格区域 -->
       <el-table :data="tableData" style="width: 100%" v-loading="loading" border stripe>
-        <el-table-column prop="userId" label="用户ID" width="100"></el-table-column>
         <el-table-column prop="email" label="邮箱" min-width="180"></el-table-column>
         <el-table-column prop="nickname" label="用户昵称" width="120"></el-table-column>
+        <el-table-column prop="password" label="密码" width="120">
+          <template #default="scope">
+            <span>******</span>
+            <el-button link type="primary" size="small" @click="handleResetPassword(scope.row)">重置</el-button>
+          </template>
+        </el-table-column>
+        <el-table-column prop="balance" label="用户余额" width="120">
+          <template #default="scope">
+            <span class="money">¥{{ scope.row.balance }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="vipLevel" label="VIP等级" width="120">
+          <template #default="scope">
+            <el-tag :type="getVipLevelType(scope.row.role)">{{ getVipLevelName(scope.row.role) }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="totalSpent" label="累计消费" width="120">
           <template #default="scope">
             <span class="money">¥{{ scope.row.totalSpent }}</span>
@@ -111,6 +132,18 @@
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="userForm.email" placeholder="请输入邮箱"></el-input>
         </el-form-item>
+        <el-form-item label="用户余额" prop="balance">
+          <el-input-number v-model="userForm.balance" :precision="2" :step="10" :min="0"></el-input-number>
+        </el-form-item>
+        <el-form-item label="VIP等级" prop="role">
+          <el-select v-model="userForm.role" placeholder="请选择VIP等级" style="width: 168px;">
+            <el-option label="普通会员" :value="0"></el-option>
+            <el-option label="银卡会员" :value="1"></el-option>
+            <el-option label="金卡会员" :value="2"></el-option>
+            <el-option label="钻石会员" :value="3"></el-option>
+            <el-option label="至尊会员" :value="4"></el-option>
+          </el-select>
+        </el-form-item>
         <el-form-item label="状态">
           <el-switch v-model="userForm.statusBool"></el-switch>
           <span class="status-text">{{ userForm.statusBool ? '正常' : '禁用' }}</span>
@@ -120,6 +153,28 @@
         <span class="dialog-footer">
           <el-button @click="dialogVisible = false">取消</el-button>
           <el-button type="primary" @click="submitForm">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
+    
+    <!-- 重置密码对话框 -->
+    <el-dialog
+      v-model="resetPasswordDialogVisible"
+      title="重置用户密码"
+      width="450px"
+    >
+      <el-form :model="resetPwdForm" label-width="100px" :rules="resetPwdRules" ref="resetPwdFormRef">
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input v-model="resetPwdForm.newPassword" type="password" placeholder="请输入新密码"></el-input>
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword">
+          <el-input v-model="resetPwdForm.confirmPassword" type="password" placeholder="请再次输入密码"></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="resetPasswordDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitResetPassword">确定</el-button>
         </span>
       </template>
     </el-dialog>
@@ -133,9 +188,9 @@ import type { FormInstance, FormRules } from 'element-plus'
 
 // 搜索表单
 const searchForm = reactive({
-  userId: '',
   email: '',
   status: '',
+  vipLevel: '',
   dateRange: []
 })
 
@@ -245,6 +300,83 @@ const pageSize = ref(10)
 const total = ref(0)
 const loading = ref(false)
 
+// VIP等级名称和样式处理
+const getVipLevelName = (level: number) => {
+  const vipLevels = {
+    0: '普通会员',
+    1: '银卡会员',
+    2: '金卡会员',
+    3: '钻石会员',
+    4: '至尊会员',
+  }
+  return vipLevels[level as keyof typeof vipLevels] || '未知等级'
+}
+
+const getVipLevelType = (level: number) => {
+  const typeMap = {
+    0: '',
+    1: 'info',
+    2: 'warning',
+    3: 'success',
+    4: 'danger',
+  }
+  return typeMap[level as keyof typeof typeMap] || ''
+}
+
+// 重置密码相关
+const resetPasswordDialogVisible = ref(false)
+const currentUser = ref<any>(null)
+const resetPwdFormRef = ref<FormInstance>()
+const resetPwdForm = reactive({
+  userId: '',
+  newPassword: '',
+  confirmPassword: '',
+})
+
+// 重置密码表单验证规则
+const resetPwdRules = reactive<FormRules>({
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, max: 16, message: '长度在 6 到 16 个字符', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    {
+      validator: (rule: any, value: string, callback: any) => {
+        if (value !== resetPwdForm.newPassword) {
+          callback(new Error('两次输入密码不一致'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ]
+})
+
+// 处理重置密码
+const handleResetPassword = (row: any) => {
+  currentUser.value = row
+  resetPwdForm.userId = row.userId
+  resetPwdForm.newPassword = ''
+  resetPwdForm.confirmPassword = ''
+  resetPasswordDialogVisible.value = true
+}
+
+// 提交重置密码
+const submitResetPassword = async () => {
+  if (!resetPwdFormRef.value) return
+  
+  await resetPwdFormRef.value.validate((valid, fields) => {
+    if (valid) {
+      ElMessage.success(`用户"${currentUser.value.nickname}"密码重置成功`)
+      resetPasswordDialogVisible.value = false
+    } else {
+      console.log('表单验证失败', fields)
+    }
+  })
+}
+
 // 查询
 const handleSearch = () => {
   currentPage.value = 1
@@ -253,9 +385,9 @@ const handleSearch = () => {
 
 // 重置搜索
 const handleReset = () => {
-  searchForm.userId = ''
   searchForm.email = ''
   searchForm.status = ''
+  searchForm.vipLevel = ''
   searchForm.dateRange = []
   currentPage.value = 1
   getUserList()
@@ -493,10 +625,6 @@ const getUserList = () => {
   setTimeout(() => {
     // 根据搜索条件和分页参数获取数据
     const filteredData = tableData.value.filter((item: any) => {
-      // 用户ID筛选
-      if (searchForm.userId && !item.userId.includes(searchForm.userId)) {
-        return false
-      }
       // 邮箱筛选
       if (searchForm.email && !item.email.includes(searchForm.email)) {
         return false
@@ -509,6 +637,10 @@ const getUserList = () => {
         if (searchForm.status === 'disabled' && item.status !== '禁用') {
           return false
         }
+      }
+      // VIP等级筛选
+      if (searchForm.vipLevel && item.role.toString() !== searchForm.vipLevel) {
+        return false
       }
       // 日期范围筛选
       if (searchForm.dateRange && searchForm.dateRange.length === 2) {
@@ -547,7 +679,7 @@ const handleCurrentChange = (val: number) => {
 }
 
 // 监听搜索表单变化，重置分页并重新获取数据
-watch([() => searchForm.userId, () => searchForm.email, () => searchForm.status, () => searchForm.dateRange], () => {
+watch([() => searchForm.email, () => searchForm.status, () => searchForm.vipLevel, () => searchForm.dateRange], () => {
   currentPage.value = 1
   getUserList()
 })

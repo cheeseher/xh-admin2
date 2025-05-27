@@ -9,7 +9,7 @@
       </template>
       
       <div class="page-description">
-        <p>管理会员等级和会员折扣设置，会员等级折扣适用于用户购买商品时的优惠。用户累计充值金额达到设定条件时，系统将自动升级用户的会员等级。同时支持月消费系统，用户连续达到指定月数的月消费标准也可升级对应会员等级，与累充不对冲。</p>
+        <p>管理会员等级和会员折扣设置，会员等级折扣适用于用户购买商品时的优惠。用户注册账户即可享受9折优惠。用户累计充值金额达到设定条件时，系统将自动升级用户的会员等级。</p>
       </div>
       
       <!-- 会员等级表格 -->
@@ -18,11 +18,6 @@
         <el-table-column prop="name" label="等级名称" min-width="120">
           <template #default="scope">
             <div class="level-name-cell">
-              <el-image 
-                :src="scope.row.icon" 
-                fit="contain" 
-                style="width: 24px; height: 24px; margin-right: 8px;"
-              ></el-image>
               <el-tag :type="getLevelTagType(scope.row.level)">{{ scope.row.name }}</el-tag>
               <el-tag v-if="scope.row.level === 999 && !scope.row.isEnabled" type="info" size="small" effect="plain" style="margin-left: 5px;">已禁用</el-tag>
             </div>
@@ -33,20 +28,6 @@
           <template #default="scope">
             <span v-if="scope.row.level === 999">欢迎洽谈</span>
             <span v-else>{{ scope.row.condition }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="monthlyConsumption" label="月消费升级条件" min-width="120">
-          <template #default="scope">
-            <span v-if="scope.row.level === 999">欢迎洽谈</span>
-            <span v-else-if="scope.row.monthlyConsumption > 0">¥{{ scope.row.monthlyConsumption }}</span>
-            <span v-else>-</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="consecutiveMonths" label="连续月数" width="100">
-          <template #default="scope">
-            <span v-if="scope.row.level === 999">-</span>
-            <span v-else-if="scope.row.monthlyConsumption > 0">{{ scope.row.consecutiveMonths || 3 }}个月</span>
-            <span v-else>-</span>
           </template>
         </el-table-column>
         <el-table-column prop="discount" label="会员折扣" width="120">
@@ -73,24 +54,6 @@
         </el-table-column>
       </el-table>
 
-      <!-- 月消费系统说明 -->
-      <div class="system-description">
-        <h3>月消费系统说明</h3>
-        <p>1. 月消费系统与累计充值系统并行，两者不对冲，用户可通过任一方式达到升级条件。</p>
-        <p>2. 月消费系统要求用户连续指定月数每月消费达到指定金额，系统每月1日进行核验。</p>
-        <p>3. 若用户某月消费未达标，连续计数将重置为0，需重新开始累计。</p>
-        <p>4. 用户达到月消费升级条件后，系统将自动升级用户会员等级。</p>
-        <p>5. 若用户当前等级已高于月消费可升级的等级，则不会降级。</p>
-      </div>
-      
-      <!-- 超级VIP说明 -->
-      <div class="system-description super-vip-description">
-        <h3>超级VIP说明</h3>
-        <p>1. 超级VIP为特殊会员等级，仅限经理手动指定用户。</p>
-        <p>2. 经理可在用户管理页面为每个超级VIP用户单独设置自定义折扣和充值折扣。</p>
-        <p>3. 超级VIP功能可在系统设置中开启或关闭，关闭状态下后台可选择用户为VIP1/2/3。</p>
-        <p>4. 超级VIP用户享受最高级别的服务和权益，包括专属客服、优先处理等特权。</p>
-      </div>
     </el-card>
     
     <!-- 会员等级表单对话框 -->
@@ -104,19 +67,6 @@
         <template v-if="levelForm.level === 999 || levelForm.name === '超级VIP'">
           <el-form-item label="等级名称" prop="name">
             <el-input v-model="levelForm.name" placeholder="请输入等级名称"></el-input>
-          </el-form-item>
-          <el-form-item label="等级图标" prop="icon">
-            <el-upload
-              class="avatar-uploader"
-              action="/api/upload"
-              :show-file-list="false"
-              :on-success="handleIconSuccess"
-              :before-upload="beforeIconUpload"
-            >
-              <img v-if="levelForm.icon" :src="levelForm.icon" class="avatar" />
-              <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-            </el-upload>
-            <div class="form-tip">建议上传正方形图片，大小不超过200KB</div>
           </el-form-item>
           <el-form-item label="备注" prop="description">
             <el-input 
@@ -145,19 +95,6 @@
           <el-form-item label="等级名称" prop="name">
             <el-input v-model="levelForm.name" placeholder="请输入等级名称"></el-input>
           </el-form-item>
-          <el-form-item label="等级图标" prop="icon">
-            <el-upload
-              class="avatar-uploader"
-              action="/api/upload"
-              :show-file-list="false"
-              :on-success="handleIconSuccess"
-              :before-upload="beforeIconUpload"
-            >
-              <img v-if="levelForm.icon" :src="levelForm.icon" class="avatar" />
-              <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-            </el-upload>
-            <div class="form-tip">建议上传正方形图片，大小不超过200KB</div>
-          </el-form-item>
           <el-form-item label="等级" prop="level">
             <el-input-number 
               v-model="levelForm.level" 
@@ -177,27 +114,6 @@
               style="width: 180px;"
             ></el-input-number>
             <span class="form-tip">元（用户累计充值达到此金额时自动升级）</span>
-          </el-form-item>
-          <el-form-item label="月消费升级条件" prop="monthlyConsumption">
-            <el-input-number 
-              v-model="levelForm.monthlyConsumption" 
-              :min="0" 
-              :precision="0" 
-              :step="100"
-              style="width: 180px;"
-            ></el-input-number>
-            <span class="form-tip">元（用户每月消费达到此金额）</span>
-          </el-form-item>
-          <el-form-item label="连续月数" prop="consecutiveMonths">
-            <el-input-number 
-              v-model="levelForm.consecutiveMonths" 
-              :min="1" 
-              :max="12" 
-              :precision="0" 
-              :step="1"
-              style="width: 180px;"
-            ></el-input-number>
-            <span class="form-tip">月（用户需要连续多少个月达到月消费条件）</span>
           </el-form-item>
           <el-form-item label="会员折扣" prop="discount">
             <el-input-number 
@@ -251,16 +167,16 @@ const loading = ref(false)
 const memberLevels = ref([
   {
     id: 5,
-    name: '普通用户',
+    name: '普通',
     level: 0,
     condition: '默认等级',
     minRechargeTotal: 0,
     monthlyConsumption: 0,
     consecutiveMonths: 3,
-    discount: 100,
-    description: '所有用户的默认等级',
+    discount: 90,
+    description: '注册账户即可享受9折优惠',
     icon: 'https://element-plus.org/images/element-plus-logo.svg',
-    introduction: '普通用户无商品折扣优惠',
+    introduction: '注册账户即可享受所有商品9折优惠',
     isSystemDefault: true // 标记为系统默认
   },
   {
@@ -350,17 +266,8 @@ const levelRules = reactive<FormRules>({
     { required: true, message: '请输入等级名称', trigger: 'blur' },
     { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
   ],
-  icon: [
-    { required: true, message: '请上传等级图标', trigger: 'change' }
-  ],
   minRechargeTotal: [
     { required: true, message: '请输入累计充值升级条件', trigger: 'blur' }
-  ],
-  monthlyConsumption: [
-    { required: true, message: '请输入月消费升级条件', trigger: 'blur' }
-  ],
-  consecutiveMonths: [
-    { required: true, message: '请输入连续月数', trigger: 'blur' }
   ],
   discount: [
     { required: true, message: '请输入会员折扣', trigger: 'blur' }
@@ -381,9 +288,11 @@ const rechargePreviewData = computed(() => {
 const getLevelTagType = (level: number) => {
   if (level === 999) {
     return 'danger'
+  } else if (level === 0) {
+    return 'primary'
   }
-  const types = ['', 'success', 'warning', 'danger']
-  return types[level] || ''
+  // 所有普通VIP统一使用warning颜色
+  return 'warning'
 }
 
 // 新增会员等级
@@ -544,26 +453,6 @@ const submitLevelForm = async () => {
   })
 }
 
-// 处理图标上传
-const handleIconSuccess = (response: any) => {
-  levelForm.icon = response.data.url
-}
-
-const beforeIconUpload = (file: File) => {
-  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
-  const isLt200K = file.size / 1024 < 200
-
-  if (!isJPG) {
-    ElMessage.error('图标只能是 JPG 或 PNG 格式!')
-    return false
-  }
-  if (!isLt200K) {
-    ElMessage.error('图标大小不能超过 200KB!')
-    return false
-  }
-  return true
-}
-
 // 初始化
 onMounted(() => {
   // 可以在这里加载数据
@@ -606,15 +495,6 @@ onMounted(() => {
   background-color: #f6ffed;
   border-radius: 4px;
   border-left: 5px solid #52c41a;
-}
-
-.super-vip-description {
-  background-color: #fff0f6;
-  border-left: 5px solid #eb2f96;
-}
-
-.super-vip-description h3 {
-  color: #eb2f96;
 }
 
 .system-description h3 {

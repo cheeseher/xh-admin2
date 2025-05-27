@@ -31,6 +31,18 @@
           <el-button @click="refreshTable">刷新</el-button>
         </div>
       </div>
+      
+      <!-- 公告启用说明 -->
+      <div class="notice-tip">
+        <el-alert
+          title="公告设置说明"
+          type="info"
+          description="系统只允许同时启用一个公告，启用新公告后将自动禁用其他公告。"
+          show-icon
+          :closable="false"
+        />
+      </div>
+      
       <el-table
         v-loading="tableLoading"
         :data="tableData"
@@ -131,7 +143,7 @@ const tableData = ref([
     id: 2,
     title: '新功能上线',
     content: '我们已上线批量导入功能，欢迎体验。',
-    status: 'enabled',
+    status: 'disabled',
     publishTime: '2024-04-20 10:30:00'
   },
   {
@@ -196,8 +208,52 @@ const handleDelete = (row) => {
   // 删除逻辑
 }
 const submitForm = () => {
-  // 表单提交逻辑
-  dialogVisible.value = false
+  formRef.value.validate((valid) => {
+    if (valid) {
+      submitLoading.value = true
+      
+      // 如果当前表单状态为启用，则禁用其他所有公告
+      if (form.status === 'enabled') {
+        tableData.value.forEach(item => {
+          if (item.id !== form.id) {
+            item.status = 'disabled'
+          }
+        })
+      }
+      
+      // 如果是新增公告
+      if (form.id === null) {
+        // 生成新ID和发布时间
+        const newId = Math.max(...tableData.value.map(item => item.id), 0) + 1
+        const now = new Date()
+        const publishTime = now.toLocaleDateString().replace(/\//g, '-') + ' ' + 
+                           now.toTimeString().substring(0, 8)
+        
+        // 添加新公告
+        tableData.value.push({
+          id: newId,
+          title: form.title,
+          content: form.content,
+          status: form.status,
+          publishTime: publishTime
+        })
+      } else {
+        // 更新现有公告
+        const index = tableData.value.findIndex(item => item.id === form.id)
+        if (index !== -1) {
+          tableData.value[index] = {
+            ...tableData.value[index],
+            title: form.title,
+            content: form.content,
+            status: form.status
+          }
+        }
+      }
+      
+      submitLoading.value = false
+      dialogVisible.value = false
+    }
+  })
 }
 const handleSearch = () => {}
 const resetFilter = () => {
@@ -224,5 +280,8 @@ const handleCurrentChange = () => {}
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
+}
+.notice-tip {
+  margin-bottom: 16px;
 }
 </style> 
