@@ -33,6 +33,7 @@
               <span>订单管理</span>
             </template>
             <el-menu-item index="/orders">商品订单</el-menu-item>
+            <el-menu-item index="/recharge-orders">充值订单</el-menu-item>
           </el-sub-menu>
 
           <el-sub-menu index="/products">

@@ -60,7 +60,19 @@
               <el-option label="待付款" value="待付款"></el-option>
               <el-option label="待发货" value="待发货"></el-option>
               <el-option label="已完成" value="已完成"></el-option>
+              <el-option label="已退款" value="已退款"></el-option>
               <el-option label="已取消" value="已取消"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="用户身份">
+            <el-select v-model="searchForm.userRole" placeholder="请选择" clearable style="width: 168px;">
+              <el-option label="全部" value=""></el-option>
+              <el-option label="游客" value="游客"></el-option>
+              <el-option label="普通用户" value="普通用户"></el-option>
+              <el-option label="vip1" value="vip1"></el-option>
+              <el-option label="vip2" value="vip2"></el-option>
+              <el-option label="vip3" value="vip3"></el-option>
+              <el-option label="超级会员" value="超级会员"></el-option>
             </el-select>
           </el-form-item>
           <el-form-item label="下单时间">
@@ -139,6 +151,11 @@
             </div>
           </template>
         </el-table-column>
+        <el-table-column prop="status" label="状态" width="100">
+          <template #default="scope">
+            <el-tag :type="getStatusType(scope.row.status)">{{ scope.row.status }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="cardId" label="卡密ID" width="100"></el-table-column>
         <el-table-column prop="cardInfo" label="卡密信息" min-width="120">
           <template #default="scope">
@@ -146,6 +163,13 @@
           </template>
         </el-table-column>
         <el-table-column prop="userEmail" label="用户邮箱" width="180"></el-table-column>
+        <el-table-column prop="userRole" label="用户身份" width="100">
+          <template #default="scope">
+            <el-tag :type="getUserRoleType(scope.row.userRole)" size="small">
+              {{ scope.row.userRole }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="payMethod" label="支付方式" width="100">
           <template #default="scope">
             <el-tag :type="getPayMethodType(scope.row.payMethod)">
@@ -160,24 +184,32 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="scope">
-            <el-tag :type="getStatusType(scope.row.status)">{{ scope.row.status }}</el-tag>
-          </template>
-        </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
         <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="120" fixed="right">
           <template #default="scope">
-            <div class="action-buttons">
-              <el-button 
-                v-if="scope.row.status === '待发货'" 
-                size="small" 
-                type="success" 
-                @click="handleDeliver(scope.row)"
-              >发货</el-button>
-              <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
-            </div>
+            <el-dropdown trigger="hover">
+              <el-button type="primary" size="small">
+                操作
+                <el-icon class="el-icon--right"><arrow-down /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item v-if="scope.row.status === '待发货'" @click="handleDeliver(scope.row)">
+                    <el-icon><Check /></el-icon>发货
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="handleResendEmail(scope.row)">
+                    <el-icon><Message /></el-icon>重发邮件
+                  </el-dropdown-item>
+                  <el-dropdown-item v-if="scope.row.status !== '已退款'" @click="handleRefund(scope.row)">
+                    <el-icon><Money /></el-icon>退款
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="handleDelete(scope.row)">
+                    <el-icon><Delete /></el-icon>删除
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
@@ -239,58 +271,46 @@
     <!-- 退款审核对话框 -->
     <el-dialog
       v-model="refundDialogVisible"
-      title="退款审核"
-      width="600px"
+      title="订单退款"
+      width="500px"
       class="refund-dialog"
       :close-on-click-modal="false"
       destroy-on-close
     >
-      <div class="refund-section">
-        <h4>退款申请详情</h4>
-        <div class="info-grid">
-          <div class="info-item">
-            <span class="label">订单号：</span>
-            <span class="value">{{ refundForm.orderId }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">商品名称：</span>
-            <span class="value">{{ refundForm.productName }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">退款金额：</span>
-            <span class="value price">¥{{ refundForm.refundAmount.toFixed(2) }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">申请时间：</span>
-            <span class="value">{{ refundForm.refundTime || '未知' }}</span>
-          </div>
-          <div class="info-item full-width">
-            <span class="label">退款说明：</span>
-            <span class="value">{{ refundForm.refundRemark || '无' }}</span>
-          </div>
+      <div class="refund-info">
+        <div class="info-item">
+          <span class="label">订单号：</span>
+          <span class="value">{{ refundForm.orderId }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">商品名称：</span>
+          <span class="value">{{ refundForm.productName }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">退款金额：</span>
+          <span class="value price">¥{{ refundForm.refundAmount.toFixed(2) }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">用户ID：</span>
+          <span class="value">{{ refundForm.userId }}</span>
         </div>
       </div>
       
-      <div class="refund-section">
-        <h4>审核信息</h4>
-        <el-form :model="refundForm" label-width="84px" :rules="refundRules" ref="refundFormRef">
-          <el-form-item label="审核结果" prop="approved" required>
-            <el-radio-group v-model="refundForm.approved">
-              <el-radio :label="true">同意退款</el-radio>
-              <el-radio :label="false">拒绝退款</el-radio>
-            </el-radio-group>
-            <div class="form-tip warning" v-if="refundForm.approved === false">
-              <el-icon><Warning /></el-icon>
-              <span>拒绝退款后将无法撤销，请谨慎操作</span>
-            </div>
-          </el-form-item>
-        </el-form>
-      </div>
+      <el-form :model="refundForm" label-width="80px" :rules="refundRules" ref="refundFormRef">
+        <el-form-item label="退款备注" prop="refundRemark">
+          <el-input
+            v-model="refundForm.refundRemark"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入退款备注信息"
+          ></el-input>
+        </el-form-item>
+      </el-form>
       
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="refundDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitRefund">确认</el-button>
+          <el-button type="primary" @click="submitRefund">确认退款</el-button>
         </div>
       </template>
     </el-dialog>
@@ -300,7 +320,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Download } from '@element-plus/icons-vue'
+import { Download, ArrowDown, Check, Delete, View, Warning, Money, Message } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 
 // 搜索表单
@@ -311,6 +331,7 @@ const searchForm = reactive({
   payMethod: '',
   deliveryMethod: '',
   status: '',
+  userRole: '',
   dateRange: [] as string[]
 })
 
@@ -357,6 +378,7 @@ interface OrderItem {
   cardId?: string;
   cardInfo?: string;
   userEmail: string;
+  userRole: string;
   payMethod: string;
   deliveryMethod: string;
   status: string;
@@ -379,6 +401,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C001',
     cardInfo: 'example@gmail.com',
     userEmail: 'buyer1@example.com',
+    userRole: 'vip1',
     payMethod: 'alipay',
     deliveryMethod: '自动发货',
     status: '已完成',
@@ -398,6 +421,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C002',
     cardInfo: 'instagram_user123',
     userEmail: 'buyer2@example.com',
+    userRole: '超级会员',
     payMethod: 'wechat',
     deliveryMethod: '手动发货',
     status: '待发货',
@@ -417,6 +441,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C000007',
     cardInfo: 'chatgpt@example.com|password789',
     userEmail: 'user777@example.com',
+    userRole: 'vip3',
     payMethod: 'usdt',
     deliveryMethod: '自动发货',
     status: '已完成',
@@ -437,6 +462,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C000001',
     cardInfo: 'gmail@example.com|password123',
     userEmail: 'user123@example.com',
+    userRole: '普通用户',
     payMethod: 'usdt',
     deliveryMethod: '自动发货',
     status: '已完成',
@@ -457,6 +483,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C000002',
     cardInfo: 'gmail1month@example.com|password456',
     userEmail: 'user456@example.com',
+    userRole: 'vip2',
     payMethod: 'usdt',
     deliveryMethod: '手动发货',
     status: '待发货',
@@ -477,6 +504,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: '',
     cardInfo: '',
     userEmail: 'user789@example.com',
+    userRole: '游客',
     payMethod: 'usdt',
     deliveryMethod: '手动发货',
     status: '待发货',
@@ -497,6 +525,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: '',
     cardInfo: '',
     userEmail: 'user101@example.com',
+    userRole: '游客',
     payMethod: 'usdt',
     deliveryMethod: '自动发货',
     status: '待付款',
@@ -517,6 +546,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C000003',
     cardInfo: 'twitter@example.com|password789',
     userEmail: 'user202@example.com',
+    userRole: '普通用户',
     payMethod: 'usdt',
     deliveryMethod: '手动发货',
     status: '已完成',
@@ -541,6 +571,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: '',
     cardInfo: '',
     userEmail: 'user303@example.com',
+    userRole: '普通用户',
     payMethod: 'usdt',
     deliveryMethod: '自动发货',
     status: '待发货',
@@ -561,6 +592,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C000008',
     cardInfo: 'facebook@example.com|fb123456',
     userEmail: 'user888@example.com',
+    userRole: 'vip2',
     payMethod: 'usdt',
     deliveryMethod: '自动发货',
     status: '已完成',
@@ -581,6 +613,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C000009',
     cardInfo: 'discord1@example.com|dis123\ndiscord2@example.com|dis456',
     userEmail: 'user999@example.com',
+    userRole: 'vip1',
     payMethod: 'usdt',
     deliveryMethod: '自动发货',
     status: '已完成',
@@ -605,6 +638,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C000010',
     cardInfo: '多个账号信息，请联系客服获取',
     userEmail: 'business@company.com',
+    userRole: '超级会员',
     payMethod: 'usdt',
     deliveryMethod: '手动发货',
     status: '已完成',
@@ -625,6 +659,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: '',
     cardInfo: '',
     userEmail: 'premium@example.com',
+    userRole: '超级会员',
     payMethod: 'usdt',
     deliveryMethod: '手动发货',
     status: '已完成',
@@ -645,6 +680,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C000012',
     cardInfo: '批量账号，详情见附件',
     userEmail: 'wholesale@example.com',
+    userRole: 'vip3',
     payMethod: 'usdt',
     deliveryMethod: '自动发货',
     status: '已完成',
@@ -665,6 +701,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C000013',
     cardInfo: 'instagram_premium@example.com|ins789xyz',
     userEmail: 'influencer@example.com',
+    userRole: 'vip3',
     payMethod: 'usdt',
     deliveryMethod: '手动发货',
     status: '待发货',
@@ -685,6 +722,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: '',
     cardInfo: '',
     userEmail: 'verified@example.com',
+    userRole: 'vip2',
     payMethod: 'usdt',
     deliveryMethod: '手动发货',
     status: '待付款',
@@ -705,6 +743,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C000015',
     cardInfo: 'steam1@example.com|steam123\nsteam2@example.com|steam456',
     userEmail: 'gamer@example.com',
+    userRole: '普通用户',
     payMethod: 'usdt',
     deliveryMethod: '自动发货',
     status: '已完成',
@@ -725,6 +764,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C000016',
     cardInfo: 'gmail_us@example.com|gmailUS123',
     userEmail: 'overseas@example.com',
+    userRole: '游客',
     payMethod: 'usdt',
     deliveryMethod: '自动发货',
     status: '已完成',
@@ -749,6 +789,7 @@ const orderList = ref<OrderItem[]>([{
     cardId: 'C000017',
     cardInfo: 'fb_business@example.com|fbBiz789',
     userEmail: 'marketing@example.com',
+    userRole: 'vip1',
     payMethod: 'usdt',
     deliveryMethod: '手动发货',
     status: '已完成',
@@ -805,6 +846,10 @@ const filteredOrderList = computed(() => {
   
   if (searchForm.status) {
     result = result.filter(item => item.status === searchForm.status)
+  }
+  
+  if (searchForm.userRole) {
+    result = result.filter(item => item.userRole === searchForm.userRole)
   }
   
   if (searchForm.dateRange && searchForm.dateRange.length === 2) {
@@ -919,18 +964,17 @@ const refundForm = reactive({
   id: '',
   orderId: '',
   productName: '',
-  userEmail: '',
+  userId: '',
   totalPrice: 0,
   refundAmount: 0,
   refundRemark: '',
-  refundTime: '',
-  approved: true // 审核结果，默认为通过
+  refundTime: ''
 })
 
 // 退款表单验证规则
 const refundRules = reactive<FormRules>({
-  refundAmount: [
-    { required: true, message: '请输入退款金额', trigger: 'blur' }
+  refundRemark: [
+    { required: true, message: '请输入退款备注', trigger: 'blur' }
   ]
 })
 
@@ -958,6 +1002,8 @@ const getStatusType = (status: string) => {
       return 'primary'
     case '已完成':
       return 'success'
+    case '已退款':
+      return 'danger'
     case '已取消':
       return 'info'
     default:
@@ -973,6 +1019,7 @@ const resetSearch = () => {
   searchForm.payMethod = ''
   searchForm.deliveryMethod = ''
   searchForm.status = ''
+  searchForm.userRole = ''
   searchForm.dateRange = []
   showTotalAmount.value = false
   
@@ -1060,6 +1107,12 @@ const handleView = (row: any) => {
         <div class="detail-item">
           <span class="label">用户邮箱：</span>
           <span>${row.userEmail}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">用户身份：</span>
+          <span><el-tag size="small" effect="plain" :type="getUserRoleType(row.userRole)">
+            ${row.userRole}
+          </el-tag></span>
         </div>
         <div class="detail-item">
           <span class="label">支付方式：</span>
@@ -1163,12 +1216,40 @@ const viewCardInfo = (row: any) => {
   })
 }
 
-// 处理退款
+// 添加重发邮件功能
+const handleResendEmail = (row: any) => {
+  ElMessageBox.confirm(
+    `确定要重发订单 ${row.orderId} 的邮件通知吗？`,
+    '提示',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'info',
+    }
+  )
+    .then(() => {
+      // 模拟邮件发送处理
+      setTimeout(() => {
+        ElMessage({
+          type: 'success',
+          message: `订单 ${row.orderId} 的邮件已重新发送`,
+        })
+      }, 500)
+    })
+    .catch(() => {
+      ElMessage({
+        type: 'info',
+        message: '已取消操作',
+      })
+    })
+}
+
+// 修改退款处理函数，可对任何非已退款状态的订单执行
 const handleRefund = (row: any) => {
   refundForm.id = row.id
   refundForm.orderId = row.orderId
   refundForm.productName = row.productName
-  refundForm.userEmail = row.userEmail
+  refundForm.userId = row.id.substring(1)
   refundForm.totalPrice = parseFloat(row.totalPrice.replace('¥', ''))
   refundForm.refundAmount = refundForm.totalPrice
   
@@ -1195,11 +1276,10 @@ const handleRefund = (row: any) => {
     refundForm.refundRemark = '客户表示不再需要此账号'
   }
   
-  refundForm.approved = true
   refundDialogVisible.value = true
 }
 
-// 提交审核结果
+// 修改提交退款审核结果函数
 const submitRefund = async () => {
   if (!refundFormRef.value) return
   
@@ -1208,14 +1288,15 @@ const submitRefund = async () => {
       // 获取订单
       const index = orderList.value.findIndex(item => item.id === refundForm.id)
       if (index !== -1) {
-        // 根据审核结果更新订单状态
-        if (refundForm.approved) {
-          orderList.value[index].status = '已完成'
-          ElMessage.success(`订单 ${refundForm.orderId} 的退款申请已通过`)
-        } else {
-          orderList.value[index].status = '已完成'
-          ElMessage.info(`订单 ${refundForm.orderId} 的退款申请已拒绝`)
+        // 更新订单状态为已退款
+        orderList.value[index].status = '已退款'
+        // 更新退款信息
+        orderList.value[index].refundInfo = {
+          refundAmount: refundForm.refundAmount,
+          refundRemark: refundForm.refundRemark,
+          refundTime: refundForm.refundTime
         }
+        ElMessage.success(`订单 ${refundForm.orderId} 已退款成功`)
       }
       
       refundDialogVisible.value = false
@@ -1290,6 +1371,26 @@ const convertToUSDT = (price: string): string => {
   // 假设汇率为 1 CNY = 0.14 USDT
   const usdtPrice = (numPrice * 0.14).toFixed(2)
   return usdtPrice
+}
+
+// 添加获取用户身份类型函数
+const getUserRoleType = (role: string) => {
+  switch (role) {
+    case '游客':
+      return 'info'
+    case '普通用户':
+      return ''
+    case 'vip1':
+      return 'success'
+    case 'vip2':
+      return 'warning'
+    case 'vip3':
+      return 'danger'
+    case '超级会员':
+      return 'danger'
+    default:
+      return ''
+  }
 }
 </script>
 
@@ -1544,7 +1645,7 @@ const convertToUSDT = (price: string): string => {
 }
 
 :deep(.refund-dialog .el-dialog__body) {
-  padding: 24px;
+  padding: 20px;
 }
 
 :deep(.refund-dialog .el-dialog__footer) {
@@ -1690,5 +1791,49 @@ const convertToUSDT = (price: string): string => {
   color: #67c23a;
   font-size: 12px;
   font-weight: bold;
+}
+
+/* 退款对话框样式 */
+:deep(.refund-dialog .el-dialog__body) {
+  padding: 20px;
+}
+
+.refund-info {
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.refund-info .info-item {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.refund-info .info-item:last-child {
+  margin-bottom: 0;
+}
+
+.refund-info .label {
+  min-width: 80px;
+  color: #606266;
+  text-align: right;
+  padding-right: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.refund-info .value {
+  flex: 1;
+  color: #303133;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.refund-info .value.price {
+  color: #f56c6c;
+  font-weight: 600;
 }
 </style>

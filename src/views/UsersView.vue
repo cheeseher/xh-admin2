@@ -93,6 +93,7 @@
             <div class="action-buttons">
               <el-button size="small" type="primary" @click="handleEdit(scope.row)">编辑</el-button>
               <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+              <el-button size="small" type="info" @click="handleUserLogs(scope.row)">日志</el-button>
             </div>
           </template>
         </el-table-column>
@@ -177,6 +178,48 @@
           <el-button type="primary" @click="submitResetPassword">确定</el-button>
         </span>
       </template>
+    </el-dialog>
+
+    <!-- 添加用户操作日志弹窗 -->
+    <el-dialog
+      v-model="userLogsDialogVisible"
+      title="用户操作日志"
+      width="750px"
+    >
+      <div class="user-logs-header">
+        <span>用户：{{ currentUser?.nickname }} ({{ currentUser?.email }})</span>
+      </div>
+      
+      <el-table :data="userLogsList" border stripe v-loading="logsLoading" style="width: 100%; margin-top: 15px;">
+        <el-table-column prop="operator" label="操作人" width="120"></el-table-column>
+        <el-table-column prop="operationType" label="操作类型" width="150">
+          <template #default="{ row }">
+            <el-tag :type="getOperationTypeTag(row.operationType)">{{ row.operationType }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="operationAmount" label="操作金额" width="120">
+          <template #default="{ row }">
+            <span :class="{'text-green': row.operationAmount > 0, 'text-red': row.operationAmount < 0}">
+              {{ row.operationAmount > 0 ? '+' : '' }}{{ row.operationAmount.toFixed(2) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="operationDesc" label="操作描述" min-width="200"></el-table-column>
+        <el-table-column prop="operationTime" label="操作时间" width="180"></el-table-column>
+      </el-table>
+      
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="logsCurrentPage"
+          v-model:page-size="logsPageSize"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next"
+          :total="logsTotalCount"
+          @size-change="handleLogsSizeChange"
+          @current-change="handleLogsCurrentChange"
+          :background="true"
+        ></el-pagination>
+      </div>
     </el-dialog>
   </div>
 </template>
@@ -688,6 +731,114 @@ watch([() => searchForm.email, () => searchForm.status, () => searchForm.vipLeve
 onMounted(() => {
   getUserList()
 })
+
+// 用户操作日志相关
+const userLogsDialogVisible = ref(false)
+const userLogsList = ref<any[]>([])
+const logsLoading = ref(false)
+const logsCurrentPage = ref(1)
+const logsPageSize = ref(10)
+const logsTotalCount = ref(0)
+
+// 处理用户日志
+const handleUserLogs = (row: any) => {
+  currentUser.value = row
+  userLogsDialogVisible.value = true
+  logsCurrentPage.value = 1
+  logsPageSize.value = 10
+  fetchUserLogs()
+}
+
+// 获取用户操作日志
+const fetchUserLogs = () => {
+  if (!currentUser.value) return
+  
+  logsLoading.value = true
+  
+  // 模拟API请求获取日志数据
+  setTimeout(() => {
+    // 模拟日志数据
+    const mockLogs = [
+      {
+        logId: 'L0001',
+        userId: currentUser.value.userId,
+        operator: '系统',
+        operationType: '充值',
+        operationAmount: 1000.00,
+        operationDesc: '用户在线充值',
+        operationTime: '2024-03-15 10:30:22'
+      },
+      {
+        logId: 'L0002',
+        userId: currentUser.value.userId,
+        operator: '管理员',
+        operationType: '人工充值',
+        operationAmount: 500.00,
+        operationDesc: '管理员手动充值',
+        operationTime: '2024-03-14 15:45:10'
+      },
+      {
+        logId: 'L0003',
+        userId: currentUser.value.userId,
+        operator: '系统',
+        operationType: '消费',
+        operationAmount: -200.00,
+        operationDesc: '购买商品',
+        operationTime: '2024-03-13 09:20:33'
+      },
+      {
+        logId: 'L0004',
+        userId: currentUser.value.userId,
+        operator: '系统',
+        operationType: '退款',
+        operationAmount: 50.00,
+        operationDesc: '订单部分退款',
+        operationTime: '2024-03-12 14:10:05'
+      },
+      {
+        logId: 'L0005',
+        userId: currentUser.value.userId,
+        operator: '管理员',
+        operationType: '扣款',
+        operationAmount: -100.00,
+        operationDesc: '违规扣除',
+        operationTime: '2024-03-10 16:30:45'
+      }
+    ]
+    
+    userLogsList.value = mockLogs
+    logsTotalCount.value = mockLogs.length
+    logsLoading.value = false
+  }, 500)
+}
+
+// 获取操作类型标签样式
+const getOperationTypeTag = (type: string) => {
+  switch (type) {
+    case '充值':
+    case '人工充值':
+      return 'success'
+    case '消费':
+      return 'info'
+    case '退款':
+      return 'warning'
+    case '扣款':
+      return 'danger'
+    default:
+      return ''
+  }
+}
+
+// 处理日志分页
+const handleLogsSizeChange = (val: number) => {
+  logsPageSize.value = val
+  fetchUserLogs()
+}
+
+const handleLogsCurrentChange = (val: number) => {
+  logsCurrentPage.value = val
+  fetchUserLogs()
+}
 </script>
 
 <style scoped>
@@ -894,5 +1045,24 @@ onMounted(() => {
   padding: 2px 4px;
   display: inline-block;
   margin-left: 5px;
+}
+
+.text-red {
+  color: #f56c6c;
+  font-weight: bold;
+}
+
+.text-green {
+  color: #67c23a;
+  font-weight: bold;
+}
+
+.user-logs-header {
+  margin-bottom: 15px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #303133;
+  border-bottom: 1px solid #EBEEF5;
+  padding-bottom: 15px;
 }
 </style> 

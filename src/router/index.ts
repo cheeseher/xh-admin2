@@ -65,6 +65,15 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/recharge-orders',
+    name: 'rechargeOrders',
+    component: () => import('../views/RechargeOrdersView.vue'),
+    meta: {
+      title: '充值订单管理',
+      requiresAuth: true
+    }
+  },
+  {
     path: '/products',
     name: 'products',
     component: () => import('../views/ProductsView.vue'),
