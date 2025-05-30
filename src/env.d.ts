@@ -8,4 +8,6 @@ interface ImportMetaEnv {
 
 interface ImportMeta {
   readonly env: ImportMetaEnv
-} 
+}
+
+declare module '@wangeditor/editor-for-vue'; 

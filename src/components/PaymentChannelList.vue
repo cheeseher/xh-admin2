@@ -2,9 +2,6 @@
   <div class="payment-channel-list">
     <!-- 工具栏 -->
     <div class="table-toolbar">
-      <div class="left">
-        <!-- 根据需求移除添加新通道按钮 -->
-      </div>
       <div class="right">
         <el-alert
           v-if="showAlertForInvalidWeights"
@@ -236,27 +233,18 @@ const resetForm = () => {
   
   nextTick(() => {
     channelFormRef.value?.clearValidate();
-    // resetFields 可能不完全按预期工作，特别是对于深层响应式对象或复杂类型
-    // 手动重置关键字段确保状态正确
-    currentChannel.name = '';
-    currentChannel.paymentMethodKey = props.paymentMethodKey;
-    currentChannel.ratio = 1;
-    currentChannel.status = 'enabled';
-    currentChannel.fee = 0;
-    currentChannel.minAmount = 100;
-    currentChannel.maxAmount = 10000;
-    currentChannel.id = undefined; // 再次确保id清除
   });
 };
 
 const handleEditChannel = (channel: PaymentChannel & { actualRatio?: number }) => {
-  // resetForm(); // 在 assign 之前调用 reset 会导致 props.paymentMethodKey 覆盖 channel 的值
+  // 使用深拷贝确保原始 channel 数据不受影响，并且 currentChannel 是响应式的
   const channelToEdit = JSON.parse(JSON.stringify(channel)); 
-  Object.assign(currentChannel, channelToEdit);
-  // 确保 paymentMethodKey 来自 props，以防 channel 数据不一致（理论上不应发生）
-  currentChannel.paymentMethodKey = props.paymentMethodKey;
+  Object.assign(currentChannel, initialChannelState(), channelToEdit); // 先用初始状态重置，再用编辑数据覆盖
 
   dialogVisible.value = true;
+  nextTick(() => {
+    channelFormRef.value?.clearValidate();
+  });
 };
 
 const handleStatusSwitchInDialog = (newStatus: string | number | boolean) => {
@@ -302,10 +290,11 @@ const submitChannelForm = async () => {
 
     let success = false;
     if (currentChannel.id) { 
-      success = paymentStore.updateChannel(currentChannel as PaymentChannel); // 此处断言 id 必然存在
+      // 在原型演示中，我们直接修改 store 中的数据
+      success = paymentStore.updateChannel(currentChannel as PaymentChannel);
     } else {
-      // 添加逻辑已移除，理论上不执行
-      ElMessage.error('不支持添加新通道。'); 
+      // 添加逻辑已移除，此分支不应执行
+      ElMessage.error('原型不支持添加新通道。'); 
       submitLoading.value = false;
       return;
     }

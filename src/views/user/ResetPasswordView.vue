@@ -37,6 +37,7 @@
                 <el-input 
                   v-model="verifyForm.captcha" 
                   placeholder="请输入验证码"
+                  prefix-icon="ChatLineSquare"
                 ></el-input>
                 <div class="captcha-image" @click="refreshCaptcha">
                   <img :src="captchaUrl" alt="验证码" />
@@ -45,8 +46,8 @@
             </el-form-item>
             
             <el-form-item>
-              <el-button type="primary" @click="handleVerify" :loading="verifyLoading">下一步</el-button>
-              <el-button @click="handleCancel">取消</el-button>
+              <el-button type="primary" @click="handleVerify" :loading="verifyLoading" :icon="ArrowRightBold">下一步</el-button>
+              <el-button @click="handleCancel" :icon="Close">取消</el-button>
             </el-form-item>
           </el-form>
         </div>
@@ -100,8 +101,8 @@
             </el-form-item>
             
             <el-form-item>
-              <el-button type="primary" @click="handleResetPassword" :loading="resetLoading">提交</el-button>
-              <el-button @click="handlePrevStep">上一步</el-button>
+              <el-button type="primary" @click="handleResetPassword" :loading="resetLoading" :icon="Select">提交</el-button>
+              <el-button @click="handlePrevStep" :icon="ArrowLeftBold">上一步</el-button>
             </el-form-item>
           </el-form>
         </div>
@@ -114,8 +115,8 @@
             sub-title="您的账户密码已经成功修改，请使用新密码登录系统"
           >
             <template #extra>
-              <el-button type="primary" @click="handleBackToProfile">返回个人中心</el-button>
-              <el-button @click="handleReLogin">重新登录</el-button>
+              <el-button type="primary" @click="handleBackToProfile" :icon="User">返回个人中心</el-button>
+              <el-button @click="handleReLogin" :icon="SwitchButton">重新登录</el-button>
             </template>
           </el-result>
         </div>
@@ -128,7 +129,18 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Lock, Key, CircleCheck } from '@element-plus/icons-vue'
+import { 
+  Lock, 
+  Key, 
+  CircleCheck, 
+  ChatLineSquare,
+  ArrowRightBold,
+  ArrowLeftBold,
+  Close,
+  Select,
+  User,
+  SwitchButton
+} from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 
 const router = useRouter()

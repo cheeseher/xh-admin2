@@ -18,215 +18,227 @@
       </div>
       
       <!-- 搜索区域 -->
-      <div class="search-area">
-        <el-form :inline="true" :model="searchForm" class="demo-form-inline">
-          <el-form-item label="订单号">
-            <el-input v-model="searchForm.orderId" placeholder="请输入订单号" clearable></el-input>
-          </el-form-item>
-          <el-form-item label="用户邮箱">
-            <el-input v-model="searchForm.userEmail" placeholder="请输入用户邮箱" clearable></el-input>
-          </el-form-item>
-          <el-form-item label="商品分类">
-            <el-select v-model="searchForm.category" placeholder="请选择" clearable style="width: 168px;">
-              <el-option label="全部" value=""></el-option>
-              <el-option label="谷歌邮箱" value="谷歌邮箱"></el-option>
-              <el-option label="微软邮箱" value="微软邮箱"></el-option>
-              <el-option label="Instagram账号" value="Instagram账号"></el-option>
-              <el-option label="Twitter账号" value="Twitter账号"></el-option>
-              <el-option label="Facebook账号" value="Facebook账号"></el-option>
-              <el-option label="Discord账号" value="Discord账号"></el-option>
-              <el-option label="ChatGPT账号" value="ChatGPT账号"></el-option>
-              <el-option label="其他账号" value="其他账号"></el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="支付方式">
-            <el-select v-model="searchForm.payMethod" placeholder="请选择" clearable style="width: 168px;">
-              <el-option label="全部" value=""></el-option>
-              <el-option label="USDT" value="usdt"></el-option>
-              <el-option label="微信" value="wechat"></el-option>
-              <el-option label="支付宝" value="alipay"></el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="发货方式">
-            <el-select v-model="searchForm.deliveryMethod" placeholder="请选择" clearable style="width: 168px;">
-              <el-option label="全部" value=""></el-option>
-              <el-option label="自动发货" value="自动发货"></el-option>
-              <el-option label="手动发货" value="手动发货"></el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="订单状态">
-            <el-select v-model="searchForm.status" placeholder="请选择" clearable style="width: 168px;">
-              <el-option label="全部" value=""></el-option>
-              <el-option label="待付款" value="待付款"></el-option>
-              <el-option label="待发货" value="待发货"></el-option>
-              <el-option label="已完成" value="已完成"></el-option>
-              <el-option label="已退款" value="已退款"></el-option>
-              <el-option label="已取消" value="已取消"></el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="用户身份">
-            <el-select v-model="searchForm.userRole" placeholder="请选择" clearable style="width: 168px;">
-              <el-option label="全部" value=""></el-option>
-              <el-option label="游客" value="游客"></el-option>
-              <el-option label="普通用户" value="普通用户"></el-option>
-              <el-option label="vip1" value="vip1"></el-option>
-              <el-option label="vip2" value="vip2"></el-option>
-              <el-option label="vip3" value="vip3"></el-option>
-              <el-option label="超级会员" value="超级会员"></el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="下单时间">
-            <el-date-picker
-              v-model="searchForm.dateRange"
-              type="daterange"
-              range-separator="至"
-              start-placeholder="开始日期"
-              end-placeholder="结束日期"
-              value-format="YYYY-MM-DD"
-            ></el-date-picker>
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="handleSearch">查询</el-button>
-            <el-button @click="resetSearch">重置</el-button>
-          </el-form-item>
-        </el-form>
-        
-        <!-- 添加总金额和导出按钮 -->
-        <div class="search-summary">
-          <div class="total-amount">
-            <span>筛选结果总金额：</span>
-            <span class="amount-value">¥{{ totalAmount.toFixed(2) }}</span>
-            <span v-if="multipleSelection.length > 0" style="margin-left: 20px;">已选择：{{ multipleSelection.length }}笔订单</span>
-            <span v-if="multipleSelection.length > 0" class="amount-value">¥{{ selectedTotalAmount.toFixed(2) }}</span>
-          </div>
-          <div class="action-btns">
-            <el-button type="success" @click="exportOrders" :disabled="multipleSelection.length === 0">
-              <el-icon><Download /></el-icon>
-              导出选中订单
-            </el-button>
+      <el-card shadow="never" class="filter-card-wrapper">
+        <div class="search-area">
+          <el-form :inline="true" :model="searchForm" class="demo-form-inline">
+            <el-form-item label="订单号">
+              <el-input v-model="searchForm.orderId" placeholder="请输入订单号" clearable></el-input>
+            </el-form-item>
+            <el-form-item label="用户邮箱">
+              <el-input v-model="searchForm.userEmail" placeholder="请输入用户邮箱" clearable></el-input>
+            </el-form-item>
+            <el-form-item label="商品分类">
+              <el-select v-model="searchForm.category" placeholder="请选择" clearable style="width: 168px;">
+                <el-option label="全部" value=""></el-option>
+                <el-option label="谷歌邮箱" value="谷歌邮箱"></el-option>
+                <el-option label="微软邮箱" value="微软邮箱"></el-option>
+                <el-option label="Instagram账号" value="Instagram账号"></el-option>
+                <el-option label="Twitter账号" value="Twitter账号"></el-option>
+                <el-option label="Facebook账号" value="Facebook账号"></el-option>
+                <el-option label="Discord账号" value="Discord账号"></el-option>
+                <el-option label="ChatGPT账号" value="ChatGPT账号"></el-option>
+                <el-option label="其他账号" value="其他账号"></el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="支付方式">
+              <el-select v-model="searchForm.payMethod" placeholder="请选择" clearable style="width: 168px;">
+                <el-option label="全部" value=""></el-option>
+                <el-option label="USDT" value="usdt"></el-option>
+                <el-option label="微信" value="wechat"></el-option>
+                <el-option label="支付宝" value="alipay"></el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="发货方式">
+              <el-select v-model="searchForm.deliveryMethod" placeholder="请选择" clearable style="width: 168px;">
+                <el-option label="全部" value=""></el-option>
+                <el-option label="自动发货" value="自动发货"></el-option>
+                <el-option label="手动发货" value="手动发货"></el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="订单状态">
+              <el-select v-model="searchForm.status" placeholder="请选择" clearable style="width: 168px;">
+                <el-option label="全部" value=""></el-option>
+                <el-option label="待付款" value="待付款"></el-option>
+                <el-option label="待发货" value="待发货"></el-option>
+                <el-option label="已完成" value="已完成"></el-option>
+                <el-option label="已退款" value="已退款"></el-option>
+                <el-option label="已取消" value="已取消"></el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="用户身份">
+              <el-select v-model="searchForm.userRole" placeholder="请选择" clearable style="width: 168px;">
+                <el-option label="全部" value=""></el-option>
+                <el-option label="游客" value="游客"></el-option>
+                <el-option label="普通用户" value="普通用户"></el-option>
+                <el-option label="vip1" value="vip1"></el-option>
+                <el-option label="vip2" value="vip2"></el-option>
+                <el-option label="vip3" value="vip3"></el-option>
+                <el-option label="超级会员" value="超级会员"></el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="下单时间">
+              <el-date-picker
+                v-model="searchForm.dateRange"
+                type="daterange"
+                range-separator="至"
+                start-placeholder="开始日期"
+                end-placeholder="结束日期"
+                value-format="YYYY-MM-DD"
+              ></el-date-picker>
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="handleSearch">查询</el-button>
+              <el-button @click="resetSearch">重置</el-button>
+            </el-form-item>
+          </el-form>
+          
+          <!-- 添加总金额和导出按钮 -->
+          <div class="search-summary">
+            <div class="total-amount">
+              <span>筛选结果总金额：</span>
+              <span class="amount-value">¥{{ totalAmount.toFixed(2) }}</span>
+              <span v-if="multipleSelection.length > 0" style="margin-left: 20px;">已选择：{{ multipleSelection.length }}笔订单</span>
+              <span v-if="multipleSelection.length > 0" class="amount-value">¥{{ selectedTotalAmount.toFixed(2) }}</span>
+            </div>
+            <div class="action-btns">
+              <el-button type="success" @click="exportOrders" :disabled="multipleSelection.length === 0">
+                <el-icon><Download /></el-icon>
+                导出选中订单
+              </el-button>
+            </div>
           </div>
         </div>
-      </div>
+      </el-card>
       
       <!-- 表格区域 -->
-      <el-table 
-        :data="filteredOrderList" 
-        style="width: 100%" 
-        v-loading="loading" 
-        border 
-        stripe
-        @selection-change="handleSelectionChange"
-      >
-        <el-table-column type="selection" width="55"></el-table-column>
-        <el-table-column prop="id" label="商品订单ID" width="100"></el-table-column>
-        <el-table-column prop="orderId" label="订单号" width="180"></el-table-column>
-        <el-table-column prop="productName" label="商品名称" min-width="180"></el-table-column>
-        <el-table-column prop="category" label="商品分类" width="100">
-          <template #default="scope">
-            {{ scope.row.category }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="originalPrice" label="商品价格" width="100">
-          <template #default="scope">
-            <div class="price-container">
-              <span class="price">{{ scope.row.originalPrice }}</span>
-              <span v-if="scope.row.payMethod === 'usdt'" class="usdt-price">{{ convertToUSDT(scope.row.originalPrice) }} USDT</span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="quantity" label="数量" width="80"></el-table-column>
-        <el-table-column prop="totalPrice" label="总价" width="100">
-          <template #default="scope">
-            <div class="price-container">
-              <span class="price">{{ scope.row.totalPrice }}</span>
-              <span v-if="scope.row.payMethod === 'usdt'" class="usdt-price">{{ convertToUSDT(scope.row.totalPrice) }} USDT</span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="fee" label="手续费" width="100">
-          <template #default="scope">
-            <div class="price-container">
-              <span class="fee">{{ scope.row.fee || '¥0.00' }}</span>
-              <span v-if="scope.row.payMethod === 'usdt'" class="usdt-price">{{ convertToUSDT(scope.row.fee || '¥0.00') }} USDT</span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="scope">
-            <el-tag :type="getStatusType(scope.row.status)">{{ scope.row.status }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="cardId" label="卡密ID" width="100"></el-table-column>
-        <el-table-column prop="cardInfo" label="卡密信息" min-width="120">
-          <template #default="scope">
-            <el-button link type="primary" @click="viewCardInfo(scope.row)">查看</el-button>
-          </template>
-        </el-table-column>
-        <el-table-column prop="userEmail" label="用户邮箱" width="180"></el-table-column>
-        <el-table-column prop="userRole" label="用户身份" width="100">
-          <template #default="scope">
-            <el-tag :type="getUserRoleType(scope.row.userRole)" size="small">
-              {{ scope.row.userRole }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="payMethod" label="支付方式" width="100">
-          <template #default="scope">
-            <el-tag :type="getPayMethodType(scope.row.payMethod)">
-              {{ getPayMethodLabel(scope.row.payMethod) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="deliveryMethod" label="发货方式" width="100">
-          <template #default="scope">
-            <el-tag :type="scope.row.deliveryMethod === '自动发货' ? 'success' : 'info'">
-              {{ scope.row.deliveryMethod }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
-          <template #default="scope">
-            <el-dropdown trigger="hover">
-              <el-button type="primary" size="small">
-                操作
-                <el-icon class="el-icon--right"><arrow-down /></el-icon>
-              </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item v-if="scope.row.status === '待发货'" @click="handleDeliver(scope.row)">
-                    <el-icon><Check /></el-icon>发货
-                  </el-dropdown-item>
-                  <el-dropdown-item @click="handleResendEmail(scope.row)">
-                    <el-icon><Message /></el-icon>重发邮件
-                  </el-dropdown-item>
-                  <el-dropdown-item v-if="scope.row.status !== '已退款'" @click="handleRefund(scope.row)">
-                    <el-icon><Money /></el-icon>退款
-                  </el-dropdown-item>
-                  <el-dropdown-item @click="handleDelete(scope.row)">
-                    <el-icon><Delete /></el-icon>删除
-                  </el-dropdown-item>
-                </el-dropdown-menu>
+      <el-card shadow="never" class="table-card-wrapper">
+        <div class="table-area-wrapper">
+          <el-table 
+            :data="filteredOrderList" 
+            style="width: 100%" 
+            v-loading="loading" 
+            border 
+            stripe
+            @selection-change="handleSelectionChange"
+          >
+            <el-table-column type="selection" width="55"></el-table-column>
+            <el-table-column prop="id" label="商品订单ID" width="100"></el-table-column>
+            <el-table-column prop="orderId" label="订单号" width="180"></el-table-column>
+            <el-table-column prop="productName" label="商品名称" min-width="180"></el-table-column>
+            <el-table-column prop="category" label="商品分类" width="100">
+              <template #default="scope">
+                {{ scope.row.category }}
               </template>
-            </el-dropdown>
-          </template>
-        </el-table-column>
-      </el-table>
-      
-      <!-- 分页区域 -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="total"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-          :background="true"
-        ></el-pagination>
-      </div>
+            </el-table-column>
+            <el-table-column prop="originalPrice" label="商品价格" width="100">
+              <template #default="scope">
+                <div class="price-container">
+                  <span class="price">{{ scope.row.originalPrice }}</span>
+                  <span v-if="scope.row.payMethod === 'usdt'" class="usdt-price">{{ convertToUSDT(scope.row.originalPrice) }} USDT</span>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="quantity" label="数量" width="80"></el-table-column>
+            <el-table-column prop="totalPrice" label="总价" width="100">
+              <template #default="scope">
+                <div class="price-container">
+                  <span class="price">{{ scope.row.totalPrice }}</span>
+                  <span v-if="scope.row.payMethod === 'usdt'" class="usdt-price">{{ convertToUSDT(scope.row.totalPrice) }} USDT</span>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="fee" label="手续费" width="100">
+              <template #default="scope">
+                <div class="price-container">
+                  <span class="fee">{{ scope.row.fee || '¥0.00' }}</span>
+                  <span v-if="scope.row.payMethod === 'usdt'" class="usdt-price">{{ convertToUSDT(scope.row.fee || '¥0.00') }} USDT</span>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100">
+              <template #default="scope">
+                <el-tag :type="getStatusType(scope.row.status)">{{ scope.row.status }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="cardId" label="卡密ID" width="100"></el-table-column>
+            <el-table-column prop="cardInfo" label="卡密信息" min-width="120">
+              <template #default="scope">
+                <el-button link type="primary" @click="viewCardInfo(scope.row)">查看</el-button>
+              </template>
+            </el-table-column>
+            <el-table-column prop="userEmail" label="用户邮箱" width="180"></el-table-column>
+            <el-table-column prop="userRole" label="用户身份" width="100">
+              <template #default="scope">
+                <el-tag :type="getUserRoleType(scope.row.userRole)" size="small">
+                  {{ scope.row.userRole }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="payMethod" label="支付方式" width="100">
+              <template #default="scope">
+                <el-tag :type="getPayMethodType(scope.row.payMethod)">
+                  {{ getPayMethodLabel(scope.row.payMethod) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="deliveryMethod" label="发货方式" width="100">
+              <template #default="scope">
+                <el-tag :type="scope.row.deliveryMethod === '自动发货' ? 'success' : 'info'">
+                  {{ scope.row.deliveryMethod }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
+            <el-table-column label="操作" width="120" fixed="right">
+              <template #default="scope">
+                <el-dropdown trigger="hover">
+                  <el-button type="primary" size="small">
+                    操作
+                    <el-icon class="el-icon--right"><arrow-down /></el-icon>
+                  </el-button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item @click="handleViewDetails(scope.row)">
+                        <el-icon><View /></el-icon>查看详情
+                      </el-dropdown-item>
+                      <el-dropdown-item @click="handleEditOrder(scope.row)">
+                        <el-icon><Edit /></el-icon>编辑订单
+                      </el-dropdown-item>
+                      <el-dropdown-item v-if="scope.row.status === '待发货'" @click="handleDeliver(scope.row)">
+                        <el-icon><Check /></el-icon>发货
+                      </el-dropdown-item>
+                      <el-dropdown-item @click="handleResendEmail(scope.row)">
+                        <el-icon><Message /></el-icon>重发邮件
+                      </el-dropdown-item>
+                      <el-dropdown-item v-if="scope.row.status !== '已退款'" @click="handleRefund(scope.row)">
+                        <el-icon><Money /></el-icon>退款
+                      </el-dropdown-item>
+                      <el-dropdown-item @click="handleDelete(scope.row)">
+                        <el-icon><Delete /></el-icon>删除
+                      </el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+              </template>
+            </el-table-column>
+          </el-table>
+          
+          <!-- 分页区域 -->
+          <div class="pagination-container">
+            <el-pagination
+              v-model:current-page="currentPage"
+              v-model:page-size="pageSize"
+              :page-sizes="[10, 20, 50, 100]"
+              layout="total, sizes, prev, pager, next, jumper"
+              :total="total"
+              @size-change="handleSizeChange"
+              @current-change="handleCurrentChange"
+              :background="true"
+            ></el-pagination>
+          </div>
+        </div>
+      </el-card>
     </el-card>
     
     <!-- 发货对话框 -->
@@ -314,14 +326,81 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- Order Details Dialog -->
+    <el-dialog
+      v-model="orderDetailsDialogVisible"
+      title="订单详情"
+      width="700px"
+      destroy-on-close
+    >
+      <div v-if="selectedOrderDetails" class="order-detail-content">
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="订单ID">{{ selectedOrderDetails.id }}</el-descriptions-item>
+          <el-descriptions-item label="订单号">{{ selectedOrderDetails.orderId }}</el-descriptions-item>
+          <el-descriptions-item label="商品名称">{{ selectedOrderDetails.productName }}</el-descriptions-item>
+          <el-descriptions-item label="商品分类">{{ selectedOrderDetails.category }}</el-descriptions-item>
+          <el-descriptions-item label="数量">{{ selectedOrderDetails.quantity }}</el-descriptions-item>
+          <el-descriptions-item label="商品原价">{{ selectedOrderDetails.originalPrice }}</el-descriptions-item>
+          <el-descriptions-item label="购买价格">{{ selectedOrderDetails.purchasePrice }}</el-descriptions-item>
+          <el-descriptions-item label="总价">{{ selectedOrderDetails.totalPrice }}</el-descriptions-item>
+          <el-descriptions-item label="手续费">{{ selectedOrderDetails.fee }}</el-descriptions-item>
+          <el-descriptions-item label="状态"> <el-tag :type="getStatusType(selectedOrderDetails.status)">{{ selectedOrderDetails.status }}</el-tag></el-descriptions-item>
+          <el-descriptions-item label="卡密ID" v-if="selectedOrderDetails.cardId">{{ selectedOrderDetails.cardId }}</el-descriptions-item>
+          <el-descriptions-item label="用户邮箱">{{ selectedOrderDetails.userEmail }}</el-descriptions-item>
+          <el-descriptions-item label="用户身份"><el-tag :type="getUserRoleType(selectedOrderDetails.userRole)" size="small">{{ selectedOrderDetails.userRole }}</el-tag></el-descriptions-item>
+          <el-descriptions-item label="支付方式"><el-tag :type="getPayMethodType(selectedOrderDetails.payMethod)">{{ getPayMethodLabel(selectedOrderDetails.payMethod) }}</el-tag></el-descriptions-item>
+          <el-descriptions-item label="发货方式"><el-tag :type="selectedOrderDetails.deliveryMethod === '自动发货' ? 'success' : 'info'">{{ selectedOrderDetails.deliveryMethod }}</el-tag></el-descriptions-item>
+          <el-descriptions-item label="创建时间">{{ selectedOrderDetails.createTime }}</el-descriptions-item>
+          <el-descriptions-item label="备注" :span="2" v-if="selectedOrderDetails.remark">{{ selectedOrderDetails.remark }}</el-descriptions-item>
+          <el-descriptions-item label="卡密信息" :span="2" v-if="selectedOrderDetails.cardInfo && (selectedOrderDetails.status === '已完成' || selectedOrderDetails.status === '待发货')">
+            <pre class="card-info-pre">{{ selectedOrderDetails.cardInfo }}</pre>
+          </el-descriptions-item>
+          <template v-if="selectedOrderDetails.refundInfo">
+            <el-descriptions-item label="退款金额" :span="2"><span style="color: #F56C6C; font-weight: bold;">¥{{ selectedOrderDetails.refundInfo.refundAmount.toFixed(2) }}</span></el-descriptions-item>
+            <el-descriptions-item label="退款备注" :span="2">{{ selectedOrderDetails.refundInfo.refundRemark }}</el-descriptions-item>
+            <el-descriptions-item label="退款时间" :span="2">{{ selectedOrderDetails.refundInfo.refundTime }}</el-descriptions-item>
+          </template>
+        </el-descriptions>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="orderDetailsDialogVisible = false">关闭</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- Edit Order Dialog -->
+    <el-dialog
+      v-model="editOrderDialogVisible"
+      title="编辑订单备注"
+      width="500px"
+      destroy-on-close
+    >
+      <el-form v-if="editOrderForm" :model="editOrderForm" label-width="80px" ref="editOrderFormRef">
+        <el-form-item label="订单号">
+          <el-input v-model="editOrderForm.orderId" disabled />
+        </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="editOrderForm.remark" type="textarea" :rows="3" placeholder="请输入订单备注" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="editOrderDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitEditOrderForm">保存</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Download, ArrowDown, Check, Delete, View, Warning, Money, Message } from '@element-plus/icons-vue'
+import { Download, ArrowDown, Check, Delete, View, Warning, Money, Message, Edit } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
+import { orderList as externalOrderList, productOptions as externalProductOptions, type OrderItem, type RefundInfo } from '@/data/orderData.js'
 
 // 搜索表单
 const searchForm = reactive({
@@ -335,472 +414,31 @@ const searchForm = reactive({
   dateRange: [] as string[]
 })
 
-// 商品选项
-const productOptions = [
-  { label: 'Gmail邮箱-稳定可用 (手工)', value: 'Gmail邮箱-稳定可用 (手工)', price: 4.20 },
-  { label: 'Gmail邮箱-稳定可用', value: 'Gmail邮箱-稳定可用', price: 2.75 },
-  { label: 'Gmail邮箱-1月以上', value: 'Gmail邮箱-1月以上', price: 5.50 },
-  { label: 'Gmail邮箱-半年以上', value: 'Gmail邮箱-半年以上', price: 7.50 },
-  { label: 'Gmail邮箱-美国稳定', value: 'Gmail邮箱-美国稳定', price: 10.00 },
-  { label: 'Gmail邮箱-一年以上', value: 'Gmail邮箱-一年以上', price: 12.00 },
-  { label: 'Gmail美国老号 (6个月+)', value: 'Gmail美国老号 (6个月+)', price: 16.88 },
-  { label: '2022年老号账号-谷歌邮箱', value: '2022年老号账号-谷歌邮箱', price: 14.00 },
-  { label: 'Instagram账号', value: 'Instagram账号', price: 39.99 },
-  { label: 'Instagram账号-高粉丝', value: 'Instagram账号-高粉丝', price: 399.99 },
-  { label: 'Twitter账号', value: 'Twitter账号', price: 49.99 },
-  { label: 'Twitter账号-已认证', value: 'Twitter账号-已认证', price: 599.99 },
-  { label: 'Facebook账号', value: 'Facebook账号', price: 59.99 },
-  { label: 'Facebook账号-商业版', value: 'Facebook账号-商业版', price: 199.99 },
-  { label: 'Discord账号', value: 'Discord账号', price: 39.99 },
-  { label: 'ChatGPT账号', value: 'ChatGPT账号', price: 199.99 },
-  { label: 'ChatGPT账号-高级版', value: 'ChatGPT账号-高级版', price: 299.99 },
-  { label: '微软邮箱账号', value: '微软邮箱账号', price: 25.00 },
-  { label: '其他账号-Steam', value: '其他账号-Steam', price: 79.99 }
-]
+// 商品选项 - Use from external file
+const productOptions = externalProductOptions
 
-// 表格数据类型定义
-interface RefundInfo {
-  refundAmount: number;
-  refundRemark: string;
-  refundTime: string;
-}
+// 表格数据 - Use from external file
+const orderList = ref<OrderItem[]>([]) // Initialize as empty, will be populated
+const allOrderList = ref<OrderItem[]>([]) // This will hold the initial full list from external data
 
-interface OrderItem {
-  id: string;
-  orderId: string;
-  productName: string;
-  category: string;
-  quantity: number;
-  originalPrice: string;
-  purchasePrice: string;
-  totalPrice: string;
-  fee: string;
-  cardId?: string;
-  cardInfo?: string;
-  userEmail: string;
-  userRole: string;
-  payMethod: string;
-  deliveryMethod: string;
-  status: string;
-  remark?: string;
-  createTime: string;
-  refundInfo: RefundInfo | null;
-}
+// Dialog states and forms
+const orderDetailsDialogVisible = ref(false)
+const selectedOrderDetails = ref<OrderItem | null>(null)
 
-// 表格数据
-const orderList = ref<OrderItem[]>([{
-    id: 'S001001',
-    orderId: 'SO20230901001',
-    productName: '谷歌邮箱账号',
-    category: '谷歌邮箱',
-    quantity: 1,
-    originalPrice: '¥120.00',
-    purchasePrice: '¥99.00',
-    totalPrice: '¥99.00',
-    fee: '¥2.00',
-    cardId: 'C001',
-    cardInfo: 'example@gmail.com',
-    userEmail: 'buyer1@example.com',
-    userRole: 'vip1',
-    payMethod: 'alipay',
-    deliveryMethod: '自动发货',
-    status: '已完成',
-    createTime: '2023-09-01 10:00:00',
-    refundInfo: null
-  },
-  {
-    id: 'S001002',
-    orderId: 'SO20230901002',
-    productName: 'Instagram账号',
-    category: 'Instagram账号',
-    quantity: 1,
-    originalPrice: '¥220.00',
-    purchasePrice: '¥199.00',
-    totalPrice: '¥199.00',
-    fee: '¥3.00',
-    cardId: 'C002',
-    cardInfo: 'instagram_user123',
-    userEmail: 'buyer2@example.com',
-    userRole: '超级会员',
-    payMethod: 'wechat',
-    deliveryMethod: '手动发货',
-    status: '待发货',
-    createTime: '2023-09-01 11:00:00',
-    refundInfo: null
-  },
-  {
-    id: 'S000007',
-    orderId: 'DD20240315007', 
-    productName: 'ChatGPT账号', 
-    category: 'ChatGPT账号',
-    quantity: 1,
-    originalPrice: '¥249.99',
-    purchasePrice: '¥199.99',
-    totalPrice: '¥199.99',
-    fee: '¥0.00',
-    cardId: 'C000007',
-    cardInfo: 'chatgpt@example.com|password789',
-    userEmail: 'user777@example.com',
-    userRole: 'vip3',
-    payMethod: 'usdt',
-    deliveryMethod: '自动发货',
-    status: '已完成',
-    remark: '账号无法正常使用',
-    createTime: '2024-03-15 18:30:00',
-    refundInfo: null
-  },
-  {
-    id: 'S000001',
-    orderId: 'DD20240315001', 
-    productName: 'Gmail邮箱-稳定可用', 
-    category: '谷歌邮箱',
-    quantity: 1,
-    originalPrice: '¥5.50',
-    purchasePrice: '¥4.20',
-    totalPrice: '¥4.20',
-    fee: '¥0.00',
-    cardId: 'C000001',
-    cardInfo: 'gmail@example.com|password123',
-    userEmail: 'user123@example.com',
-    userRole: '普通用户',
-    payMethod: 'usdt',
-    deliveryMethod: '自动发货',
-    status: '已完成',
-    remark: '客户要求稳定可用的账号',
-    createTime: '2024-03-15 10:00:00',
-    refundInfo: null
-  },
-  {
-    id: 'S000002',
-    orderId: 'DD20240315002', 
-    productName: 'Gmail邮箱-1月以上', 
-    category: '谷歌邮箱',
-    quantity: 1,
-    originalPrice: '¥6.50',
-    purchasePrice: '¥5.50',
-    totalPrice: '¥5.50',
-    fee: '¥0.00',
-    cardId: 'C000002',
-    cardInfo: 'gmail1month@example.com|password456',
-    userEmail: 'user456@example.com',
-    userRole: 'vip2',
-    payMethod: 'usdt',
-    deliveryMethod: '手动发货',
-    status: '待发货',
-    remark: '客户需要美国地区的账号',
-    createTime: '2024-03-15 11:30:00',
-    refundInfo: null
-  },
-  {
-    id: 'S000003',
-    orderId: 'DD20240315003', 
-    productName: 'Instagram账号', 
-    category: 'Instagram账号',
-    quantity: 1,
-    originalPrice: '¥49.99',
-    purchasePrice: '¥39.99',
-    totalPrice: '¥39.99',
-    fee: '¥0.00',
-    cardId: '',
-    cardInfo: '',
-    userEmail: 'user789@example.com',
-    userRole: '游客',
-    payMethod: 'usdt',
-    deliveryMethod: '手动发货',
-    status: '待发货',
-    remark: '',
-    createTime: '2024-03-15 14:20:00',
-    refundInfo: null
-  },
-  {
-    id: 'S000004',
-    orderId: 'DD20240315004', 
-    productName: 'Gmail邮箱-美国稳定', 
-    category: '谷歌邮箱',
-    quantity: 2,
-    originalPrice: '¥12.00',
-    purchasePrice: '¥10.00',
-    totalPrice: '¥20.00',
-    fee: '¥0.00',
-    cardId: '',
-    cardInfo: '',
-    userEmail: 'user101@example.com',
-    userRole: '游客',
-    payMethod: 'usdt',
-    deliveryMethod: '自动发货',
-    status: '待付款',
-    remark: '',
-    createTime: '2024-03-15 16:45:00',
-    refundInfo: null
-  },
-  {
-    id: 'S000005',
-    orderId: 'DD20240315005', 
-    productName: 'Twitter账号', 
-    category: 'Twitter账号',
-    quantity: 1,
-    originalPrice: '¥59.99',
-    purchasePrice: '¥49.99',
-    totalPrice: '¥49.99',
-    fee: '¥0.00',
-    cardId: 'C000003',
-    cardInfo: 'twitter@example.com|password789',
-    userEmail: 'user202@example.com',
-    userRole: '普通用户',
-    payMethod: 'usdt',
-    deliveryMethod: '手动发货',
-    status: '已完成',
-    remark: '客户申请退款',
-    createTime: '2024-03-15 09:15:00',
-    refundInfo: {
-      refundAmount: 49.99,
-      refundRemark: '客户不需要此账号',
-      refundTime: '2024-03-15 10:30:00'
-    }
-  },
-  { 
-    id: 'S000006',
-    orderId: 'DD20240315006', 
-    productName: 'Gmail邮箱-半年以上', 
-    category: '谷歌邮箱',
-    quantity: 3,
-    originalPrice: '¥8.50',
-    purchasePrice: '¥7.50',
-    totalPrice: '¥22.50',
-    fee: '¥0.00',
-    cardId: '',
-    cardInfo: '',
-    userEmail: 'user303@example.com',
-    userRole: '普通用户',
-    payMethod: 'usdt',
-    deliveryMethod: '自动发货',
-    status: '待发货',
-    remark: '批量购买',
-    createTime: '2024-03-15 07:30:00',
-    refundInfo: null
-  },
-  {
-    id: 'S000008',
-    orderId: 'DD20240316001', 
-    productName: 'Facebook账号', 
-    category: 'Facebook账号',
-    quantity: 1,
-    originalPrice: '¥69.99',
-    purchasePrice: '¥59.99',
-    totalPrice: '¥59.99',
-    fee: '¥1.50',
-    cardId: 'C000008',
-    cardInfo: 'facebook@example.com|fb123456',
-    userEmail: 'user888@example.com',
-    userRole: 'vip2',
-    payMethod: 'usdt',
-    deliveryMethod: '自动发货',
-    status: '已完成',
-    remark: '客户需要美国地区的账号',
-    createTime: '2024-03-16 08:15:00',
-    refundInfo: null
-  },
-  {
-    id: 'S000009',
-    orderId: 'DD20240316002', 
-    productName: 'Discord账号', 
-    category: 'Discord账号',
-    quantity: 2,
-    originalPrice: '¥45.99',
-    purchasePrice: '¥39.99',
-    totalPrice: '¥79.98',
-    fee: '¥2.00',
-    cardId: 'C000009',
-    cardInfo: 'discord1@example.com|dis123\ndiscord2@example.com|dis456',
-    userEmail: 'user999@example.com',
-    userRole: 'vip1',
-    payMethod: 'usdt',
-    deliveryMethod: '自动发货',
-    status: '已完成',
-    remark: '客户申请退款但不符合条件',
-    createTime: '2024-03-16 09:30:00',
-    refundInfo: {
-      refundAmount: 79.98,
-      refundRemark: '客户表示不再需要此账号，但已超过退款期限',
-      refundTime: '2024-03-16 10:45:00'
-    }
-  },
-  {
-    id: 'S000010',
-    orderId: 'DD20240316003', 
-    productName: '微软邮箱账号', 
-    category: '微软邮箱',
-    quantity: 5,
-    originalPrice: '¥30.00',
-    purchasePrice: '¥25.00',
-    totalPrice: '¥125.00',
-    fee: '¥3.50',
-    cardId: 'C000010',
-    cardInfo: '多个账号信息，请联系客服获取',
-    userEmail: 'business@company.com',
-    userRole: '超级会员',
-    payMethod: 'usdt',
-    deliveryMethod: '手动发货',
-    status: '已完成',
-    remark: '企业批量采购',
-    createTime: '2024-03-16 11:20:00',
-    refundInfo: null
-  },
-  {
-    id: 'S000011',
-    orderId: 'DD20240316004', 
-    productName: 'ChatGPT账号-高级版', 
-    category: 'ChatGPT账号',
-    quantity: 1,
-    originalPrice: '¥349.99',
-    purchasePrice: '¥299.99',
-    totalPrice: '¥299.99',
-    fee: '¥5.00',
-    cardId: '',
-    cardInfo: '',
-    userEmail: 'premium@example.com',
-    userRole: '超级会员',
-    payMethod: 'usdt',
-    deliveryMethod: '手动发货',
-    status: '已完成',
-    remark: '客户主动取消订单',
-    createTime: '2024-03-16 13:45:00',
-    refundInfo: null
-  },
-  {
-    id: 'S000012',
-    orderId: 'DD20240316005', 
-    productName: 'Gmail邮箱-一年以上', 
-    category: '谷歌邮箱',
-    quantity: 10,
-    originalPrice: '¥15.00',
-    purchasePrice: '¥12.00',
-    totalPrice: '¥120.00',
-    fee: '¥0.00',
-    cardId: 'C000012',
-    cardInfo: '批量账号，详情见附件',
-    userEmail: 'wholesale@example.com',
-    userRole: 'vip3',
-    payMethod: 'usdt',
-    deliveryMethod: '自动发货',
-    status: '已完成',
-    remark: '批发客户，享受折扣',
-    createTime: '2024-03-16 15:30:00',
-    refundInfo: null
-  },
-  {
-    id: 'S000013',
-    orderId: 'DD20240316006', 
-    productName: 'Instagram账号-高粉丝', 
-    category: 'Instagram账号',
-    quantity: 1,
-    originalPrice: '¥499.99',
-    purchasePrice: '¥399.99',
-    totalPrice: '¥399.99',
-    fee: '¥10.00',
-    cardId: 'C000013',
-    cardInfo: 'instagram_premium@example.com|ins789xyz',
-    userEmail: 'influencer@example.com',
-    userRole: 'vip3',
-    payMethod: 'usdt',
-    deliveryMethod: '手动发货',
-    status: '待发货',
-    remark: '特殊账号，需人工审核',
-    createTime: '2024-03-16 16:45:00',
-    refundInfo: null
-  },
-  {
-    id: 'S000014',
-    orderId: 'DD20240316007', 
-    productName: 'Twitter账号-已认证', 
-    category: 'Twitter账号',
-    quantity: 1,
-    originalPrice: '¥699.99',
-    purchasePrice: '¥599.99',
-    totalPrice: '¥599.99',
-    fee: '¥15.00',
-    cardId: '',
-    cardInfo: '',
-    userEmail: 'verified@example.com',
-    userRole: 'vip2',
-    payMethod: 'usdt',
-    deliveryMethod: '手动发货',
-    status: '待付款',
-    remark: '高级认证账号',
-    createTime: '2024-03-16 17:30:00',
-    refundInfo: null
-  },
-  {
-    id: 'S000015',
-    orderId: 'DD20240316008', 
-    productName: '其他账号-Steam', 
-    category: '其他账号',
-    quantity: 2,
-    originalPrice: '¥89.99',
-    purchasePrice: '¥79.99',
-    totalPrice: '¥159.98',
-    fee: '¥4.00',
-    cardId: 'C000015',
-    cardInfo: 'steam1@example.com|steam123\nsteam2@example.com|steam456',
-    userEmail: 'gamer@example.com',
-    userRole: '普通用户',
-    payMethod: 'usdt',
-    deliveryMethod: '自动发货',
-    status: '已完成',
-    remark: '游戏账号',
-    createTime: '2024-03-16 18:15:00',
-    refundInfo: null
-  },
-  {
-    id: 'S000016',
-    orderId: 'DD20240316009', 
-    productName: 'Gmail邮箱-美国稳定', 
-    category: '谷歌邮箱',
-    quantity: 1,
-    originalPrice: '¥12.00',
-    purchasePrice: '¥10.00',
-    totalPrice: '¥10.00',
-    fee: '¥0.00',
-    cardId: 'C000016',
-    cardInfo: 'gmail_us@example.com|gmailUS123',
-    userEmail: 'overseas@example.com',
-    userRole: '游客',
-    payMethod: 'usdt',
-    deliveryMethod: '自动发货',
-    status: '已完成',
-    remark: '客户称账号无法登录',
-    createTime: '2024-03-16 19:30:00',
-    refundInfo: {
-      refundAmount: 10.00,
-      refundRemark: '账号无法登录，提示安全验证',
-      refundTime: '2024-03-16 20:45:00'
-    }
-  },
-  {
-    id: 'S000017',
-    orderId: 'DD20240316010', 
-    productName: 'Facebook账号-商业版', 
-    category: 'Facebook账号',
-    quantity: 1,
-    originalPrice: '¥249.99',
-    purchasePrice: '¥199.99',
-    totalPrice: '¥199.99',
-    fee: '¥5.00',
-    cardId: 'C000017',
-    cardInfo: 'fb_business@example.com|fbBiz789',
-    userEmail: 'marketing@example.com',
-    userRole: 'vip1',
-    payMethod: 'usdt',
-    deliveryMethod: '手动发货',
-    status: '已完成',
-    remark: '商业账号，含广告权限',
-    createTime: '2024-03-16 21:00:00',
-    refundInfo: null
-  }
-])
+const editOrderDialogVisible = ref(false)
+const editOrderFormRef = ref<FormInstance>()
+const editOrderForm = ref<Partial<OrderItem>>({ id: '', remark: '' }) // Allow partial updates, focusing on remark
 
-// 添加一个新的变量来存储所有订单数据
-const allOrderList = ref<OrderItem[]>([])
+// Populate orderList and allOrderList from external data onMounted
+onMounted(() => {
+  // Assuming externalOrderList is a ref from the .js file
+  const rawExternalData = externalOrderList.value || [] 
+  orderList.value = JSON.parse(JSON.stringify(rawExternalData)); // Deep copy for local manipulation
+  allOrderList.value = JSON.parse(JSON.stringify(rawExternalData)); // Deep copy for original dataset
+  handleSearch() // Initial filter/display
+  // Initialize total for pagination
+  total.value = filteredOrderList.value.length;
+})
 
 // 查询
 const handleSearch = () => {
@@ -813,12 +451,6 @@ const handleSearch = () => {
     loading.value = false
   }, 500)
 }
-
-// 初始化allOrderList
-onMounted(() => {
-  allOrderList.value = [...orderList.value]
-  handleSearch()
-})
 
 // 添加一个新的变量来存储筛选后的订单数据
 const filteredOrderList = computed(() => {
@@ -866,25 +498,24 @@ const filteredOrderList = computed(() => {
   return result
 })
 
-// 添加总金额计算
-const showTotalAmount = ref(false)
+// 计算筛选后的总金额
 const totalAmount = computed(() => {
   return filteredOrderList.value.reduce((sum, order) => {
     const price = parseFloat(order.totalPrice.replace('¥', ''))
-    return sum + price
+    return sum + (isNaN(price) ? 0 : price)
+  }, 0)
+})
+
+// 计算选中的订单总金额
+const selectedTotalAmount = computed(() => {
+  return multipleSelection.value.reduce((sum, order) => {
+    const price = parseFloat(order.totalPrice.replace('¥', ''))
+    return sum + (isNaN(price) ? 0 : price)
   }, 0)
 })
 
 // 多选相关
 const multipleSelection = ref<OrderItem[]>([])
-const selectedTotalAmount = computed(() => {
-  return multipleSelection.value.reduce((sum, order) => {
-    const price = parseFloat(order.totalPrice.replace('¥', ''))
-    return sum + price
-  }, 0)
-})
-
-// 处理表格选择变化
 const handleSelectionChange = (selection: OrderItem[]) => {
   multipleSelection.value = selection
 }
@@ -1021,7 +652,6 @@ const resetSearch = () => {
   searchForm.status = ''
   searchForm.userRole = ''
   searchForm.dateRange = []
-  showTotalAmount.value = false
   
   // 重置后重新查询
   handleSearch()
@@ -1375,23 +1005,53 @@ const convertToUSDT = (price: string): string => {
 
 // 添加获取用户身份类型函数
 const getUserRoleType = (role: string) => {
-  switch (role) {
-    case '游客':
-      return 'info'
-    case '普通用户':
-      return ''
-    case 'vip1':
-      return 'success'
-    case 'vip2':
-      return 'warning'
-    case 'vip3':
-      return 'danger'
-    case '超级会员':
-      return 'danger'
-    default:
-      return ''
-  }
+  if (role.toLowerCase().includes('vip') || role.includes('超级会员')) return 'warning'
+  if (role === '普通用户') return 'success'
+  return 'info'
 }
+
+// Handlers for new dialogs
+const handleViewDetails = (row: OrderItem) => {
+  selectedOrderDetails.value = JSON.parse(JSON.stringify(row)); // Use a deep copy
+  orderDetailsDialogVisible.value = true;
+};
+
+const handleEditOrder = (row: OrderItem) => {
+  // Only copy relevant fields for editing to avoid unintended modifications
+  editOrderForm.value = { 
+    id: row.id, 
+    orderId: row.orderId, // For display in form
+    remark: row.remark || '' 
+  };
+  editOrderDialogVisible.value = true;
+};
+
+const submitEditOrderForm = async () => {
+  if (!editOrderFormRef.value) return;
+  try {
+    const valid = await editOrderFormRef.value.validate();
+    if (valid && editOrderForm.value.id) {
+      const orderIndex = orderList.value.findIndex(o => o.id === editOrderForm.value.id);
+      if (orderIndex !== -1) {
+        orderList.value[orderIndex].remark = editOrderForm.value.remark;
+        // Also update in allOrderList if you want changes to persist across unfiltered data
+        const allOrderIndex = allOrderList.value.findIndex(o => o.id === editOrderForm.value.id);
+        if (allOrderIndex !== -1) {
+          allOrderList.value[allOrderIndex].remark = editOrderForm.value.remark;
+        }
+        ElMessage.success('备注更新成功');
+        editOrderDialogVisible.value = false;
+      } else {
+        ElMessage.error('未找到订单');
+      }
+    } else {
+      ElMessage.error('表单验证失败');
+    }
+  } catch (error) {
+    console.error("Error submitting edit order form:", error);
+    ElMessage.error('更新备注失败');
+  }
+};
 </script>
 
 <style>
@@ -1499,239 +1159,39 @@ const getUserRoleType = (role: string) => {
   padding: 20px;
 }
 
+.box-card {
+  margin-bottom: 20px;
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 5px;
 }
 
-.card-header span {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.header-buttons {
-  display: flex;
-  gap: 10px;
-}
-
-.header-buttons .el-button + .el-button {
-  margin-left: 0;
+.header-buttons .el-button {
+  margin-left: 10px;
 }
 
 .page-description {
   margin-bottom: 20px;
-  padding: 10px 15px;
-  background-color: #f0f9eb;
+  padding: 15px;
+  background-color: #f4f4f5;
   border-radius: 4px;
-  border-left: 4px solid #67c23a;
+  color: #909399;
+  font-size: 14px;
 }
 
-.page-description p {
-  margin: 0;
-  color: #606266;
-  font-size: 14px;
-  line-height: 1.6;
+.filter-card-wrapper {
+  margin-bottom: 20px;
 }
 
 .search-area {
-  margin-bottom: 20px;
+  /* el-card will provide padding, specific padding here can be removed or adjusted if necessary */
 }
 
-.price {
-  color: #f56c6c;
-  font-weight: bold;
-}
-
-.original-price {
-  color: #909399;
-}
-
-.purchase-price {
-  color: #67c23a;
-  font-weight: bold;
-}
-
-.fee {
-  color: #E6A23C;
-  font-weight: bold;
-}
-
-.pagination-container {
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-:deep(.order-detail) {
-  font-size: 14px;
-  line-height: 1.8;
-}
-
-:deep(.order-detail h3) {
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: #303133;
-  font-size: 18px;
-  border-bottom: 1px solid #ebeef5;
-  padding-bottom: 10px;
-}
-
-:deep(.order-detail h4) {
-  margin-top: 20px;
+.demo-form-inline .el-form-item {
   margin-bottom: 10px;
-  color: #606266;
-  font-size: 16px;
-  border-left: 3px solid #409EFF;
-  padding-left: 10px;
-}
-
-:deep(.detail-section) {
-  margin-bottom: 15px;
-  background-color: #f9f9f9;
-  padding: 10px 15px;
-  border-radius: 4px;
-}
-
-:deep(.detail-item) {
-  margin-bottom: 8px;
-}
-
-:deep(.detail-item .label) {
-  font-weight: bold;
-  color: #606266;
-  display: inline-block;
-  width: 80px;
-}
-
-:deep(.detail-item pre) {
-  margin: 5px 0 0 0;
-  padding: 10px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
-  font-family: monospace;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
-:deep(.account-info pre) {
-  color: #67c23a;
-}
-
-:deep(.order-detail-dialog .el-message-box__wrapper .el-message-box) {
-  max-width: 600px;
-  width: 100%;
-}
-
-/* 退款审核弹窗样式优化 */
-:deep(.refund-dialog) {
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-:deep(.refund-dialog .el-dialog__header) {
-  background-color: #f8f9fa;
-  padding: 16px 24px;
-  margin: 0;
-  border-bottom: 1px solid #e4e7ed;
-}
-
-:deep(.refund-dialog .el-dialog__title) {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-}
-
-:deep(.refund-dialog .el-dialog__body) {
-  padding: 20px;
-}
-
-:deep(.refund-dialog .el-dialog__footer) {
-  padding: 16px 24px;
-  background-color: #f8f9fa;
-  border-top: 1px solid #e4e7ed;
-  margin-top: 0;
-}
-
-:deep(.refund-section) {
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-}
-
-:deep(.refund-section:last-child) {
-  margin-bottom: 0;
-}
-
-:deep(.refund-section h4) {
-  font-size: 16px;
-  color: #303133;
-  margin: 0 0 16px;
-  padding-left: 10px;
-  border-left: 3px solid #409EFF;
-  line-height: 1.2;
-}
-
-:deep(.info-grid) {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-:deep(.info-item) {
-  display: flex;
-  align-items: flex-start;
-}
-
-:deep(.info-item.full-width) {
-  grid-column: span 2;
-}
-
-:deep(.info-item .label) {
-  color: #606266;
-  min-width: 80px;
-  font-weight: 500;
-}
-
-:deep(.info-item .value) {
-  color: #303133;
-  flex: 1;
-  word-break: break-all;
-}
-
-:deep(.info-item .value.price) {
-  color: #f56c6c;
-  font-weight: 600;
-}
-
-:deep(.form-tip.warning) {
-  margin-top: 8px;
-  color: #E6A23C;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-:deep(.dialog-footer) {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-.action-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.action-buttons .el-button {
-  margin-left: 0 !important;
-  margin-right: 0 !important;
 }
 
 .search-summary {
@@ -1739,101 +1199,107 @@ const getUserRoleType = (role: string) => {
   justify-content: space-between;
   align-items: center;
   margin-top: 15px;
-  padding: 12px 15px;
-  background-color: #f5f7fa;
+  padding: 10px;
+  background-color: #f9f9f9;
   border-radius: 4px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
-.total-amount {
+.total-amount span {
+  margin-right: 10px;
   font-size: 14px;
-  color: #606266;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 5px;
 }
 
-.amount-value {
-  font-size: 16px;
+.total-amount .amount-value {
   font-weight: bold;
-  color: #f56c6c;
-  margin-left: 5px;
+  color: #F56C6C;
 }
 
-.action-btns {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.action-btns .el-button {
+  margin-left: 10px;
 }
 
-.action-btns .el-button + .el-button {
-  margin-left: 0;
-}
-
-/* 添加表格选中行的样式 */
-:deep(.el-table .el-table__row.selected-row) {
-  background-color: #f0f9eb;
-}
-
-:deep(.el-table .el-checkbox.is-checked .el-checkbox__inner) {
-  background-color: #67c23a;
-  border-color: #67c23a;
+.table-area-wrapper {
+  /* el-card will provide padding */
 }
 
 .price-container {
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
-.usdt-price {
-  color: #67c23a;
-  font-size: 12px;
+.price, .original-price, .purchase-price, .fee {
+  /* Consolidating price related styles, specific colors can be added if needed */
+  color: #303133;
+}
+
+.price {
+  /* Making sure .price (often total price) stands out if needed */
+  /* font-weight: bold; */ /* Example if it needs to be bolder */
+}
+
+.original-price {
+ color: #909399;
+}
+
+.purchase-price {
+  color: #67C23A;
   font-weight: bold;
 }
 
-/* 退款对话框样式 */
-:deep(.refund-dialog .el-dialog__body) {
-  padding: 20px;
+.fee {
+  color: #E6A23C;
+  /* font-weight: bold; */ /* Example */
 }
 
-.refund-info {
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  padding: 16px;
-  margin-bottom: 20px;
+
+.usdt-price {
+  font-size: 0.9em;
+  color: #67C23A;
 }
 
-.refund-info .info-item {
-  margin-bottom: 10px;
+.pagination-container {
   display: flex;
-  align-items: center;
-  white-space: nowrap;
+  justify-content: flex-end;
+  margin-top: 20px;
 }
 
-.refund-info .info-item:last-child {
-  margin-bottom: 0;
+/* Styles for dialogs */
+.refund-dialog .refund-info {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
 }
 
-.refund-info .label {
-  min-width: 80px;
+.refund-dialog .info-item {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.refund-dialog .info-item .label {
   color: #606266;
-  text-align: right;
-  padding-right: 12px;
-  font-weight: 500;
-  flex-shrink: 0;
+  margin-right: 5px;
 }
 
-.refund-info .value {
-  flex: 1;
+.refund-dialog .info-item .value {
   color: #303133;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.refund-info .value.price {
-  color: #f56c6c;
-  font-weight: 600;
+.refund-dialog .info-item .price {
+  color: #F56C6C;
+  font-weight: bold;
+}
+
+/* Removing potentially conflicting deep selectors and general cleanup */
+/* Styles like :deep(.order-detail), :deep(.refund-dialog .el-dialog__header) etc. */
+/* will be re-evaluated if specific dialog styling is needed later, adhering to BEM or scoped styles */
+
+.order-detail-content pre.card-info-pre {
+  background-color: #f5f7fa;
+  padding: 10px;
+  border-radius: 4px;
+  white-space: pre-wrap; 
+  word-break: break-all; 
+  font-family: monospace;
 }
 </style>

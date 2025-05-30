@@ -146,7 +146,6 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { View, Check, Delete } from '@element-plus/icons-vue'
 import { useRoute } from 'vue-router'
 
 // 获取路由对象
@@ -412,12 +411,6 @@ defineExpose({
 
 .message-header {
   margin-bottom: 20px;
-}
-
-.message-header h3 {
-  margin: 0 0 10px 0;
-  font-size: 18px;
-  color: #303133;
 }
 
 .message-meta {

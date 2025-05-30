@@ -88,13 +88,33 @@
           </template>
         </el-table-column>
         <el-table-column prop="registerTime" label="注册时间" width="180"></el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="120" fixed="right">
           <template #default="scope">
-            <div class="action-buttons">
-              <el-button size="small" type="primary" @click="handleEdit(scope.row)">编辑</el-button>
-              <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
-              <el-button size="small" type="info" @click="handleUserLogs(scope.row)">日志</el-button>
-            </div>
+            <el-dropdown trigger="hover">
+              <el-button type="primary" size="small">
+                操作
+                <el-icon class="el-icon--right"><arrow-down /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item @click="handleEdit(scope.row)">
+                    <el-icon><Edit /></el-icon>编辑
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="handleBalanceOperation(scope.row)">
+                    <el-icon><Money /></el-icon>余额操作
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="handleResetPassword(scope.row)">
+                    <el-icon><Key /></el-icon>重置密码
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="handleUserLogs(scope.row)">
+                    <el-icon><Document /></el-icon>查看日志
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="handleDelete(scope.row)">
+                    <el-icon><Delete /></el-icon>删除
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
@@ -132,9 +152,6 @@
         </el-form-item>
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="userForm.email" placeholder="请输入邮箱"></el-input>
-        </el-form-item>
-        <el-form-item label="用户余额" prop="balance">
-          <el-input-number v-model="userForm.balance" :precision="2" :step="10" :min="0"></el-input-number>
         </el-form-item>
         <el-form-item label="VIP等级" prop="role">
           <el-select v-model="userForm.role" placeholder="请选择VIP等级" style="width: 168px;">
@@ -221,6 +238,49 @@
         ></el-pagination>
       </div>
     </el-dialog>
+
+    <!-- 余额操作对话框 -->
+    <el-dialog
+      v-model="balanceDialogVisible"
+      title="余额操作"
+      width="500px"
+    >
+      <div class="balance-info">
+        <p>当前用户：{{ currentUser?.nickname }} ({{ currentUser?.email }})</p>
+        <p>当前余额：<span class="money">¥{{ currentUser?.balance }}</span></p>
+      </div>
+      <el-form :model="balanceForm" label-width="100px" :rules="balanceRules" ref="balanceFormRef">
+        <el-form-item label="操作类型" prop="operationType">
+          <el-radio-group v-model="balanceForm.operationType">
+            <el-radio label="increase">增加余额</el-radio>
+            <el-radio label="decrease">扣减余额</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="操作金额" prop="amount">
+          <el-input-number 
+            v-model="balanceForm.amount" 
+            :precision="2" 
+            :step="10" 
+            :min="0"
+            style="width: 200px;"
+          ></el-input-number>
+        </el-form-item>
+        <el-form-item label="操作说明" prop="remark">
+          <el-input 
+            v-model="balanceForm.remark" 
+            type="textarea" 
+            :rows="3" 
+            placeholder="请输入操作说明"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="balanceDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitBalanceOperation">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -228,6 +288,7 @@
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
+import { Edit, Key, Document, Delete, ArrowDown, Money } from '@element-plus/icons-vue'
 
 // 搜索表单
 const searchForm = reactive({
@@ -239,108 +300,60 @@ const searchForm = reactive({
 
 // 表格数据
 const tableData = ref([
-  { 
-    userId: 'U10001',
-    username: 'user123',
-    nickname: '张小明',
-    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-    phone: '138****1234',
-    email: 'user123@example.com',
-    role: 0,
-    status: '正常',
-    statusBool: true,
-    registerTime: '2024-01-15 10:00:00',
-    lastLoginTime: '2024-03-15 08:30:00',
-    registerIp: '192.168.1.1',
+  {
+    userId: 'user001',
+    email: 'testuser1@example.com',
+    nickname: '测试用户一',
+    password: 'password123',
     balance: 100.50,
-    totalSpent: 899.50
-  },
-  { 
-    userId: 'U10002',
-    username: 'admin456',
-    nickname: '李管理',
-    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-    phone: '139****5678',
-    email: 'admin456@example.com',
-    role: 3,
-    status: '正常',
+    role: 0, // 普通会员
+    totalSpent: 250.00,
+    status: 'normal',
     statusBool: true,
-    registerTime: '2023-12-20 14:30:00',
-    lastLoginTime: '2024-03-15 09:15:00',
-    registerIp: '192.168.1.2',
-    balance: 0,
-    totalSpent: 0
+    registerTime: '2023-01-15 10:30:00',
   },
-  { 
-    userId: 'U10003',
-    username: 'vip789',
-    nickname: '王大富',
-    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-    phone: '137****9012',
-    email: 'vip789@example.com',
-    role: 2,
-    status: '正常',
-    statusBool: true,
-    registerTime: '2024-02-05 16:45:00',
-    lastLoginTime: '2024-03-14 18:20:00',
-    registerIp: '192.168.1.3',
+  {
+    userId: 'user002',
+    email: 'vipuser2@example.com',
+    nickname: 'VIP二号',
+    password: 'password456',
     balance: 500.75,
-    totalSpent: 4499.25
+    role: 1, // 银卡会员
+    totalSpent: 1200.00,
+    status: 'normal',
+    statusBool: true,
+    registerTime: '2023-02-20 14:00:00',
   },
-  { 
-    userId: 'U10004',
-    username: 'test321',
-    nickname: '赵测试',
-    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-    phone: '136****3456',
-    email: 'test321@example.com',
-    role: 0,
-    status: '禁用',
+  {
+    userId: 'user003',
+    email: 'goldmember3@example.com',
+    nickname: '金卡三',
+    password: 'password789',
+    balance: 2000.00,
+    role: 2, // 金卡会员
+    totalSpent: 5000.00,
+    status: 'disabled',
     statusBool: false,
-    registerTime: '2024-01-30 09:10:00',
-    lastLoginTime: '2024-02-28 11:05:00',
-    registerIp: '192.168.1.4',
-    balance: 50.25,
-    totalSpent: 149.75
+    registerTime: '2023-03-10 09:15:00',
   },
-  { 
-    userId: 'U10005',
-    username: 'guest555',
-    nickname: '陈访客',
-    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-    phone: '135****7890',
-    email: 'guest555@example.com',
-    role: 1,
-    status: '正常',
+  {
+    userId: 'user004',
+    email: 'diamonduser4@example.com',
+    nickname: '钻石头号玩家',
+    password: 'passwordabc',
+    balance: 150.00,
+    role: 3, // 钻石会员
+    totalSpent: 800.00,
+    status: 'normal',
     statusBool: true,
-    registerTime: '2024-03-01 13:25:00',
-    lastLoginTime: '2024-03-15 07:40:00',
-    registerIp: '192.168.1.5',
-    balance: 0,
-    totalSpent: 0
+    registerTime: '2023-04-05 18:45:00',
   },
-  { 
-    userId: 'U10006',
-    username: 'supervip',
-    nickname: '刘总',
-    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-    phone: '133****6666',
-    email: 'supervip@example.com',
-    role: 4,
-    status: '正常',
-    statusBool: true,
-    registerTime: '2024-03-10 09:30:00',
-    lastLoginTime: '2024-03-16 10:20:00',
-    registerIp: '192.168.1.6',
-    balance: 10000.00,
-    totalSpent: 40000.00
-  }
 ])
 
 // 分页相关
 const currentPage = ref(1)
 const pageSize = ref(10)
-const total = ref(0)
+const total = ref(tableData.value.length)
 const loading = ref(false)
 
 // VIP等级名称和样式处理
@@ -734,11 +747,48 @@ onMounted(() => {
 
 // 用户操作日志相关
 const userLogsDialogVisible = ref(false)
-const userLogsList = ref<any[]>([])
+const userLogsList = ref<any[]>([
+  {
+    logId: 'log001',
+    userId: 'user001',
+    operator: 'admin',
+    operationType: '余额充值',
+    operationAmount: 50.00,
+    operationDesc: '用户在线充值',
+    operationTime: '2023-05-01 10:00:00',
+  },
+  {
+    logId: 'log002',
+    userId: 'user002',
+    operator: 'system',
+    operationType: '等级变更',
+    operationAmount: 0,
+    operationDesc: '用户升级为银卡会员',
+    operationTime: '2023-05-02 11:30:00',
+  },
+  {
+    logId: 'log003',
+    userId: 'user001',
+    operator: 'user001',
+    operationType: '修改密码',
+    operationAmount: 0,
+    operationDesc: '用户自行修改登录密码',
+    operationTime: '2023-05-03 14:20:00',
+  },
+  {
+    logId: 'log004',
+    userId: 'user003',
+    operator: 'admin',
+    operationType: '账户冻结',
+    operationAmount: 0,
+    operationDesc: '因违规操作，账户被冻结',
+    operationTime: '2023-05-04 09:00:00',
+  },
+])
 const logsLoading = ref(false)
 const logsCurrentPage = ref(1)
 const logsPageSize = ref(10)
-const logsTotalCount = ref(0)
+const logsTotalCount = ref(userLogsList.value.length)
 
 // 处理用户日志
 const handleUserLogs = (row: any) => {
@@ -762,46 +812,46 @@ const fetchUserLogs = () => {
       {
         logId: 'L0001',
         userId: currentUser.value.userId,
-        operator: '系统',
-        operationType: '充值',
+        operator: '管理员',
+        operationType: '余额增加',
         operationAmount: 1000.00,
-        operationDesc: '用户在线充值',
+        operationDesc: '人工充值',
         operationTime: '2024-03-15 10:30:22'
       },
       {
         logId: 'L0002',
         userId: currentUser.value.userId,
         operator: '管理员',
-        operationType: '人工充值',
+        operationType: '余额增加',
         operationAmount: 500.00,
-        operationDesc: '管理员手动充值',
+        operationDesc: '活动奖励',
         operationTime: '2024-03-14 15:45:10'
       },
       {
         logId: 'L0003',
         userId: currentUser.value.userId,
-        operator: '系统',
-        operationType: '消费',
+        operator: '管理员',
+        operationType: '余额扣减',
         operationAmount: -200.00,
-        operationDesc: '购买商品',
+        operationDesc: '违规扣除',
         operationTime: '2024-03-13 09:20:33'
       },
       {
         logId: 'L0004',
         userId: currentUser.value.userId,
-        operator: '系统',
-        operationType: '退款',
+        operator: '管理员',
+        operationType: '余额增加',
         operationAmount: 50.00,
-        operationDesc: '订单部分退款',
+        operationDesc: '补偿',
         operationTime: '2024-03-12 14:10:05'
       },
       {
         logId: 'L0005',
         userId: currentUser.value.userId,
         operator: '管理员',
-        operationType: '扣款',
+        operationType: '余额扣减',
         operationAmount: -100.00,
-        operationDesc: '违规扣除',
+        operationDesc: '扣除无效充值',
         operationTime: '2024-03-10 16:30:45'
       }
     ]
@@ -815,14 +865,9 @@ const fetchUserLogs = () => {
 // 获取操作类型标签样式
 const getOperationTypeTag = (type: string) => {
   switch (type) {
-    case '充值':
-    case '人工充值':
+    case '余额增加':
       return 'success'
-    case '消费':
-      return 'info'
-    case '退款':
-      return 'warning'
-    case '扣款':
+    case '余额扣减':
       return 'danger'
     default:
       return ''
@@ -838,6 +883,80 @@ const handleLogsSizeChange = (val: number) => {
 const handleLogsCurrentChange = (val: number) => {
   logsCurrentPage.value = val
   fetchUserLogs()
+}
+
+// 余额操作相关
+const balanceDialogVisible = ref(false)
+const balanceFormRef = ref<FormInstance>()
+const balanceForm = reactive({
+  operationType: 'increase',
+  amount: 0,
+  remark: ''
+})
+
+// 余额操作表单验证规则
+const balanceRules = reactive<FormRules>({
+  operationType: [
+    { required: true, message: '请选择操作类型', trigger: 'change' }
+  ],
+  amount: [
+    { required: true, message: '请输入操作金额', trigger: 'blur' }
+  ],
+  remark: [
+    { required: true, message: '请输入操作说明', trigger: 'blur' },
+    { max: 200, message: '操作说明不能超过200个字符', trigger: 'blur' }
+  ]
+})
+
+// 处理余额操作
+const handleBalanceOperation = (row: any) => {
+  currentUser.value = row
+  balanceForm.operationType = 'increase'
+  balanceForm.amount = 0
+  balanceForm.remark = ''
+  balanceDialogVisible.value = true
+}
+
+// 提交余额操作
+const submitBalanceOperation = async () => {
+  if (!balanceFormRef.value) return
+  
+  await balanceFormRef.value.validate((valid, fields) => {
+    if (valid) {
+      const amount = balanceForm.operationType === 'increase' ? balanceForm.amount : -balanceForm.amount
+      const operationType = balanceForm.operationType === 'increase' ? '余额增加' : '余额扣减'
+      
+      // 更新用户余额
+      const index = tableData.value.findIndex(item => item.userId === currentUser.value.userId)
+      if (index !== -1) {
+        const newBalance = tableData.value[index].balance + amount
+        if (newBalance < 0) {
+          ElMessage.error('用户余额不足')
+          return
+        }
+        tableData.value[index].balance = newBalance
+        currentUser.value.balance = newBalance
+        
+        // 添加操作日志
+        const newLog = {
+          logId: `L${Date.now()}`,
+          userId: currentUser.value.userId,
+          operator: '管理员',
+          operationType,
+          operationAmount: amount,
+          operationDesc: balanceForm.remark,
+          operationTime: new Date().toLocaleString()
+        }
+        
+        if (userLogsList.value) {
+          userLogsList.value.unshift(newLog)
+        }
+        
+        ElMessage.success('操作成功')
+        balanceDialogVisible.value = false
+      }
+    }
+  })
 }
 </script>
 
@@ -1064,5 +1183,22 @@ const handleLogsCurrentChange = (val: number) => {
   color: #303133;
   border-bottom: 1px solid #EBEEF5;
   padding-bottom: 15px;
+}
+
+.balance-info {
+  background-color: #f5f7fa;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.balance-info p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #606266;
+}
+
+.balance-info .money {
+  font-size: 16px;
 }
 </style> 

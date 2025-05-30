@@ -4,7 +4,7 @@
       <template #header>
         <div class="card-header">
           <span>系统文档设置</span>
-          <el-button type="primary" @click="saveAllDocuments">保存所有更改</el-button>
+          <el-button type="primary" @click="saveAllDocuments" :icon="FolderChecked">保存所有更改</el-button>
         </div>
       </template>
       
@@ -63,8 +63,8 @@
             <span>最后更新时间：{{ currentDocument.updateTime || '未保存' }}</span>
           </div>
           <div class="action-buttons">
-            <el-button @click="resetDocument">重置</el-button>
-            <el-button type="primary" @click="saveDocument">保存</el-button>
+            <el-button @click="resetDocument" :icon="RefreshLeft">重置</el-button>
+            <el-button type="primary" @click="saveDocument" :icon="Select">保存</el-button>
           </div>
         </div>
       </div>
@@ -89,6 +89,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import '@wangeditor/editor/dist/css/style.css' // 引入编辑器样式
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import type { IEditorConfig, IToolbarConfig } from '@wangeditor/editor'
+import { FolderChecked, RefreshLeft, Select } from '@element-plus/icons-vue'
 
 // 加载状态
 const loading = ref(false)

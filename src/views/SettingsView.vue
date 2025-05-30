@@ -371,10 +371,6 @@ const resetUsdtRateForm = () => {
     usdtRateFormRef.value.resetFields()
   }
 }
-
-onMounted(() => {
-  // 初始化数据
-})
 </script>
 
 <style scoped>
@@ -427,26 +423,6 @@ onMounted(() => {
 .form-text {
   margin-left: 10px;
   font-size: 14px;
-}
-
-.form-tip {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 5px;
-}
-
-.small-input {
-  width: 120px !important;
-  margin: 0 5px;
-}
-
-.medium-input {
-  width: 120px !important;
-}
-
-.form-text {
-  margin-left: 10px;
-  font-size: 14px;
   color: #606266;
 }
 
@@ -455,17 +431,5 @@ onMounted(() => {
   color: #909399;
   line-height: 1.5;
   margin-top: 5px;
-}
-
-.table-footer {
-  margin-top: 10px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.table-tip {
-  font-size: 12px;
-  color: #909399;
 }
 </style> 

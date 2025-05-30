@@ -124,21 +124,27 @@
           </el-table-column>
           <el-table-column prop="createTime" label="创建时间" min-width="180" />
           <el-table-column prop="payTime" label="支付时间" min-width="180" />
-          <el-table-column label="操作" width="180" fixed="right">
+          <el-table-column label="操作" width="120" fixed="right">
             <template #default="scope">
-              <div class="action-buttons">
-                <el-button 
-                  v-if="scope.row.status === 'pending'" 
-                  size="small" 
-                  type="success" 
-                  @click="confirmPayment(scope.row)"
-                >确认支付</el-button>
-                <el-button 
-                  size="small" 
-                  type="danger" 
-                  @click="handleDelete(scope.row)"
-                >删除</el-button>
-              </div>
+              <el-dropdown trigger="hover">
+                <el-button type="primary" size="small">
+                  操作
+                  <el-icon class="el-icon--right"><arrow-down /></el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item v-if="scope.row.status === 'pending'" @click="confirmPayment(scope.row)">
+                      <el-icon><Check /></el-icon>确认支付
+                    </el-dropdown-item>
+                    <el-dropdown-item v-if="scope.row.status === 'paid' && !scope.row.refunded" @click="handleRefund(scope.row)">
+                      <el-icon><Money /></el-icon>退款
+                    </el-dropdown-item>
+                    <el-dropdown-item @click="handleDelete(scope.row)">
+                      <el-icon><Delete /></el-icon>删除
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </template>
           </el-table-column>
         </el-table>
@@ -296,7 +302,7 @@
   import { ref, reactive, onMounted, computed } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import type { FormInstance, FormRules } from 'element-plus'
-  import { Download, Money } from '@element-plus/icons-vue'
+  import { Download, Money, View, Check, Delete, ArrowDown } from '@element-plus/icons-vue'
   
   // 定义充值订单类型
   interface RechargeOrder {
@@ -476,7 +482,6 @@
             logs: [
               { time: '2024-03-10 10:00:00', action: '创建订单', operator: '系统' },
               { time: '2024-03-10 10:05:23', action: '支付成功', operator: '系统' },
-              { time: '2024-03-10 11:00:00', action: '提款完成', operator: '管理员' }
             ]
           },
           {
@@ -487,7 +492,7 @@
             amount: 2000.00,
             fee: 20.00,
             status: 'pending',
-            paymentMethod: 'usdt',
+            paymentMethod: 'wechat',
             channelName: '通道B',
             createTime: '2024-03-10 11:30:00',
             logs: [
@@ -502,12 +507,12 @@
             amount: 500.00,
             fee: 5.00,
             status: 'cancelled',
-            paymentMethod: 'wechat',
+            paymentMethod: 'alipay',
             channelName: '通道C',
             createTime: '2024-03-10 14:20:00',
             logs: [
               { time: '2024-03-10 14:20:00', action: '创建订单', operator: '系统' },
-              { time: '2024-03-10 15:30:00', action: '取消订单', operator: '管理员' }
+              { time: '2024-03-10 15:30:00', action: '取消订单', operator: '用户' }
             ]
           },
           {
@@ -515,165 +520,22 @@
             orderNo: 'CZ202403100004',
             userId: 1004,
             userEmail: 'zhaoliu@example.com',
-            amount: 1000.00,
-            fee: 10.00,
+            amount: 100.00,
+            fee: 1.00,
             status: 'paid',
             paymentMethod: 'usdt',
-            channelName: '通道B',
+            channelName: '通道A',
             transactionId: '2024031087654321',
-            createTime: '2024-03-10 16:00:00',
-            payTime: '2024-03-10 16:05:12',
+            createTime: '2024-03-11 16:00:00',
+            payTime: '2024-03-11 16:05:12',
             logs: [
-              { time: '2024-03-10 16:00:00', action: '创建订单', operator: '系统' },
-              { time: '2024-03-10 16:05:12', action: '支付成功', operator: '系统' }
-            ]
-          },
-          {
-            id: 'R000005',
-            orderNo: 'CZ202403110001',
-            userId: 1005,
-            userEmail: 'sunqi@example.com',
-            amount: 3000.00,
-            fee: 30.00,
-            status: 'paid',
-            paymentMethod: 'alipay',
-            channelName: '通道D',
-            transactionId: '2024031100001',
-            createTime: '2024-03-11 09:15:00',
-            payTime: '2024-03-11 09:20:35',
-            logs: [
-              { time: '2024-03-11 09:15:00', action: '创建订单', operator: '系统' },
-              { time: '2024-03-11 09:20:35', action: '支付成功', operator: '系统' }
-            ]
-          },
-          {
-            id: 'R000006',
-            orderNo: 'CZ202403110002',
-            userId: 1006,
-            userEmail: 'zhouba@example.com',
-            amount: 5000.00,
-            fee: 50.00,
-            status: 'cancelled',
-            paymentMethod: 'usdt',
-            channelName: '通道A',
-            refunded: true,
-            createTime: '2024-03-11 10:30:00',
-            payTime: '2024-03-11 10:35:22',
-            logs: [
-              { time: '2024-03-11 10:30:00', action: '创建订单', operator: '系统' },
-              { time: '2024-03-11 10:35:22', action: '支付成功', operator: '系统' },
-              { time: '2024-03-11 14:20:00', action: '退款 ¥5000.00 - 客户申请退款', operator: '管理员' }
-            ]
-          },
-          {
-            id: 'R000007',
-            orderNo: 'CZ202403110003',
-            userId: 1007,
-            userEmail: 'wujiu@example.com',
-            amount: 800.00,
-            fee: 8.00,
-            status: 'paid',
-            paymentMethod: 'wechat',
-            channelName: '通道C',
-            transactionId: '2024031100003',
-            createTime: '2024-03-11 13:45:00',
-            payTime: '2024-03-11 13:50:18',
-            logs: [
-              { time: '2024-03-11 13:45:00', action: '创建订单', operator: '系统' },
-              { time: '2024-03-11 13:50:18', action: '支付成功', operator: '系统' },
-              { time: '2024-03-11 16:30:00', action: '提款 ¥800.00', operator: '管理员' }
-            ]
-          },
-          {
-            id: 'R000008',
-            orderNo: 'CZ202403120001',
-            userId: 1008,
-            userEmail: 'zhengshi@example.com',
-            amount: 1500.00,
-            fee: 15.00,
-            status: 'pending',
-            paymentMethod: 'alipay',
-            channelName: '通道D',
-            createTime: '2024-03-12 08:30:00',
-            logs: [
-              { time: '2024-03-12 08:30:00', action: '创建订单', operator: '系统' }
-            ]
-          },
-          {
-            id: 'R000009',
-            orderNo: 'CZ202403120002',
-            userId: 1009,
-            userEmail: 'wangshi@example.com',
-            amount: 2500.00,
-            fee: 25.00,
-            status: 'paid',
-            paymentMethod: 'usdt',
-            channelName: '通道A',
-            transactionId: '2024031200002',
-            createTime: '2024-03-12 10:15:00',
-            payTime: '2024-03-12 10:20:45',
-            logs: [
-              { time: '2024-03-12 10:15:00', action: '创建订单', operator: '系统' },
-              { time: '2024-03-12 10:20:45', action: '支付成功', operator: '系统' },
-              { time: '2024-03-12 11:30:00', action: '提款 ¥2500.00', operator: '管理员' }
-            ]
-          },
-          {
-            id: 'R000010',
-            orderNo: 'CZ202403120003',
-            userId: 1010,
-            userEmail: 'lishi@example.com',
-            amount: 3500.00,
-            fee: 35.00,
-            status: 'cancelled',
-            paymentMethod: 'alipay',
-            channelName: '通道D',
-            refunded: true,
-            createTime: '2024-03-12 14:00:00',
-            payTime: '2024-03-12 14:05:33',
-            logs: [
-              { time: '2024-03-12 14:00:00', action: '创建订单', operator: '系统' },
-              { time: '2024-03-12 14:05:33', action: '支付成功', operator: '系统' },
-              { time: '2024-03-12 16:45:00', action: '退款 ¥3500.00 - 系统错误', operator: '管理员' }
-            ]
-          },
-          {
-            id: 'R000011',
-            orderNo: 'CZ202403130001',
-            userId: 1011,
-            userEmail: 'zhangshiyi@example.com',
-            amount: 6000.00,
-            fee: 60.00,
-            status: 'paid',
-            paymentMethod: 'usdt',
-            channelName: '通道B',
-            transactionId: '2024031300001',
-            createTime: '2024-03-13 09:00:00',
-            payTime: '2024-03-13 09:10:15',
-            logs: [
-              { time: '2024-03-13 09:00:00', action: '创建订单', operator: '系统' },
-              { time: '2024-03-13 09:10:15', action: '支付成功', operator: '系统' }
-            ]
-          },
-          {
-            id: 'R000012',
-            orderNo: 'CZ202403130002',
-            userId: 1012,
-            userEmail: 'lishier@example.com',
-            amount: 4000.00,
-            fee: 40.00,
-            status: 'pending',
-            paymentMethod: 'wechat',
-            channelName: '通道C',
-            createTime: '2024-03-13 11:20:00',
-            logs: [
-              { time: '2024-03-13 11:20:00', action: '创建订单', operator: '系统' }
+              { time: '2024-03-11 16:00:00', action: '创建订单', operator: '系统' },
+              { time: '2024-03-11 16:05:12', action: '支付成功', operator: '系统' }
             ]
           }
-        ]
-        
-        orderList.value = mockData
-        total.value = mockData.length
+        ];
+        orderList.value = mockData;
+        total.value = mockData.length;
         loading.value = false
       }, 500)
     } catch (error) {
@@ -983,11 +845,6 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-  }
-  
-  .header-actions {
-    display: flex;
-    gap: 10px;
   }
   
   .page-description {

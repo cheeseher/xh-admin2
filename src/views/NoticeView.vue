@@ -63,6 +63,7 @@
         <el-table-column prop="publishTime" label="发布时间" width="180" />
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
+            <el-button link :icon="View" @click="handleView(row)">查看</el-button>
             <el-button link type="primary" :icon="Edit" @click="handleEdit(row)">编辑</el-button>
             <el-popconfirm title="确认删除?" @confirm="handleDelete(row)">
               <template #reference>
@@ -121,8 +122,16 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { View, Edit, Delete } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { 
+  tableData as noticeTableData, 
+  addNotice, 
+  updateNotice, 
+  deleteNotice,
+  batchDeleteNotices
+} from '@/data/noticeData.js'
 
 // 筛选表单
 const filterForm = reactive({
@@ -131,35 +140,13 @@ const filterForm = reactive({
 })
 
 // 表格数据
-const tableData = ref([
-  {
-    id: 1,
-    title: '系统维护公告',
-    content: '平台将于2024年5月1日凌晨进行系统维护，届时部分功能将暂时不可用。',
-    status: 'enabled',
-    publishTime: '2024-04-28 09:00:00'
-  },
-  {
-    id: 2,
-    title: '新功能上线',
-    content: '我们已上线批量导入功能，欢迎体验。',
-    status: 'disabled',
-    publishTime: '2024-04-20 10:30:00'
-  },
-  {
-    id: 3,
-    title: '假期放假通知',
-    content: '五一劳动节期间，平台客服将暂停服务，祝大家节日快乐！',
-    status: 'disabled',
-    publishTime: '2024-04-18 15:00:00'
-  }
-])
+const tableData = noticeTableData
 
 // 分页参数
 const pagination = reactive({
   currentPage: 1,
   pageSize: 10,
-  total: 3
+  total: computed(() => tableData.value.length)
 })
 
 // 加载状态
@@ -167,9 +154,29 @@ const tableLoading = ref(false)
 const submitLoading = ref(false)
 
 // 多选
-const handleSelectionChange = () => {}
-const handleBatchDelete = () => {}
-const refreshTable = () => {}
+const selectedNotices = ref([])
+const handleSelectionChange = (selection) => {
+  selectedNotices.value = selection.map(item => item.id)
+}
+const handleBatchDelete = () => {
+  if (selectedNotices.value.length === 0) {
+    ElMessage.warning('请至少选择一条数据')
+    return
+  }
+  batchDeleteNotices(selectedNotices.value)
+  ElMessage.success('批量删除成功')
+  selectedNotices.value = []
+  pagination.total = tableData.value.length 
+}
+
+const refreshTable = () => {
+  tableLoading.value = true
+  setTimeout(() => {
+    pagination.total = tableData.value.length
+    tableLoading.value = false
+    ElMessage.success('刷新成功')
+  }, 500)
+}
 
 // 弹窗相关
 const dialogVisible = ref(false)
@@ -201,57 +208,27 @@ const handleEdit = (row) => {
   dialogVisible.value = true
 }
 const handleView = (row) => {
-  // 可扩展为弹窗预览
   handleEdit(row)
 }
 const handleDelete = (row) => {
-  // 删除逻辑
+  deleteNotice(row)
+  ElMessage.success('删除成功')
+  pagination.total = tableData.value.length 
 }
 const submitForm = () => {
   formRef.value.validate((valid) => {
     if (valid) {
       submitLoading.value = true
-      
-      // 如果当前表单状态为启用，则禁用其他所有公告
-      if (form.status === 'enabled') {
-        tableData.value.forEach(item => {
-          if (item.id !== form.id) {
-            item.status = 'disabled'
-          }
-        })
-      }
-      
-      // 如果是新增公告
       if (form.id === null) {
-        // 生成新ID和发布时间
-        const newId = Math.max(...tableData.value.map(item => item.id), 0) + 1
-        const now = new Date()
-        const publishTime = now.toLocaleDateString().replace(/\//g, '-') + ' ' + 
-                           now.toTimeString().substring(0, 8)
-        
-        // 添加新公告
-        tableData.value.push({
-          id: newId,
-          title: form.title,
-          content: form.content,
-          status: form.status,
-          publishTime: publishTime
-        })
+        addNotice(form)
+        ElMessage.success('新增成功')
       } else {
-        // 更新现有公告
-        const index = tableData.value.findIndex(item => item.id === form.id)
-        if (index !== -1) {
-          tableData.value[index] = {
-            ...tableData.value[index],
-            title: form.title,
-            content: form.content,
-            status: form.status
-          }
-        }
+        updateNotice(form)
+        ElMessage.success('更新成功')
       }
-      
-      submitLoading.value = false
+      pagination.total = tableData.value.length 
       dialogVisible.value = false
+      submitLoading.value = false
     }
   })
 }
@@ -260,8 +237,12 @@ const resetFilter = () => {
   filterForm.title = ''
   filterForm.status = ''
 }
-const handleSizeChange = () => {}
-const handleCurrentChange = () => {}
+const handleSizeChange = (size) => {
+  pagination.pageSize = size
+}
+const handleCurrentChange = (page) => {
+  pagination.currentPage = page
+}
 </script>
 
 <style scoped>

@@ -4,7 +4,7 @@
       <template #header>
         <div class="card-header">
           <span>文档设置</span>
-          <el-button type="primary" @click="handleAddHelp">新增文档</el-button>
+          <el-button type="primary" @click="handleAddHelp" :icon="Plus">新增文档</el-button>
         </div>
       </template>
       
@@ -32,8 +32,8 @@
             </el-select>
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" @click="handleSearch">查询</el-button>
-            <el-button @click="resetSearch">重置</el-button>
+            <el-button type="primary" @click="handleSearch" :icon="Search">查询</el-button>
+            <el-button @click="resetSearch" :icon="RefreshRight">重置</el-button>
           </el-form-item>
         </el-form>
       </div>
@@ -62,7 +62,7 @@
         </el-table-column>
         <el-table-column label="文档内容" width="100" align="center">
           <template #default="scope">
-            <el-button type="primary" link @click="handlePreview(scope.row)">预览</el-button>
+            <el-button type="primary" link @click="handlePreview(scope.row)" :icon="View">预览</el-button>
           </template>
         </el-table-column>
         <el-table-column prop="sort" label="排序" width="80"></el-table-column>
@@ -81,8 +81,19 @@
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
-              <el-button size="small" type="primary" @click="handleEdit(scope.row)">编辑</el-button>
-              <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+              <el-button link type="primary" :icon="Edit" @click="handleEdit(scope.row)">编辑</el-button>
+              <el-popconfirm
+                title="确定要删除该文档吗？"
+                confirm-button-text="确定"
+                cancel-button-text="取消"
+                @confirm="handleDelete(scope.row)"
+                placement="top-end"
+                width="200"
+              >
+                <template #reference>
+                  <el-button link type="danger" :icon="Delete">删除</el-button>
+                </template>
+              </el-popconfirm>
             </div>
           </template>
         </el-table-column>
@@ -125,7 +136,7 @@
           <div class="editor-container">
             <div class="editor-toolbar">
               <div></div>
-              <el-button size="small" @click="previewContent">预览效果</el-button>
+              <el-button link type="primary" @click="previewContent" :icon="View">预览效果</el-button>
             </div>
             <QuillEditor
               v-model:content="helpForm.content"
@@ -147,8 +158,8 @@
       </el-form>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitForm">确定</el-button>
+          <el-button @click="dialogVisible = false" :icon="Close">取消</el-button>
+          <el-button type="primary" @click="submitForm" :icon="Select">确定</el-button>
         </span>
       </template>
     </el-dialog>
@@ -178,6 +189,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
+import { Plus, Search, RefreshRight, View, Edit, Delete, Close, Select } from '@element-plus/icons-vue'
 
 // 搜索表单
 const searchForm = reactive({
@@ -405,7 +417,7 @@ const handleAddHelp = () => {
 }
 
 // 编辑
-const handleEdit = (row: any) => {
+const handleEdit = (row: HelpItem) => {
   dialogType.value = 'edit'
   helpForm.id = row.id
   helpForm.title = row.title
@@ -418,34 +430,31 @@ const handleEdit = (row: any) => {
 }
 
 // 删除
-const handleDelete = (row: any) => {
-  ElMessageBox.confirm(
-    `确定要删除文档"${row.title}"吗？`,
-    '警告',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    }
-  )
-    .then(() => {
-      // 实际项目中这里应该调用API进行删除
-      const index = helpList.value.findIndex(item => item.id === row.id)
-      if (index !== -1) {
-        helpList.value.splice(index, 1)
-      }
-      ElMessage.success('删除成功')
-    })
-    .catch(() => {
-      ElMessage.info('已取消删除')
-    })
+const handleDelete = (row: HelpItem) => {
+  // 实际项目中这里应该调用API进行删除
+  const index = helpList.value.findIndex(item => item.id === row.id)
+  if (index !== -1) {
+    helpList.value.splice(index, 1)
+    ElMessage.success('删除成功')
+    handleSearch() // 重新筛选以更新视图和分页
+  } else {
+    ElMessage.error('删除失败，未找到对应文档')
+  }
 }
 
 // 状态变更
-const handleStatusChange = (val: boolean, row: any) => {
+const handleStatusChange = (val: boolean, row: HelpItem) => {
   // 实际项目中这里应该调用API进行状态更新
-  row.status = val ? '已发布' : '未发布'
-  ElMessage.success(`状态已更新为：${row.status}`)
+  const item = helpList.value.find(h => h.id === row.id);
+  if (item) {
+    item.statusBool = val;
+    ElMessage.success(`状态已更新为：${val ? '已发布' : '未发布'}`)
+    // 如果需要，可以在这里调用 handleSearch() 来刷新列表，但通常 el-switch 的变化会直接响应式更新
+    // 为了确保筛选逻辑在状态改变后依然正确，可以考虑调用 handleSearch()
+    handleSearch(); 
+  } else {
+    ElMessage.error('状态更新失败，未找到对应文档');
+  }
 }
 
 // 重置表单
@@ -506,10 +515,14 @@ const submitForm = async () => {
 }
 
 // 预览
-const handlePreview = (row: any) => {
-  helpForm.id = row.id
+const handlePreview = (row: HelpItem) => {
+  // 注意：预览时，我们不直接修改 helpForm 的 id，因为 helpForm 主要用于编辑/新增
+  // 这里可以创建一个临时的对象来传递给预览弹窗，或者让预览弹窗直接使用 row 的数据
+  // 为了简单起见，并且考虑到预览弹窗目前也复用了 helpForm 的部分字段，我们暂时保持原样
+  // 但在实际项目中，预览的数据源应该更清晰
   helpForm.title = row.title
   helpForm.subtitle = row.subtitle
+  helpForm.category = row.category // 确保预览弹窗能获取分类信息
   helpForm.content = row.content
   previewVisible.value = true
 }
@@ -589,8 +602,8 @@ onMounted(() => {
 }
 
 .action-buttons .el-button {
-  margin-left: 0 !important;
-  margin-right: 0 !important;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .status-text {

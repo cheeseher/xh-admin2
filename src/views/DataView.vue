@@ -3,7 +3,7 @@
     <!-- 数据概览卡片 - 第一行 -->
     <el-row :gutter="20">
       <el-col :span="12">
-        <el-card shadow="hover" class="data-card sales-card">
+        <el-card shadow="hover" class="data-card">
           <div class="card-header">
             <div class="title">总销售额</div>
             <div class="actions">
@@ -15,7 +15,7 @@
             </div>
           </div>
           <div class="data-card-content">
-            <div class="icon-container blue">
+            <div class="icon-container">
               <el-icon><Money /></el-icon>
             </div>
             <div class="data-info">
@@ -35,7 +35,7 @@
         </el-card>
       </el-col>
       <el-col :span="12">
-        <el-card shadow="hover" class="data-card payment-card">
+        <el-card shadow="hover" class="data-card">
           <div class="card-header">
             <div class="title">支付笔数</div>
             <div class="actions">
@@ -47,7 +47,7 @@
             </div>
           </div>
           <div class="data-card-content">
-            <div class="icon-container cyan">
+            <div class="icon-container">
               <el-icon><ShoppingBag /></el-icon>
             </div>
             <div class="data-info">
@@ -69,7 +69,7 @@
       <el-col :span="8">
         <el-card shadow="hover" class="data-card">
           <div class="data-card-content">
-            <div class="icon-container indigo">
+            <div class="icon-container">
               <el-icon><List /></el-icon>
             </div>
             <div class="data-info">
@@ -86,7 +86,7 @@
       <el-col :span="8">
         <el-card shadow="hover" class="data-card">
           <div class="data-card-content">
-            <div class="icon-container orange">
+            <div class="icon-container">
               <el-icon><User /></el-icon>
             </div>
             <div class="data-info">
@@ -109,7 +109,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { Money, List, User, ShoppingBag, Connection } from '@element-plus/icons-vue'
+import { Money, List, User, ShoppingBag } from '@element-plus/icons-vue'
 import { useDashboardStore } from '@/store/dashboard'
 
 // 获取仪表盘数据
@@ -117,7 +117,6 @@ const dashboardStore = useDashboardStore()
 
 // 时间范围选择
 const salesTimeRange = ref('total')
-const flowTimeRange = ref('total')
 const paymentTimeRange = ref('total')
 
 // 根据时间范围获取销售数据
@@ -142,32 +141,6 @@ const getSalesData = computed(() => {
       refunds: dashboardStore.totalRefunds,
       fees: dashboardStore.totalFees,
       netRevenue: dashboardStore.netRevenue
-    }
-  }
-})
-
-// 根据时间范围获取流水数据
-const getFlowData = computed(() => {
-  if (flowTimeRange.value === 'today') {
-    return {
-      flow: dashboardStore.todayFlow,
-      recharge: dashboardStore.todayRecharge,
-      withdrawal: dashboardStore.todayWithdrawal,
-      surplus: dashboardStore.todayBalanceSurplus
-    }
-  } else if (flowTimeRange.value === 'yesterday') {
-    return {
-      flow: dashboardStore.yesterdayFlow,
-      recharge: dashboardStore.yesterdayRecharge,
-      withdrawal: dashboardStore.yesterdayWithdrawal,
-      surplus: dashboardStore.yesterdayBalanceSurplus
-    }
-  } else {
-    return {
-      flow: dashboardStore.totalFlow,
-      recharge: dashboardStore.totalRecharge,
-      withdrawal: dashboardStore.totalWithdrawal,
-      surplus: dashboardStore.balanceSurplus
     }
   }
 })
@@ -209,7 +182,6 @@ onMounted(() => {
 }
 
 .data-card {
-  height: 160px;
   transition: all 0.3s;
 }
 
@@ -221,8 +193,7 @@ onMounted(() => {
 .data-card-content {
   display: flex;
   align-items: center;
-  height: calc(100% - 50px);
-  padding: 0 15px;
+  padding: 15px;
 }
 
 .icon-container {
@@ -234,43 +205,17 @@ onMounted(() => {
   justify-content: center;
   margin-right: 15px;
   transition: all 0.3s;
+  background-color: var(--el-color-primary);
 }
 
 .data-card:hover .icon-container {
   transform: scale(1.1);
+  color: #fff;
 }
 
 .icon-container .el-icon {
   font-size: 30px;
   color: #fff;
-}
-
-.blue {
-  background-color: #409EFF;
-}
-
-.green {
-  background-color: #67C23A;
-}
-
-.orange {
-  background-color: #E6A23C;
-}
-
-.red {
-  background-color: #F56C6C;
-}
-
-.purple {
-  background-color: #9254de;
-}
-
-.cyan {
-  background-color: #36cfc9;
-}
-
-.indigo {
-  background-color: #5c6bc0;
 }
 
 .data-info {
@@ -371,8 +316,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 0 10px;
+  margin-bottom: 10px;
 }
 
 .card-header .title {

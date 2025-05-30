@@ -71,59 +71,6 @@ const searchForm = reactive({
   dateRange: []
 })
 
-// 操作类型选项
-const operationTypes = ref([
-  { value: 'login', label: '登录' },
-  { value: 'logout', label: '登出' },
-  { value: 'query', label: '查询' },
-  { value: 'add', label: '新增' },
-  { value: 'update', label: '修改' },
-  { value: 'delete', label: '删除' },
-  { value: 'import', label: '导入' },
-  { value: 'export', label: '导出' },
-  { value: 'upload', label: '上传' },
-  { value: 'download', label: '下载' },
-  { value: 'other', label: '其他' }
-])
-
-// 模块选项
-const moduleOptions = ref([
-  { value: 'system', label: '系统管理' },
-  { value: 'user', label: '用户管理' },
-  { value: 'role', label: '角色管理' },
-  { value: 'account', label: '账户管理' },
-  { value: 'product', label: '商品管理' },
-  { value: 'order', label: '订单管理' },
-  { value: 'category', label: '分类管理' },
-  { value: 'member', label: '会员管理' },
-  { value: 'template', label: '模板管理' },
-  { value: 'setting', label: '系统设置' }
-])
-
-// 获取操作类型标签
-const getOperationTypeTag = (type: string) => {
-  const tagMap: Record<string, string> = {
-    'login': 'success',
-    'logout': 'info',
-    'query': 'info',
-    'add': 'primary',
-    'update': 'warning',
-    'delete': 'danger',
-    'import': 'success',
-    'export': 'success',
-    'upload': 'primary',
-    'download': 'primary',
-    'other': 'info'
-  }
-  return tagMap[type] || 'info'
-}
-
-// 获取操作类型标签文本
-const getOperationTypeLabel = (type: string) => {
-  const option = operationTypes.value.find(item => item.value === type)
-  return option ? option.label : type
-}
-
 // 表格数据
 const tableData = ref([
   { 

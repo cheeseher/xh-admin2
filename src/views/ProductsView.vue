@@ -139,14 +139,22 @@
         </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
-        <el-table-column label="操作" width="300" fixed="right">
+        <el-table-column label="操作" width="120" fixed="right">
           <template #default="scope">
-            <div class="action-buttons">
-              <el-button size="small" type="primary" @click="handleEditProduct(scope.row)">编辑</el-button>
-              <el-button size="small" type="warning" @click="handlePackageManager(scope.row)">包管理</el-button>
-              <el-button size="small" type="success" @click="handleInventory(scope.row)">库存管理</el-button>
-              <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
-            </div>
+            <el-dropdown trigger="hover">
+              <el-button type="primary" size="small">
+                操作
+                <el-icon class="el-icon--right"><arrow-down /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item @click="handleEditProduct(scope.row)">编辑</el-dropdown-item>
+                  <el-dropdown-item @click="handlePackageManager(scope.row)">包管理</el-dropdown-item>
+                  <el-dropdown-item @click="handleInventory(scope.row)">库存管理</el-dropdown-item>
+                  <el-dropdown-item @click="handleDelete(scope.row)">删除</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
@@ -446,6 +454,9 @@
           <!-- 搜索区域 -->
           <div class="search-area">
             <el-form :inline="true" :model="inventorySearchForm" class="demo-form-inline">
+              <el-form-item label="卡密ID">
+                <el-input v-model="inventorySearchForm.cardId" placeholder="请输入卡密ID" clearable></el-input>
+              </el-form-item>
               <el-form-item label="销售状态">
                 <el-select v-model="inventorySearchForm.status" placeholder="请选择" clearable>
                   <el-option label="未售出" value="unsold"></el-option>
@@ -630,7 +641,7 @@
                   <el-upload
                     class="package-icon-uploader"
                     action="#"
-                    :http-request="(file) => handleIconUpload(file, index)"
+                    :http-request="(options: UploadRequestOptions) => handleIconUpload(options, index)"
                     :show-file-list="false"
                     :on-exceed="handleExceed"
                     :before-upload="beforeIconUpload"
@@ -753,7 +764,22 @@ import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules, UploadRequestOptions } from 'element-plus'
-import { Delete, QuestionFilled, Plus, Setting, ArrowDown, Lock, Check, Warning, Document, List, View, InfoFilled, Picture, Upload, UploadFilled } from '@element-plus/icons-vue'
+import { 
+  Delete, 
+  Plus, 
+  Setting, 
+  ArrowDown, 
+  Lock, 
+  Check, 
+  Warning, 
+  Document, 
+  List, 
+  View, 
+  InfoFilled, 
+  Picture, 
+  Upload,
+  // QuestionFilled, UploadFilled, Edit, Box, Goods are unused
+} from '@element-plus/icons-vue'
 import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
 
@@ -768,197 +794,109 @@ const searchForm = reactive({
 
 // 表格数据
 const tableData = ref([
-  { 
-    id: 'P000001',
-    name: 'Gmail邮箱-稳定可用 (手工)', 
+  {
+    id: 'P001',
+    name: 'Gmail邮箱 - 自动发货 (高质量Gmail账号)',
+    image: 'https://example.com/gmail_product_image.png',
     category: '谷歌邮箱',
-    image: 'https://placekitten.com/400/400',
-    currentPrice: 4.20,
-    originalPrice: 6.50,
-    stock: 384,
-    stockWarning: 50,
-    sales: 368,
-    deliveryMethod: '手动发货',
-    feature: '稳定可用',
-    specialNote: '支持自定义密码，支持换绑手机',
-    description: 'Gmail是Google提供的免费电子邮件服务，以下是使用Gmail账号的基本说明...',
-    instructions: '登录步骤：\n1. 访问 https://mail.google.com\n2. 输入您购买的Gmail账号\n3. 输入对应的密码\n4. 如果提示需要验证，请按照提示完成验证步骤',
-    afterSaleInfo: '本店所售Gmail账号均为稳定可用账号，购买后7天内提供更换服务。',
-    disclaimer: '请勿将账号用于非法用途，账号被封禁概不负责。',
-    status: '上架中',
-    statusBool: true,
-    createTime: '2024-03-01 10:00:00',
-    wholesalePrices: [
-      { quantity: 10, price: 3.90 },
-      { quantity: 50, price: 3.70 },
-      { quantity: 100, price: 3.50 }
-    ],
-    templateMode: 'bind',
-    templateId: 2,
-    costPrice: 2.50,
-    remark: '优质账号，稳定性高',
-    payMethods: ['usdt', 'wechat', 'alipay'],
-    packages: [
-      {
-        name: 'Gmail官方安卓应用',
-        icon: 'https://placekitten.com/128/128',
-        type: 'link',
-        link: 'https://play.google.com/store/apps/details?id=com.google.android.gm',
-        fileName: '',
-        visible: true
-      }
-    ],
-    purchaseLimit: {
-      type: 'percent',
-      value: 20,
-      enabled: true
-    }
-  },
-  { 
-    id: 'P000002',
-    name: 'Gmail邮箱-稳定可用', 
-    category: '谷歌邮箱',
-    image: 'https://placekitten.com/401/401',
-    currentPrice: 2.75,
-    originalPrice: 4.00,
-    stock: 575,
-    stockWarning: 100,
-    sales: 292,
+    currentPrice: 15.99,
+    originalPrice: 20.00,
+    costPrice: 5.50,
+    stock: 150,
+    stockWarning: 20,
+    sales: 580,
+    purchaseLimit: { enabled: true, type: 'fixed', value: 5 },
     deliveryMethod: '自动发货',
-    feature: '稳定可用',
-    specialNote: '支持自定义密码',
-    description: 'Gmail是Google提供的免费电子邮件服务，以下是使用Gmail账号的基本说明...',
-    instructions: '登录步骤：\n1. 访问 https://mail.google.com\n2. 输入您购买的Gmail账号\n3. 输入对应的密码\n4. 如果提示需要验证，请按照提示完成验证步骤',
-    afterSaleInfo: '本店所售Gmail账号均为稳定可用账号，购买后3天内提供更换服务。',
-    disclaimer: '请勿将账号用于非法用途，账号被封禁概不负责。',
-    status: '上架中',
+    status: 'on',
     statusBool: true,
-    createTime: '2024-03-02 09:30:00',
-    wholesalePrices: [
-      { quantity: 10, price: 2.50 },
-      { quantity: 50, price: 2.30 },
-      { quantity: 100, price: 2.00 }
-    ],
-    templateMode: 'custom',
-    templateId: 0,
-    costPrice: 1.50,
-    remark: '热销产品，适合批量采购',
-    payMethods: ['usdt', 'wechat', 'alipay'],
-    purchaseLimit: {
-      type: 'fixed',
-      value: 50,
-      enabled: true
-    }
-  },
-  { 
-    id: 'P000003',
-    name: 'Gmail邮箱-1月以上', 
-    category: '谷歌邮箱',
-    image: 'https://placekitten.com/402/402',
-    currentPrice: 5.50,
-    originalPrice: 8.00,
-    stock: 23,
-    sales: 256,
-    deliveryMethod: '自动发货',
-    feature: '1个月以上',
-    specialNote: '支持自定义密码，支持换绑手机',
-    description: 'Gmail是Google提供的免费电子邮件服务，以下是使用Gmail账号的基本说明...',
-    instructions: '登录步骤：\n1. 访问 https://mail.google.com\n2. 输入您购买的Gmail账号\n3. 输入对应的密码\n4. 如果提示需要验证，请按照提示完成验证步骤',
-    afterSaleInfo: '本店所售Gmail账号均为稳定可用账号，购买后15天内提供更换服务。',
-    disclaimer: '请勿将账号用于非法用途，账号被封禁概不负责。',
-    status: '上架中',
-    statusBool: true,
-    createTime: '2024-03-03 09:00:00',
-    wholesalePrices: [
-      { quantity: 10, price: 5.20 },
-      { quantity: 50, price: 5.00 },
-      { quantity: 100, price: 4.80 }
-    ],
-    templateMode: 'bind',
-    templateId: 2,
-    costPrice: 3.20,
-    stockWarning: 10,
-    remark: '高质量账号，适合长期使用',
-    payMethods: ['usdt', 'wechat', 'alipay']
-  },
-  { 
-    id: 'P000004',
-    name: 'Gmail邮箱-半年以上', 
-    category: '谷歌邮箱',
-    image: 'https://placekitten.com/403/403',
-    currentPrice: 7.50,
-    originalPrice: 12.00,
-    stock: 740,
-    sales: 198,
-    deliveryMethod: '自动发货',
-    feature: '半年以上',
-    status: '上架中',
-    statusBool: true,
-    createTime: '2024-03-04 08:30:00',
-    wholesalePrices: [
-      { quantity: 10, price: 7.35 },
-      { quantity: 50, price: 7.05 },
-      { quantity: 100, price: 6.75 }
-    ],
-    templateMode: 'custom',
-    templateId: 0,
-    costPrice: 4.50,
-    stockWarning: 100,
-    remark: '半年以上老号，稳定性高',
-    payMethods: ['usdt', 'wechat', 'alipay']
-  },
-  { 
-    id: 'P000005',
-    name: 'Gmail邮箱-美国稳定', 
-    category: '谷歌邮箱',
-    image: 'https://placekitten.com/404/404',
-    currentPrice: 10.00,
-    originalPrice: 18.00,
-    stock: 1060,
-    sales: 165,
-    deliveryMethod: '自动发货',
-    feature: '美国地区',
-    status: '上架中',
-    statusBool: true,
-    createTime: '2024-03-05 08:00:00',
-    templateMode: 'custom',
-    templateId: 0,
-    costPrice: 6.00,
-    stockWarning: 200,
-    remark: '美国地区IP，适合海外用户',
-    payMethods: ['usdt', 'wechat', 'alipay'],
-    packages: [
-      {
-        name: 'Gmail桌面版',
-        icon: 'https://placekitten.com/130/130',
-        type: 'link',
-        link: 'https://www.google.com/gmail/about/',
-        fileName: '',
-        visible: true
-      },
-      {
-        name: 'Gmail iOS版',
-        icon: 'https://placekitten.com/129/129',
-        type: 'link',
-        link: 'https://apps.apple.com/us/app/gmail-email-by-google/id422689480',
-        fileName: '',
-        visible: false
-      },
-      {
-        name: 'Gmail安卓版',
-        icon: 'https://placekitten.com/128/128',
-        type: 'link',
-        link: 'https://play.google.com/store/apps/details?id=com.google.android.gm',
-        fileName: '',
-        visible: true
-      }
+    remark: '适合各类注册需求，稳定耐用。',
+    createTime: '2023-01-10 09:00:00',
+    description: '<p>这是<strong>谷歌邮箱</strong>商品详情，支持HTML。</p>',
+    inventoryType: '卡密',
+    autoReleaseCycle: 7,
+    autoDisableDays: 30,
+    packageInfo: [
+      { id: 'pkg001', name: '10个/包', price: 150.00, stock: 50, type: 'fixed' },
+      { id: 'pkg002', name: '50个/包', price: 700.00, stock: 20, type: 'fixed' },
     ]
-  }])
+  },
+  {
+    id: 'P002',
+    name: 'Instagram活跃账号 - 手动发货 (真人活跃粉)',
+    image: 'https://example.com/instagram_product_image.png',
+    category: 'Instagram账号',
+    currentPrice: 25.50,
+    originalPrice: 30.00,
+    costPrice: 10.00,
+    stock: 80,
+    stockWarning: 10,
+    sales: 320,
+    purchaseLimit: { enabled: false }, 
+    deliveryMethod: '手动发货',
+    status: 'on',
+    statusBool: true,
+    remark: 'Instagram推广引流专用，粉丝活跃度高。',
+    createTime: '2023-02-15 14:30:00',
+    description: '<p>Instagram账号，适合推广。</p>',
+    inventoryType: '账号密码',
+    autoReleaseCycle: 0,
+    autoDisableDays: 0,
+    packageInfo: []
+  },
+  {
+    id: 'P003',
+    name: '微软邮箱 - Outlook (企业邮箱)',
+    image: 'https://example.com/microsoft_product_image.png',
+    category: '微软邮箱',
+    currentPrice: 12.00,
+    originalPrice: 15.00,
+    costPrice: 4.00,
+    stock: 5, // 低库存
+    stockWarning: 10,
+    sales: 150,
+    purchaseLimit: { enabled: true, type: 'percent', value: 10 }, 
+    deliveryMethod: '自动发货',
+    status: 'off',
+    statusBool: false, // 已下架
+    remark: 'Office 365邮箱，安全稳定。',
+    createTime: '2023-03-20 10:00:00',
+    description: '<p>微软官方邮箱。</p>',
+    inventoryType: '卡密',
+    autoReleaseCycle: 15,
+    autoDisableDays: 60,
+    packageInfo: []
+  },
+  {
+    id: 'P004',
+    name: 'Twitter老账号 - 随机粉丝数 (带推文记录)',
+    image: '', // 无图片
+    category: 'Twitter账号',
+    currentPrice: 30.00,
+    originalPrice: null,
+    costPrice: 12.50,
+    stock: 200,
+    stockWarning: 50,
+    sales: 450,
+    purchaseLimit: { enabled: false },
+    deliveryMethod: '自动发货',
+    status: 'on',
+    statusBool: true,
+    remark: 'Twitter老号，有一定权重。',
+    createTime: '2023-04-05 11:45:00',
+    description: '<p>Twitter老账号，随机粉丝和推文。</p>',
+    inventoryType: '账号密码',
+    autoReleaseCycle: 0,
+    autoDisableDays: 0,
+    packageInfo: [
+      { id: 'pkg003', name: '小包', price: 280.00, stock: 15, type: 'fixed' },
+    ]
+  }
+]);
+const total = ref(tableData.value.length); // 更新 total
 
 // 分页相关
 const currentPage = ref(1)
 const pageSize = ref(10)
-const total = ref(0)
 const loading = ref(false)
 
 // 对话框相关
@@ -1979,13 +1917,42 @@ const handleImageUpload = (options: any) => {
 const inventoryDrawerVisible = ref(false)
 const selectedProduct = ref<any>(null)
 const inventorySearchForm = reactive({
-  status: ''
+  status: '',
+  cardId: ''
 })
-const inventoryTableData = ref<InventoryTableItem[]>([]) // Typed the ref
+const inventoryTableData = ref<InventoryTableItem[]>([
+  {
+    cardId: 'inv001',
+    status: 'unsold',
+    cardInfo: 'CardNumber12345:CardPassword54321 (P001 - 卡密)',
+    createTime: '2023-05-01 10:00:00',
+    remark: '未使用'
+  },
+  {
+    cardId: 'inv002',
+    status: 'sold',
+    cardInfo: 'CardNumber67890:CardPassword09876 (P001 - 卡密)',
+    createTime: '2023-05-01 10:05:00',
+    remark: '已售出，订单ORD10086'
+  },
+  {
+    cardId: 'inv003',
+    status: 'unsold',
+    cardInfo: 'User:testuser Pass:testpass123 (P002 - 账号密码)',
+    createTime: '2023-05-02 11:00:00',
+  },
+  {
+    cardId: 'inv004',
+    status: 'unsold',
+    cardInfo: 'User:twitterold Pass:oldtwitter (P004 - 账号密码)',
+    createTime: '2023-05-03 16:00:00',
+    remark: '库存锁定'
+  },
+]);
+const inventoryTotal = ref(inventoryTableData.value.length); // 更新 inventoryTotal
 const inventoryLoading = ref(false)
 const inventoryCurrentPage = ref(1)
 const inventoryPageSize = ref(10)
-const inventoryTotal = ref(0)
 
 // 新增库存相关
 const addInventoryDialogVisible = ref(false)
@@ -2096,7 +2063,8 @@ const loadInventoryData = () => {
   inventoryLoading.value = true
   // 模拟加载数据
   setTimeout(() => {
-    inventoryTableData.value = [
+    // 模拟数据
+    const allData = [
       {
         cardId: 'CARD001',
         status: 'unsold',
@@ -2112,7 +2080,22 @@ const loadInventoryData = () => {
         remark: '已售出账号'
       }
     ]
-    inventoryTotal.value = 2
+
+    // 根据搜索条件筛选数据
+    const filteredData = allData.filter(item => {
+      // 卡密 ID 筛选
+      if (inventorySearchForm.cardId && !item.cardId.toLowerCase().includes(inventorySearchForm.cardId.toLowerCase())) {
+        return false
+      }
+      // 状态筛选
+      if (inventorySearchForm.status && item.status !== inventorySearchForm.status) {
+        return false
+      }
+      return true
+    })
+
+    inventoryTableData.value = filteredData as InventoryTableItem[] // Type assertion
+    inventoryTotal.value = filteredData.length
     inventoryLoading.value = false
   }, 500)
 }
@@ -2123,6 +2106,7 @@ const handleInventorySearch = () => {
 
 const resetInventorySearch = () => {
   inventorySearchForm.status = ''
+  inventorySearchForm.cardId = ''
   loadInventoryData()
 }
 
@@ -2474,7 +2458,7 @@ const removePackage = (index: number) => {
 
 // 上传图标处理
 const handleIconUpload = (options: UploadRequestOptions, index: number) => {
-  const fileObj = options.file
+  const fileObj = options.file as CustomUploadRawFile // options.file is UploadRawFile, cast to CustomUploadRawFile
   // 验证文件类型和大小
   const isImage = fileObj.type.startsWith('image/')
   const isLt2M = fileObj.size / 1024 / 1024 < 2
@@ -2524,7 +2508,7 @@ const handleFileUpload = (options: UploadRequestOptions, index: number) => {
   // 在实际项目中，这里应该上传到服务器并获取URL
   // 这里为了演示，我们使用文件名
   packageForm.packages[index].fileName = fileObj.name
-  packageForm.packages[index].file = fileObj
+  packageForm.packages[index].file = fileObj as any // Assign as any for mock
   packageForm.packages[index].link = '模拟文件上传链接：' + fileObj.name
 }
 
@@ -2642,11 +2626,19 @@ interface PackageItem {
   icon: string;
   type: 'link' | 'file';
   link: string;
-  file: any; // Changed to any
+  file: any; // Changed type to any for mock assignment flexibility
   fileName: string;
   visible: boolean;
   uploading: boolean;
   uploadProgress: number;
+}
+
+// 取消模拟上传
+const cancelSimulatedUpload = (index: number) => {
+  const pkg = packageForm.packages[index];
+  pkg.uploading = false;
+  pkg.uploadProgress = 0;
+  pkg.fileName = '';
 }
 </script>
 

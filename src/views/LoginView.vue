@@ -39,7 +39,7 @@
               <el-input 
                 v-model="loginForm.captcha" 
                 placeholder="请输入验证码" 
-                prefix-icon="PictureFilled"
+                prefix-icon="ChatLineSquare"
                 size="large"
                 clearable
               ></el-input>
@@ -65,8 +65,6 @@
         </el-form>
       </div>
       
-      <div class="login-footer">
-      </div>
     </div>
   </div>
 </template>
@@ -75,7 +73,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock, PictureFilled, Monitor } from '@element-plus/icons-vue'
+import { User, Lock, ChatLineSquare, Monitor } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 
 const router = useRouter()
@@ -221,12 +219,6 @@ const handleLogin = async () => {
   font-weight: 600;
 }
 
-.subtitle {
-  font-size: 14px;
-  color: #606266;
-  margin-top: 10px;
-}
-
 .form-title {
   font-size: 18px;
   color: #303133;
@@ -279,12 +271,5 @@ const handleLogin = async () => {
 
 .login-button:hover {
   background: linear-gradient(to right, #1565c0, #1976d2);
-}
-
-.login-footer {
-  text-align: center;
-  font-size: 12px;
-  color: #909399;
-  margin-top: 20px;
 }
 </style> 

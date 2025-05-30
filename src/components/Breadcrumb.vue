@@ -2,9 +2,6 @@
   <div class="breadcrumb-wrapper">
     <el-breadcrumb separator="/">
       <el-breadcrumb-item v-for="(item, index) in breadcrumbs" :key="index" :to="item.path">
-        <el-icon v-if="item.icon" class="breadcrumb-icon">
-          <component :is="iconMap[item.icon]" />
-        </el-icon>
         <span class="breadcrumb-text">{{ item.title }}</span>
       </el-breadcrumb-item>
     </el-breadcrumb>
@@ -13,176 +10,66 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { 
-  DataAnalysis, 
-  ShoppingCart, 
-  Goods, 
-  User, 
-  Management, 
-  Setting, 
-  Menu, 
-  Document, 
-  ChatLineSquare, 
-  Wallet, 
-  Box, 
-  Lock, 
-  List, 
-  UserFilled,
-  QuestionFilled
-} from '@element-plus/icons-vue'
-
-// 路由映射表
-const routeMap: Record<string, { title: string; icon: string }> = {
-  '/data': { title: '数据概览', icon: 'DataAnalysis' },
-  '/orders': { title: '商品订单', icon: 'ShoppingCart' },
-  '/products': { title: '商品列表', icon: 'Goods' },
-  '/categories': { title: '分类管理', icon: 'Menu' },
-  '/users': { title: '用户管理', icon: 'User' },
-  '/content/template': { title: '模板设置', icon: 'Document' },
-  '/content/messages': { title: '站内信', icon: 'ChatLineSquare' },
-  '/content/help': { title: '帮助中心', icon: 'QuestionFilled' },
-  '/content/notice': { title: '公告管理', icon: 'Document' },
-  '/system/settings': { title: '系统设置', icon: 'Setting' },
-  '/system/docs': { title: '系统文档设置', icon: 'Document' },
-  '/system/accounts': { title: '账户管理', icon: 'Lock' },
-  '/system/logs': { title: '操作日志', icon: 'List' },
-  '/user/profile': { title: '个人信息', icon: 'User' },
-  '/user/reset-password': { title: '修改密码', icon: 'Lock' }
-}
-
-// 菜单层级映射
-const menuHierarchy: Record<string, { parent: string; title: string; icon: string }> = {
-  // 订单管理
-  '/orders': { parent: 'order-management', title: '订单管理', icon: 'ShoppingCart' },
-  '/recharge-orders': { parent: 'order-management', title: '订单管理', icon: 'ShoppingCart' },
-  
-  // 商品管理
-  '/products': { parent: 'product-management', title: '商品管理', icon: 'Goods' },
-  '/categories': { parent: 'product-management', title: '商品管理', icon: 'Goods' },
-  '/inventory': { parent: 'product-management', title: '商品管理', icon: 'Goods' },
-  
-  // 内容管理
-  '/content/template': { parent: 'content-management', title: '内容管理', icon: 'Document' },
-  '/content/messages': { parent: 'content-management', title: '内容管理', icon: 'Document' },
-  '/content/help': { parent: 'content-management', title: '帮助中心', icon: 'QuestionFilled' },
-  '/content/notice': { parent: 'content-management', title: '内容管理', icon: 'Document' },
-  
-  // 系统管理
-  '/settings': { parent: 'system-management', title: '系统管理', icon: 'Setting' },
-  '/document-settings': { parent: 'system-management', title: '系统管理', icon: 'Setting' },
-  '/accounts': { parent: 'system-management', title: '系统管理', icon: 'Setting' },
-  '/logs': { parent: 'system-management', title: '系统管理', icon: 'Setting' },
-  
-  // 用户相关
-  '/user/profile': { parent: '/user', title: '用户', icon: 'User' },
-  '/user/reset-password': { parent: '/user', title: '用户', icon: 'User' }
-}
-
-// 图标映射表
-const iconMap: Record<string, any> = {
-  DataAnalysis,
-  ShoppingCart,
-  Goods,
-  Menu,
-  Box,
-  User,
-  UserFilled,
-  Management,
-  Setting,
-  Document,
-  Lock,
-  List,
-  ChatLineSquare,
-  Wallet,
-  QuestionFilled
-}
+import { useRoute } from 'vue-router'
 
 const route = useRoute()
-const router = useRouter()
-const breadcrumbs = ref<Array<{ title: string; path: string; icon: string | null }>>([])
+const breadcrumbs = ref<Array<{ title: string; path?: string }>>([])
 
 // 根据当前路由生成面包屑
 const generateBreadcrumbs = () => {
-  const currentPath = route.path
-  
-  // 清空面包屑
   breadcrumbs.value = []
+
+  // 使用 route.matched 来获取路由信息
+  const matchedRoutes = route.matched.filter(
+    (r) => r.meta && r.meta.title
+  )
+
+  // 始终添加一个不可点击的"首页"或"数据概览"作为根路径，如果当前不是根路径
+  // 这里的逻辑基于 App.vue 中 /data 是默认首页
+  if (route.path !== '/data') {
+    breadcrumbs.value.push({ title: '数据概览', path: '/data' });
+  }
   
-  // 始终添加首页
-  breadcrumbs.value.push({ 
-    title: '首页', 
-    path: '/data', 
-    icon: 'DataAnalysis' 
-  })
-  
-  // 如果不是首页，处理当前路径
-  if (currentPath !== '/data') {
-    // 检查当前路径是否在路由映射表中
-    const routeInfo = routeMap[currentPath]
-    
-    // 检查当前路径是否有父级菜单
-    const hierarchy = menuHierarchy[currentPath]
-    
-    if (hierarchy && routeInfo) {
-      // 添加父级菜单
-      breadcrumbs.value.push({
-        title: hierarchy.title,
-        path: '#', // 父级菜单不可点击
-        icon: hierarchy.icon
-      })
-      
-      // 添加当前页面
-      breadcrumbs.value.push({
-        title: routeInfo.title,
-        path: currentPath,
-        icon: routeInfo.icon
-      })
-    } else if (routeInfo) {
-      // 直接添加当前页面（一级菜单）
-      breadcrumbs.value.push({
-        title: routeInfo.title,
-        path: currentPath,
-        icon: routeInfo.icon
-      })
-    } else {
-      // 处理嵌套路由（如 /user/profile）
-      const pathParts = currentPath.split('/').filter(Boolean)
-      let currentPathBuild = ''
-      
-      for (const part of pathParts) {
-        currentPathBuild += `/${part}`
-        
-        // 检查是否是中间路径（如 /user）
-        if (currentPathBuild !== currentPath) {
-          const parentInfo = routeMap[currentPathBuild]
-          if (parentInfo) {
-            breadcrumbs.value.push({
-              title: parentInfo.title,
-              path: currentPathBuild,
-              icon: parentInfo.icon
-            })
-          }
-        } else {
-          // 最终路径（如 /user/profile）
-          const finalInfo = routeMap[currentPathBuild]
-          if (finalInfo) {
-            breadcrumbs.value.push({
-              title: finalInfo.title,
-              path: currentPathBuild,
-              icon: finalInfo.icon
-            })
-          }
+  matchedRoutes.forEach((record) => {
+    // 如果是重定向的父路由，通常不直接显示在面包屑中，除非它有明确的title
+    // 且避免重复添加首页
+    if (record.meta.title && (record.path !== '/data' || breadcrumbs.value.length === 0)) {
+        const breadcrumbItem: { title: string; path?: string } = {
+            title: record.meta.title as string,
+        };
+        // 通常面包屑的最后一项不可点击，或者指向当前页
+        // 对于中间项，如果它们不是重定向占位符，则可以有 path
+        if (record.path !== route.path && !record.redirect) {
+            breadcrumbItem.path = record.path;
         }
-      }
+        // 避免重复添加与首页title相同的项，除非它是当前页
+        if (breadcrumbs.value.length > 0 && breadcrumbs.value[breadcrumbs.value.length -1].title === record.meta.title && record.path !== route.path) {
+            //skip
+        } else {
+             breadcrumbs.value.push(breadcrumbItem);
+        }
     }
+  });
+
+  // 如果当前路由是 /data 且面包屑为空（比如直接访问/data），则添加它
+  if (route.path === '/data' && breadcrumbs.value.length === 0) {
+     breadcrumbs.value.push({ title: '数据概览', path: '/data' });
+  }
+  
+  // 如果面包屑为空（例如，对于没有 meta.title 的路由），可以添加一个默认项
+  if (breadcrumbs.value.length === 0 && route.meta.title) {
+      breadcrumbs.value.push({ title: route.meta.title as string });
   }
 }
 
 // 监听路由变化
-watch(() => route.path, () => {
-  generateBreadcrumbs()
-}, { immediate: true })
+watch(
+  () => route.path,
+  () => {
+    generateBreadcrumbs()
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
@@ -192,6 +79,7 @@ watch(() => route.path, () => {
   align-items: center;
 }
 
+/*
 :deep(.el-breadcrumb) {
   font-size: 14px;
   line-height: 1;
@@ -211,27 +99,28 @@ watch(() => route.path, () => {
   font-weight: normal;
 }
 
-:deep(.el-breadcrumb__inner.is-link) {
-  color: #409EFF;
+:deep(.el-breadcrumb__item:not(:last-child) .el-breadcrumb__inner.is-link),
+:deep(.el-breadcrumb__item:not(:last-child) .el-breadcrumb__inner span.is-link) { 
+  color: #409EFF; 
   font-weight: 500;
+  cursor: pointer; 
+}
+
+:deep(.el-breadcrumb__item:last-child .el-breadcrumb__inner) {
+  color: #303133;
+  font-weight: 600;
+  cursor: default; 
 }
 
 :deep(.el-breadcrumb__separator) {
   margin: 0 8px;
   color: #C0C4CC;
 }
-
-.breadcrumb-icon {
-  margin-right: 6px;
-  font-size: 16px;
-}
+*/
 
 .breadcrumb-text {
   font-size: 14px;
 }
 
-:deep(.el-breadcrumb__item:last-child .el-breadcrumb__inner) {
-  color: #303133;
-  font-weight: 600;
-}
+/* Simplified last-child styling, as direct inner text is now styled */
 </style>

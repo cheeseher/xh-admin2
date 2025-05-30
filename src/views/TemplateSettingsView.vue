@@ -1,6 +1,6 @@
 <template>
   <div class="template-settings-container">
-    <el-card class="box-card">
+    <el-card class="box-card" style="width: 100%;">
       <template #header>
         <div class="card-header">
           <span>模板设置</span>
@@ -249,7 +249,17 @@ const loading = ref(false)
 const dialogVisible = ref(false)
 const dialogType = ref<'add' | 'edit'>('add')
 const templateFormRef = ref<FormInstance>()
-const templateForm = reactive({
+
+// 模板表单数据
+interface Template {
+  id?: number // 允许 id 为 undefined，用于新增时
+  name: string
+  category: string
+  content: string
+  updateTime: string
+}
+
+const templateForm = reactive<Template>({
   id: 0,
   name: '',
   category: '',
@@ -270,13 +280,8 @@ const viewTemplate = reactive({
 
 // 表单验证规则
 const rules = reactive<FormRules>({
-  name: [
-    { required: true, message: '请输入模板名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
-  ],
-  content: [
-    { required: true, message: '请输入模板内容', trigger: 'blur' }
-  ]
+  name: [{ required: true, message: '请输入模板名称', trigger: 'blur' }],
+  content: [{ required: true, message: '请输入模板内容', trigger: 'blur' }]
 })
 
 // 富文本编辑器相关
@@ -299,22 +304,30 @@ const editorOptions = {
       ['link', 'image']
     ]
   },
-  placeholder: '请输入模板内容...'
+  placeholder: '请输入模板内容...',
+  theme: 'snow'
 }
 
 // 预览内容
 const previewContent = () => {
-  previewVisible.value = true
+  if (templateForm.content) {
+    previewVisible.value = true
+  } else {
+    ElMessage.warning('模板内容为空，无法预览')
+  }
 }
 
 // 新增模板
 const handleAddTemplate = () => {
   dialogType.value = 'add'
-  templateForm.id = 0
+  templateForm.id = undefined
   templateForm.name = ''
   templateForm.category = ''
   templateForm.content = ''
   dialogVisible.value = true
+  if (templateFormRef.value) {
+    templateFormRef.value.resetFields()
+  }
 }
 
 // 编辑模板

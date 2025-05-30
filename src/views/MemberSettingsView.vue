@@ -277,13 +277,6 @@ const levelRules = reactive<FormRules>({
   ]
 })
 
-// 充值预览数据
-const rechargePreviewData = computed(() => {
-  return memberLevels.value.map(level => ({
-    ...level
-  }))
-})
-
 // 获取等级标签类型
 const getLevelTagType = (level: number) => {
   if (level === 999) {
@@ -484,28 +477,6 @@ onMounted(() => {
 
 .page-description p {
   margin: 0;
-  color: #606266;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.system-description {
-  margin: 20px 0;
-  padding: 15px;
-  background-color: #f6ffed;
-  border-radius: 4px;
-  border-left: 5px solid #52c41a;
-}
-
-.system-description h3 {
-  margin-top: 0;
-  margin-bottom: 10px;
-  color: #52c41a;
-  font-size: 16px;
-}
-
-.system-description p {
-  margin: 5px 0;
   color: #606266;
   font-size: 14px;
   line-height: 1.6;

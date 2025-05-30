@@ -1,13 +1,13 @@
 <template>
   <div class="app-container">
     <!-- 登录页面不显示侧边栏和顶部导航栏 -->
-    <template v-if="isLoginPage">
+    <template v-if="false">
       <router-view />
     </template>
     
     <!-- 其他页面显示完整布局 -->
     <el-container v-else>
-      <el-aside :width="isCollapse ? '64px' : '200px'" class="sidebar-container">
+      <el-aside :width="isCollapse ? '64px' : '210px'" class="sidebar-container">
         <div class="logo">
           <el-icon v-if="!isCollapse"><Monitor /></el-icon>
           <span v-if="!isCollapse">星海管理系统</span>
@@ -21,13 +21,14 @@
           text-color="#fff"
           active-text-color="#1890ff"
           :collapse="isCollapse"
-          :collapse-transition="false">
+          :collapse-transition="false"
+          unique-opened>
           <el-menu-item index="/data">
             <el-icon><DataAnalysis /></el-icon>
             <template #title>数据概览</template>
           </el-menu-item>
 
-          <el-sub-menu index="/orders">
+          <el-sub-menu index="/orders-main">
             <template #title>
               <el-icon><ShoppingCart /></el-icon>
               <span>订单管理</span>
@@ -36,7 +37,7 @@
             <el-menu-item index="/recharge-orders">充值订单</el-menu-item>
           </el-sub-menu>
 
-          <el-sub-menu index="/products">
+          <el-sub-menu index="/products-main">
             <template #title>
               <el-icon><Goods /></el-icon>
               <span>商品管理</span>
@@ -60,7 +61,7 @@
             <template #title>会员设置</template>
           </el-menu-item>
 
-          <el-sub-menu index="/content">
+          <el-sub-menu index="/content-main">
             <template #title>
               <el-icon><Document /></el-icon>
               <span>内容管理</span>
@@ -72,7 +73,7 @@
               <span>帮助中心</span>
             </el-menu-item>
           </el-sub-menu>
-          <el-sub-menu index="/system">
+          <el-sub-menu index="/system-main">
             <template #title>
               <el-icon><Setting /></el-icon>
               <span>系统管理</span>
@@ -127,30 +128,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox, ElMessage } from 'element-plus'
 import { 
   Monitor, 
   DataAnalysis,
   ShoppingCart, 
   Goods,
-  Box,
   User, 
-  UserFilled,
   Setting, 
   Fold,
   Expand,
   ArrowDown,
   Key,
   SwitchButton,
-  Menu,
   Document,
-  ChatLineSquare,
-  List,
-  Lock,
-  QuestionFilled,
-  Files
 } from '@element-plus/icons-vue'
 import Breadcrumb from './components/Breadcrumb.vue'
 
@@ -163,11 +156,6 @@ const isCollapse = ref(false)
 // 用户信息
 const username = ref('Admin')
 const userAvatar = ref('https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png')
-
-// 判断是否是登录页面
-const isLoginPage = computed(() => {
-  return route.path === '/login'
-})
 
 // 切换侧边栏折叠状态
 const toggleCollapse = () => {
@@ -195,8 +183,12 @@ const handleCommand = (command: string) => {
       ).then(() => {
         // 清除登录状态
         localStorage.removeItem('token')
+        localStorage.removeItem('userInfo') // Also remove userInfo if it was set
         // 跳转到登录页
-        router.push('/login')
+        router.push('/login') 
+        ElMessage.success('已退出登录') 
+      }).catch(() => {
+        ElMessage.info('已取消退出登录'); // Inform user if cancelled
       })
       break
   }
@@ -206,17 +198,17 @@ const handleCommand = (command: string) => {
 <style scoped>
 .app-container {
   height: 100vh;
+  display: flex;
 }
 
 .sidebar-container {
   background-color: #001529;
   transition: width 0.3s;
-  height: 100vh;
   overflow-y: auto;
-
+  overflow-x: hidden;
   position: sticky;
   top: 0;
-  height: 100vh;
+  height: 100vh; 
   z-index: 1000;
 }
 
@@ -225,7 +217,7 @@ const handleCommand = (command: string) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #002140;
+  background-color: #001529;
   color: #fff;
 }
 
@@ -235,7 +227,7 @@ const handleCommand = (command: string) => {
 }
 
 .el-menu-vertical:not(.el-menu--collapse) {
-  width: 200px;
+  width: 210px;
   min-height: calc(100vh - 60px);
 }
 
@@ -246,13 +238,12 @@ const handleCommand = (command: string) => {
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
+  height: 60px;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  position: relative;
-  z-index: 1001;
 }
 
 .collapse-btn {
@@ -280,7 +271,9 @@ const handleCommand = (command: string) => {
 .el-main {
   background-color: #f0f2f5;
   padding: 20px;
+  flex: 1;
 }
+/*
 :deep(.el-menu) {
   border-right: none;
 }
@@ -290,11 +283,7 @@ const handleCommand = (command: string) => {
   color: #fff !important;
 }
 
-:deep(.el-menu-item:hover) {
-  background-color: #1890ff20 !important;
-  color: #1890ff !important;
-}
-
+:deep(.el-menu-item:not(.is-active):hover), 
 :deep(.el-sub-menu__title:hover) {
   background-color: #1890ff20 !important;
   color: #1890ff !important;
@@ -302,24 +291,6 @@ const handleCommand = (command: string) => {
 
 :deep(.el-sub-menu.is-active .el-sub-menu__title) {
   color: #1890ff !important;
-}
-
-:deep(.el-menu-item) {
-  &:hover, &:focus {
-    background-color: #1890ff20;
-  }
-}
-
-:deep(.el-sub-menu) {
-  .el-sub-menu__title {
-    &:hover, &:focus {
-      background-color: #1890ff20;
-    }
-  }
-}
-.app-container {
-  height: 100vh;
-  display: flex;
 }
 
 :deep(.el-container) {
@@ -332,8 +303,6 @@ const handleCommand = (command: string) => {
 :deep(.el-container .el-container) {
   margin: 0;
   padding: 0;
-  display: flex;
-  flex: 1;
 }
 
 :deep(.el-container .el-aside) {
@@ -342,15 +311,5 @@ const handleCommand = (command: string) => {
   flex-shrink: 0;
   border: none;
 }
-
-:deep(.el-container .el-main) {
-  margin: 0;
-  padding: 20px;
-  flex: 1;
-}
-.el-container .el-main {
-  flex: 1;
-  padding: 20px;
-  background-color: #f0f2f5;
-}
+*/
 </style>

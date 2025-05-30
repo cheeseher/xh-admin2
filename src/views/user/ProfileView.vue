@@ -4,10 +4,10 @@
       <template #header>
         <div class="card-header">
           <span>个人信息</span>
-          <el-button type="primary" size="small" @click="handleEdit" v-if="!isEditing">编辑信息</el-button>
+          <el-button type="primary" size="small" @click="handleEdit" v-if="!isEditing" :icon="Edit">编辑信息</el-button>
           <div v-else>
-            <el-button type="success" size="small" @click="handleSave">保存</el-button>
-            <el-button size="small" @click="handleCancel">取消</el-button>
+            <el-button type="success" size="small" @click="handleSave" :icon="Select">保存</el-button>
+            <el-button size="small" @click="handleCancel" :icon="Close">取消</el-button>
           </div>
         </div>
       </template>
@@ -75,7 +75,7 @@
             <h4>账户密码</h4>
             <p>定期更改密码可以保护您的账户安全</p>
           </div>
-          <el-button type="primary" plain @click="goToResetPassword">修改密码</el-button>
+          <el-button type="primary" plain @click="goToResetPassword" :icon="Key">修改密码</el-button>
         </div>
         
         <el-divider></el-divider>
@@ -85,7 +85,7 @@
             <h4>绑定邮箱</h4>
             <p>已绑定邮箱：{{ maskEmail(userForm.email) }}</p>
           </div>
-          <el-button plain @click="handleBindEmail" :disabled="!isEmailBindable">{{ isEmailBindable ? '更换邮箱' : '已绑定' }}</el-button>
+          <el-button plain @click="handleBindEmail" :disabled="!isEmailBindable" :icon="Message">{{ isEmailBindable ? '更换邮箱' : '已绑定' }}</el-button>
         </div>
         
         <el-divider></el-divider>
@@ -95,7 +95,7 @@
             <h4>登录日志</h4>
             <p>查看您的账号登录记录</p>
           </div>
-          <el-button plain @click="handleViewLogs">查看记录</el-button>
+          <el-button plain @click="handleViewLogs" :icon="View">查看记录</el-button>
         </div>
       </div>
     </el-card>
@@ -124,6 +124,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules, UploadFile } from 'element-plus'
+import { Edit, Select, Close, Key, Message, View } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userFormRef = ref<FormInstance>()
@@ -195,20 +196,6 @@ const loginLogs = ref([
 const isEmailBindable = computed(() => {
   return !!userForm.email
 })
-
-// 获取角色类型
-const getRoleType = (role: string) => {
-  switch (role) {
-    case '超级管理员':
-      return 'danger'
-    case '管理员':
-      return 'warning'
-    case 'VIP用户':
-      return 'success'
-    default:
-      return 'info'
-  }
-}
 
 // 处理头像加载错误
 const handleAvatarError = () => {

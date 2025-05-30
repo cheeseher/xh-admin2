@@ -207,18 +207,6 @@ const pageSize = ref(10)
 const total = ref(0)
 const loading = ref(false)
 
-// 获取角色对应的标签类型
-const getRoleType = (role: string) => {
-  const roleMap: Record<string, string> = {
-    '超级管理员': 'danger',
-    '管理员': 'warning',
-    '运营': 'success',
-    '客服': 'info',
-    '财务': 'primary'
-  }
-  return roleMap[role] || 'info'
-}
-
 // 查询
 const handleSearch = () => {
   currentPage.value = 1
