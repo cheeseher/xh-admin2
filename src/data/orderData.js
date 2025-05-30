@@ -19,7 +19,6 @@ import { ref } from 'vue'
  * @property {string} purchasePrice
  * @property {string} totalPrice
  * @property {string} fee
- * @property {string} [cardId]
  * @property {string} [cardInfo]
  * @property {string} userEmail
  * @property {string} userRole
@@ -68,7 +67,6 @@ export const orderList = ref([
     totalPrice: '¥31.98',
     fee: '¥0.50',
     status: '待发货',
-    cardId: 'CM001, CM002',
     cardInfo: '卡密详情1..., 卡密详情2...',
     userEmail: 'user1@example.com',
     userRole: '普通用户',
@@ -89,7 +87,6 @@ export const orderList = ref([
     totalPrice: '¥25.50',
     fee: '¥0.00',
     status: '已完成',
-    cardId: 'ACC001',
     cardInfo: '账号:iguser, 密码:xxxxxx',
     userEmail: 'user2_vip@example.com',
     userRole: 'vip2',
@@ -110,7 +107,6 @@ export const orderList = ref([
     totalPrice: '¥60.00',
     fee: '¥1.00',
     status: '已退款',
-    cardId: 'N/A',
     cardInfo: '用户申请退款，已处理',
     userEmail: 'visitor123@example.com',
     userRole: '游客',
@@ -135,7 +131,6 @@ export const orderList = ref([
     totalPrice: '¥30.00',
     fee: '¥0.80',
     status: '待付款',
-    cardId: '',
     cardInfo: '',
     userEmail: 'supermember@example.com',
     userRole: '超级会员',
@@ -184,7 +179,6 @@ export function generateSampleOrders(count) {
       totalPrice: `¥${totalPrice.toFixed(2)}`,
       fee: `¥${fee.toFixed(2)}`,
       status: status,
-      cardId: status === '已完成' || status === '待发货' ? `CID${(Math.random() * 10000).toFixed(0)}` : '',
       cardInfo: status === '已完成' || status === '待发货' ? `Generated card info for ${prodName}` : '',
       userEmail: `user${(Math.random() * 1000).toFixed(0)}@sample.com`,
       userRole: userRoles[Math.floor(Math.random() * userRoles.length)],

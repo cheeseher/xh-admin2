@@ -151,7 +151,6 @@
                   <el-dropdown-item @click="handleEditProduct(scope.row)">编辑</el-dropdown-item>
                   <el-dropdown-item @click="handlePackageManager(scope.row)">包管理</el-dropdown-item>
                   <el-dropdown-item @click="handleInventory(scope.row)">库存管理</el-dropdown-item>
-                  <el-dropdown-item @click="handleDelete(scope.row)">删除</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -1256,30 +1255,30 @@ const handleEditProduct = (row: any) => {
   dialogVisible.value = true
 }
 
-// 删除
-const handleDelete = (row: any) => {
-  ElMessageBox.confirm(
-    `确定要删除商品"${row.name}"吗？`,
-    '警告',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    }
-  )
-    .then(() => {
-      ElMessage({
-        type: 'success',
-        message: `商品"${row.name}"已删除`,
-      })
-    })
-    .catch(() => {
-      ElMessage({
-        type: 'info',
-        message: '已取消删除',
-      })
-    })
-}
+// 删除商品
+// const handleDelete = (row: any) => {
+//   ElMessageBox.confirm(
+//     `确定要删除商品"${row.name}"吗？`,
+//     '警告',
+//     {
+//       confirmButtonText: '确定',
+//       cancelButtonText: '取消',
+//       type: 'warning',
+//     }
+//   )
+//     .then(() => {
+//       ElMessage({
+//         type: 'success',
+//         message: `商品"${row.name}"已删除`,
+//       })
+//     })
+//     .catch(() => {
+//       ElMessage({
+//         type: 'info',
+//         message: '已取消删除',
+//       })
+//     })
+// }
 
 // 提交表单
 const submitForm = async () => {

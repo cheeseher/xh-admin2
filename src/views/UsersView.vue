@@ -28,10 +28,11 @@
           <el-form-item label="VIP等级">
             <el-select v-model="searchForm.vipLevel" placeholder="请选择" clearable style="width: 168px;">
               <el-option label="全部" value=""></el-option>
-              <el-option label="普通会员" value="0"></el-option>
-              <el-option label="银卡会员" value="1"></el-option>
-              <el-option label="金卡会员" value="2"></el-option>
-              <el-option label="钻石会员" value="3"></el-option>
+              <el-option label="普通" value="0"></el-option>
+              <el-option label="VIP1" value="1"></el-option>
+              <el-option label="VIP2" value="2"></el-option>
+              <el-option label="VIP3" value="3"></el-option>
+              <el-option label="超级VIP" value="4"></el-option>
             </el-select>
           </el-form-item>
           <el-form-item label="注册时间">
@@ -53,8 +54,8 @@
       
       <!-- 表格区域 -->
       <el-table :data="tableData" style="width: 100%" v-loading="loading" border stripe>
-        <el-table-column prop="email" label="邮箱" min-width="180"></el-table-column>
         <el-table-column prop="nickname" label="用户昵称" width="120"></el-table-column>
+        <el-table-column prop="email" label="邮箱" min-width="180"></el-table-column>
         <el-table-column prop="password" label="密码" width="120">
           <template #default="scope">
             <span>******</span>
@@ -98,19 +99,19 @@
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item @click="handleEdit(scope.row)">
-                    <el-icon><Edit /></el-icon>编辑
+                    编辑
                   </el-dropdown-item>
                   <el-dropdown-item @click="handleBalanceOperation(scope.row)">
-                    <el-icon><Money /></el-icon>余额操作
+                    余额操作
                   </el-dropdown-item>
                   <el-dropdown-item @click="handleResetPassword(scope.row)">
-                    <el-icon><Key /></el-icon>重置密码
+                    重置密码
                   </el-dropdown-item>
                   <el-dropdown-item @click="handleUserLogs(scope.row)">
-                    <el-icon><Document /></el-icon>查看日志
+                    查看日志
                   </el-dropdown-item>
                   <el-dropdown-item @click="handleDelete(scope.row)">
-                    <el-icon><Delete /></el-icon>删除
+                    删除
                   </el-dropdown-item>
                 </el-dropdown-menu>
               </template>
@@ -155,11 +156,11 @@
         </el-form-item>
         <el-form-item label="VIP等级" prop="role">
           <el-select v-model="userForm.role" placeholder="请选择VIP等级" style="width: 168px;">
-            <el-option label="普通会员" :value="0"></el-option>
-            <el-option label="银卡会员" :value="1"></el-option>
-            <el-option label="金卡会员" :value="2"></el-option>
-            <el-option label="钻石会员" :value="3"></el-option>
-            <el-option label="至尊会员" :value="4"></el-option>
+            <el-option label="普通" :value="0"></el-option>
+            <el-option label="VIP1" :value="1"></el-option>
+            <el-option label="VIP2" :value="2"></el-option>
+            <el-option label="VIP3" :value="3"></el-option>
+            <el-option label="超级VIP" :value="4"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
@@ -204,7 +205,7 @@
       width="750px"
     >
       <div class="user-logs-header">
-        <span>用户：{{ currentUser?.nickname }} ({{ currentUser?.email }})</span>
+        <span>用户昵称：xxxxxxx</span>
       </div>
       
       <el-table :data="userLogsList" border stripe v-loading="logsLoading" style="width: 100%; margin-top: 15px;">
@@ -246,7 +247,7 @@
       width="500px"
     >
       <div class="balance-info">
-        <p>当前用户：{{ currentUser?.nickname }} ({{ currentUser?.email }})</p>
+        <p>用户昵称：xxxxxxx</p>
         <p>当前余额：<span class="money">¥{{ currentUser?.balance }}</span></p>
       </div>
       <el-form :model="balanceForm" label-width="100px" :rules="balanceRules" ref="balanceFormRef">
@@ -359,24 +360,23 @@ const loading = ref(false)
 // VIP等级名称和样式处理
 const getVipLevelName = (level: number) => {
   const vipLevels = {
-    0: '普通会员',
-    1: '银卡会员',
-    2: '金卡会员',
-    3: '钻石会员',
-    4: '至尊会员',
+    0: '普通',
+    1: 'VIP1',
+    2: 'VIP2',
+    3: 'VIP3',
+    4: '超级VIP',
   }
   return vipLevels[level as keyof typeof vipLevels] || '未知等级'
 }
 
 const getVipLevelType = (level: number) => {
-  const typeMap = {
-    0: '',
-    1: 'info',
-    2: 'warning',
-    3: 'success',
-    4: 'danger',
+  if (level === 4 || level === 999) {
+    return 'danger'
+  } else if (level === 0) {
+    return 'primary'
   }
-  return typeMap[level as keyof typeof typeMap] || ''
+  // 所有普通VIP统一使用warning颜色
+  return 'warning'
 }
 
 // 重置密码相关
@@ -812,7 +812,7 @@ const fetchUserLogs = () => {
       {
         logId: 'L0001',
         userId: currentUser.value.userId,
-        operator: '管理员',
+        operator: 'admin',
         operationType: '余额增加',
         operationAmount: 1000.00,
         operationDesc: '人工充值',
@@ -821,7 +821,7 @@ const fetchUserLogs = () => {
       {
         logId: 'L0002',
         userId: currentUser.value.userId,
-        operator: '管理员',
+        operator: 'admin',
         operationType: '余额增加',
         operationAmount: 500.00,
         operationDesc: '活动奖励',
@@ -830,7 +830,7 @@ const fetchUserLogs = () => {
       {
         logId: 'L0003',
         userId: currentUser.value.userId,
-        operator: '管理员',
+        operator: 'admin',
         operationType: '余额扣减',
         operationAmount: -200.00,
         operationDesc: '违规扣除',
@@ -839,7 +839,7 @@ const fetchUserLogs = () => {
       {
         logId: 'L0004',
         userId: currentUser.value.userId,
-        operator: '管理员',
+        operator: 'admin',
         operationType: '余额增加',
         operationAmount: 50.00,
         operationDesc: '补偿',
@@ -848,7 +848,7 @@ const fetchUserLogs = () => {
       {
         logId: 'L0005',
         userId: currentUser.value.userId,
-        operator: '管理员',
+        operator: 'admin',
         operationType: '余额扣减',
         operationAmount: -100.00,
         operationDesc: '扣除无效充值',
@@ -941,7 +941,7 @@ const submitBalanceOperation = async () => {
         const newLog = {
           logId: `L${Date.now()}`,
           userId: currentUser.value.userId,
-          operator: '管理员',
+          operator: 'admin',
           operationType,
           operationAmount: amount,
           operationDesc: balanceForm.remark,

@@ -4,7 +4,6 @@
       <template #header>
         <div class="card-header">
           <span>会员等级设置</span>
-          <el-button type="primary" @click="handleAddLevel">新增会员</el-button>
         </div>
       </template>
       
@@ -14,7 +13,6 @@
       
       <!-- 会员等级表格 -->
       <el-table :data="memberLevels" style="width: 100%" v-loading="loading" border stripe>
-        <el-table-column type="index" label="序号" width="60"></el-table-column>
         <el-table-column prop="name" label="等级名称" min-width="120">
           <template #default="scope">
             <div class="level-name-cell">
@@ -23,7 +21,6 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="level" label="等级" width="80"></el-table-column>
         <el-table-column prop="condition" label="累充升级条件" min-width="150">
           <template #default="scope">
             <span v-if="scope.row.level === 999">欢迎洽谈</span>
@@ -39,16 +36,10 @@
         </el-table-column>
         <el-table-column prop="description" label="备注" min-width="200"></el-table-column>
         <el-table-column prop="introduction" label="会员介绍" min-width="200"></el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="100" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
               <el-button size="small" type="primary" @click="handleEditLevel(scope.row)">编辑</el-button>
-              <el-button 
-                size="small" 
-                type="danger" 
-                @click="handleDeleteLevel(scope.row)"
-                :disabled="scope.row.level === 0 || scope.row.level === 999 || scope.row.isSystemDefault"
-              >删除</el-button>
             </div>
           </template>
         </el-table-column>
@@ -94,16 +85,6 @@
         <template v-else>
           <el-form-item label="等级名称" prop="name">
             <el-input v-model="levelForm.name" placeholder="请输入等级名称"></el-input>
-          </el-form-item>
-          <el-form-item label="等级" prop="level">
-            <el-input-number 
-              v-model="levelForm.level" 
-              :min="1" 
-              :max="10" 
-              :disabled="true"
-              :controls="false"
-            ></el-input-number>
-            <span class="form-tip">系统自动生成，无需填写</span>
           </el-form-item>
           <el-form-item label="累充升级条件" prop="minRechargeTotal">
             <el-input-number 
@@ -289,24 +270,24 @@ const getLevelTagType = (level: number) => {
 }
 
 // 新增会员等级
-const handleAddLevel = () => {
-  dialogType.value = 'add'
-  levelForm.id = 0
-  levelForm.name = ''
-  levelForm.level = memberLevels.value.length > 0 ? Math.max(...memberLevels.value.map(item => item.level < 100 ? item.level : 0)) + 1 : 1
-  levelForm.condition = ''
-  levelForm.minRechargeTotal = 0
-  levelForm.monthlyConsumption = 0
-  levelForm.consecutiveMonths = 3
-  levelForm.discount = 100
-  levelForm.description = ''
-  levelForm.introduction = ''
-  levelForm.icon = ''
-  levelForm.isCustomDiscount = false
-  levelForm.isEnabled = true
-  levelForm.isSystemDefault = false
-  levelDialogVisible.value = true
-}
+// const handleAddLevel = () => {
+//   dialogType.value = 'add'
+//   levelForm.id = 0
+//   levelForm.name = ''
+//   levelForm.level = memberLevels.value.length > 0 ? Math.max(...memberLevels.value.map(item => item.level < 100 ? item.level : 0)) + 1 : 1
+//   levelForm.condition = ''
+//   levelForm.minRechargeTotal = 0
+//   levelForm.monthlyConsumption = 0
+//   levelForm.consecutiveMonths = 3
+//   levelForm.discount = 100
+//   levelForm.description = ''
+//   levelForm.introduction = ''
+//   levelForm.icon = ''
+//   levelForm.isCustomDiscount = false
+//   levelForm.isEnabled = true
+//   levelForm.isSystemDefault = false
+//   levelDialogVisible.value = true
+// }
 
 // 编辑会员等级
 const handleEditLevel = (row: any) => {

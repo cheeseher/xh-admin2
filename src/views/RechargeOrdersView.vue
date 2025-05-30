@@ -40,8 +40,10 @@
             <el-form-item label="订单状态">
               <el-select v-model="searchForm.status" placeholder="请选择" clearable style="width: 168px;">
                 <el-option label="全部" value=""></el-option>
-                <el-option label="未支付" value="unpaid"></el-option>
-                <el-option label="已支付" value="paid"></el-option>
+                <el-option label="待付款" value="pending"></el-option>
+                <el-option label="已完成" value="completed"></el-option>
+                <el-option label="已取消" value="cancelled"></el-option>
+                <el-option label="已退款" value="refunded"></el-option>
               </el-select>
             </el-form-item>
             <el-form-item label="下单时间">
@@ -63,8 +65,16 @@
           <!-- 添加总金额和导出按钮 -->
           <div class="search-summary">
             <div class="total-amount">
-              <span>筛选结果总金额：</span>
+              <span>总订单数：</span>
+              <span class="amount-value" style="color: #409EFF;">{{ totalOrders }}</span>
+              <span style="margin-left: 20px;">成功订单：</span>
+              <span class="amount-value" style="color: #67C23A;">{{ successOrders }}</span>
+              <span style="margin-left: 20px;">总充值金额：</span>
               <span class="amount-value">¥{{ totalAmount.toFixed(2) }}</span>
+              <span style="margin-left: 20px;">总手续费：</span>
+              <span class="amount-value" style="color: #E6A23C;">¥{{ totalFee.toFixed(2) }}</span>
+              <span style="margin-left: 20px;">总入账金额：</span>
+              <span class="amount-value" style="color: #303133;">¥{{ totalIncome.toFixed(2) }}</span>
               <span v-if="multipleSelection.length > 0" style="margin-left: 20px;">已选择：{{ multipleSelection.length }}笔订单</span>
               <span v-if="multipleSelection.length > 0" class="amount-value">¥{{ selectedTotalAmount.toFixed(2) }}</span>
             </div>
@@ -91,6 +101,13 @@
           <el-table-column prop="orderNo" label="订单号" min-width="180" />
           <el-table-column prop="userId" label="用户ID" min-width="100" />
           <el-table-column prop="userEmail" label="用户名" min-width="180" />
+          <el-table-column prop="balanceBefore" label="充值前余额" min-width="120">
+            <template #default="scope">
+              <div class="price-container">
+                <span class="balance">¥{{ scope.row.balanceBefore.toFixed(2) }}</span>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column prop="amount" label="充值金额" min-width="120">
             <template #default="scope">
               <div class="price-container">
@@ -99,11 +116,25 @@
               </div>
             </template>
           </el-table-column>
+          <el-table-column prop="balanceAfter" label="充值后余额" min-width="120">
+            <template #default="scope">
+              <div class="price-container">
+                <span class="balance-after">¥{{ scope.row.balanceAfter.toFixed(2) }}</span>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column prop="fee" label="手续费" min-width="100">
             <template #default="scope">
               <div class="price-container">
                 <span class="fee">¥{{ scope.row.fee ? scope.row.fee.toFixed(2) : '0.00' }}</span>
                 <span v-if="scope.row.paymentMethod === 'usdt'" class="usdt-price">{{ convertToUSDT(scope.row.fee || 0) }} USDT</span>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="入账金额" min-width="120">
+            <template #default="scope">
+              <div class="price-container">
+                <span>¥{{ calculateIncome(scope.row).toFixed(2) }}</span>
               </div>
             </template>
           </el-table-column>
@@ -117,13 +148,14 @@
           </el-table-column>
           <el-table-column prop="status" label="订单状态" min-width="120">
             <template #default="scope">
-              <el-tag v-if="scope.row.status === 'pending'" type="warning">待支付</el-tag>
-              <el-tag v-else-if="scope.row.status === 'paid'" type="success">已支付</el-tag>
+              <el-tag v-if="scope.row.status === 'pending'" type="warning">待付款</el-tag>
+              <el-tag v-else-if="scope.row.status === 'completed'" type="success">已完成</el-tag>
               <el-tag v-else-if="scope.row.status === 'cancelled'" type="info">已取消</el-tag>
+              <el-tag v-else-if="scope.row.status === 'refunded'" type="danger">已退款</el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="createTime" label="创建时间" min-width="180" />
-          <el-table-column prop="payTime" label="支付时间" min-width="180" />
+          <el-table-column prop="payTime" label="完成时间" min-width="180" />
           <el-table-column label="操作" width="120" fixed="right">
             <template #default="scope">
               <el-dropdown trigger="hover">
@@ -134,13 +166,10 @@
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item v-if="scope.row.status === 'pending'" @click="confirmPayment(scope.row)">
-                      <el-icon><Check /></el-icon>确认支付
+                      确认支付
                     </el-dropdown-item>
-                    <el-dropdown-item v-if="scope.row.status === 'paid' && !scope.row.refunded" @click="handleRefund(scope.row)">
-                      <el-icon><Money /></el-icon>退款
-                    </el-dropdown-item>
-                    <el-dropdown-item @click="handleDelete(scope.row)">
-                      <el-icon><Delete /></el-icon>删除
+                    <el-dropdown-item v-if="scope.row.status === 'completed' && !scope.row.isRefunded" @click="handleRefund(scope.row)">
+                      退款
                     </el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
@@ -175,10 +204,20 @@
             <el-descriptions-item label="订单号" :span="2">{{ currentOrder.orderNo }}</el-descriptions-item>
             <el-descriptions-item label="用户名">{{ currentOrder.userEmail }}</el-descriptions-item>
             <el-descriptions-item label="用户ID">{{ currentOrder.userId }}</el-descriptions-item>
+            <el-descriptions-item label="充值前余额">
+              <div class="price-container">
+                <span class="balance">¥{{ currentOrder.balanceBefore.toFixed(2) }}</span>
+              </div>
+            </el-descriptions-item>
             <el-descriptions-item label="充值金额">
               <div class="price-container">
                 <span class="price">¥{{ currentOrder.amount.toFixed(2) }}</span>
                 <span v-if="currentOrder.paymentMethod === 'usdt'" class="usdt-price">{{ convertToUSDT(currentOrder.amount) }} USDT</span>
+              </div>
+            </el-descriptions-item>
+            <el-descriptions-item label="充值后余额">
+              <div class="price-container">
+                <span class="balance-after">¥{{ currentOrder.balanceAfter.toFixed(2) }}</span>
               </div>
             </el-descriptions-item>
             <el-descriptions-item label="手续费">
@@ -189,9 +228,10 @@
             </el-descriptions-item>
             <el-descriptions-item label="通道名称">{{ currentOrder.channelName }}</el-descriptions-item>
             <el-descriptions-item label="订单状态">
-              <el-tag v-if="currentOrder.status === 'pending'" type="warning">待支付</el-tag>
-              <el-tag v-else-if="currentOrder.status === 'paid'" type="success">已支付</el-tag>
+              <el-tag v-if="currentOrder.status === 'pending'" type="warning">待付款</el-tag>
+              <el-tag v-else-if="currentOrder.status === 'completed'" type="success">已完成</el-tag>
               <el-tag v-else-if="currentOrder.status === 'cancelled'" type="info">已取消</el-tag>
+              <el-tag v-else-if="currentOrder.status === 'refunded'" type="danger">已退款</el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="支付方式">
               <el-tag size="small" effect="plain" :type="getPayMethodType(currentOrder.paymentMethod)">
@@ -200,7 +240,7 @@
             </el-descriptions-item>
             <el-descriptions-item label="交易流水号">{{ currentOrder.transactionId || '暂无' }}</el-descriptions-item>
             <el-descriptions-item label="创建时间">{{ currentOrder.createTime }}</el-descriptions-item>
-            <el-descriptions-item label="支付时间">{{ currentOrder.payTime || '暂无' }}</el-descriptions-item>
+            <el-descriptions-item label="完成时间">{{ currentOrder.payTime || '暂无' }}</el-descriptions-item>
           </el-descriptions>
   
           <div class="operation-log" v-if="currentOrder.logs && currentOrder.logs.length > 0">
@@ -310,9 +350,11 @@
     orderNo: string
     userId: number
     userEmail: string
+    balanceBefore: number // 充值前余额
     amount: number
+    balanceAfter: number // 充值后余额
     fee?: number
-    status: 'pending' | 'paid' | 'cancelled'
+    status: 'pending' | 'completed' | 'cancelled' | 'refunded'
     paymentMethod: 'usdt' | 'wechat' | 'alipay' | string
     channelName: string
     transactionId?: string
@@ -323,7 +365,7 @@
       action: string
       operator: string
     }>
-    refunded?: boolean
+    isRefunded?: boolean
   }
   
   // 搜索表单
@@ -344,7 +386,9 @@
       orderNo: 'RO20230901001',
       userId: 1001,
       userEmail: 'user1@example.com',
+      balanceBefore: 1000.00,
       amount: 1000.00,
+      balanceAfter: 1000.00,
       fee: 10.00,
       status: 'pending',
       paymentMethod: 'usdt',
@@ -356,15 +400,53 @@
       orderNo: 'RO20230901002',
       userId: 1002,
       userEmail: 'user2@example.com',
+      balanceBefore: 2000.00,
       amount: 2000.00,
+      balanceAfter: 2000.00,
       fee: 20.00,
-      status: 'paid',
+      status: 'completed',
       paymentMethod: 'usdt',
       channelName: '通道A',
       transactionId: 'TX001',
       createTime: '2023-09-01 10:00:00',
       payTime: '2023-09-01 10:05:00',
-      refunded: false
+      isRefunded: false
+    },
+    {
+      id: '2003',
+      orderNo: 'RO20230902001',
+      userId: 1003,
+      userEmail: 'user3@example.com',
+      balanceBefore: 500.00,
+      amount: 500.00,
+      balanceAfter: 500.00,
+      fee: 5.00,
+      status: 'cancelled',
+      paymentMethod: 'alipay',
+      channelName: '通道B',
+      createTime: '2023-09-02 11:00:00',
+    },
+    {
+      id: '2004',
+      orderNo: 'RO20230902002',
+      userId: 1004,
+      userEmail: 'user4@example.com',
+      balanceBefore: 1500.00,
+      amount: 1500.00,
+      balanceAfter: 1500.00,
+      fee: 15.00,
+      status: 'refunded',
+      paymentMethod: 'wechat',
+      channelName: '通道C',
+      transactionId: 'TX002',
+      createTime: '2023-09-02 12:00:00',
+      payTime: '2023-09-02 12:05:00',
+      isRefunded: true,
+      logs: [
+        { time: '2023-09-02 12:00:00', action: '创建订单', operator: '系统' },
+        { time: '2023-09-02 12:05:00', action: '支付成功', operator: '系统' },
+        { time: '2023-09-02 14:00:00', action: '订单退款', operator: '管理员' }
+      ]
     }
   ])
   const currentPage = ref(1)
@@ -471,9 +553,11 @@
             orderNo: 'CZ202403100001',
             userId: 1001,
             userEmail: 'zhangsan@example.com',
+            balanceBefore: 1000.00,
             amount: 1000.00,
+            balanceAfter: 1000.00,
             fee: 10.00,
-            status: 'paid',
+            status: 'completed',
             paymentMethod: 'usdt',
             channelName: '通道A',
             transactionId: '2024031012345678',
@@ -489,7 +573,9 @@
             orderNo: 'CZ202403100002',
             userId: 1002,
             userEmail: 'lisi@example.com',
+            balanceBefore: 2000.00,
             amount: 2000.00,
+            balanceAfter: 2000.00,
             fee: 20.00,
             status: 'pending',
             paymentMethod: 'wechat',
@@ -504,7 +590,9 @@
             orderNo: 'CZ202403100003',
             userId: 1003,
             userEmail: 'wangwu@example.com',
+            balanceBefore: 500.00,
             amount: 500.00,
+            balanceAfter: 500.00,
             fee: 5.00,
             status: 'cancelled',
             paymentMethod: 'alipay',
@@ -520,9 +608,11 @@
             orderNo: 'CZ202403100004',
             userId: 1004,
             userEmail: 'zhaoliu@example.com',
-            amount: 100.00,
-            fee: 1.00,
-            status: 'paid',
+            balanceBefore: 1000.00,
+            amount: 1000.00,
+            balanceAfter: 1000.00,
+            fee: 10.00,
+            status: 'completed',
             paymentMethod: 'usdt',
             channelName: '通道A',
             transactionId: '2024031087654321',
@@ -584,7 +674,7 @@
   
   // 确认支付
   const confirmPayment = (order: RechargeOrder) => {
-    ElMessageBox.confirm(`确认将订单 ${order.orderNo} 标记为已支付吗？`, '确认操作', {
+    ElMessageBox.confirm(`确认将订单 ${order.orderNo} 标记为已完成吗？`, '确认操作', {
       confirmButtonText: '确认',
       cancelButtonText: '取消',
       type: 'warning'
@@ -593,7 +683,7 @@
       // 这里模拟更新
       const index = orderList.value.findIndex(item => item.id === order.id)
       if (index !== -1) {
-        orderList.value[index].status = 'paid'
+        orderList.value[index].status = 'completed'
         orderList.value[index].payTime = new Date().toLocaleString()
         if (orderList.value[index].logs) {
           orderList.value[index].logs.push({
@@ -659,9 +749,9 @@
             const index = orderList.value.findIndex(item => item.orderNo === refundForm.orderNo)
             if (index !== -1) {
               // 将状态改为已退款
-              orderList.value[index].status = 'cancelled' // 使用已取消状态表示已退款
+              orderList.value[index].status = 'refunded'
               // 添加退款标记
-              orderList.value[index].refunded = true
+              orderList.value[index].isRefunded = true
               
               // 添加退款记录到日志
               if (!orderList.value[index].logs) {
@@ -701,16 +791,18 @@
     }
     
     // 创建CSV内容
-    let csvContent = '订单号,用户ID,用户名,充值金额,手续费,通道名称,支付方式,订单状态,创建时间,支付时间\n'
+    let csvContent = '订单号,用户ID,用户名,充值前余额,充值金额,充值后余额,手续费,入账金额,通道名称,支付方式,订单状态,创建时间,完成时间\n'
     
     orderList.value.forEach(order => {
-      const status = order.status === 'pending' ? '待支付' : 
-                    (order.status === 'paid' && !order.refunded) ? '已支付' : 
-                    (order.status === 'cancelled' && order.refunded) ? '已退款' : '已取消'
+      const status = order.status === 'pending' ? '待付款' : 
+                    (order.status === 'completed' && !order.isRefunded) ? '已完成' : 
+                    (order.status === 'cancelled') ? '已取消' : 
+                    (order.status === 'refunded') ? '已退款' : '未知状态'
       
       const paymentMethod = getPayMethodLabel(order.paymentMethod)
+      const income = calculateIncome(order).toFixed(2)
       
-      csvContent += `"${order.orderNo}","${order.userId}","${order.userEmail}",${order.amount.toFixed(2)},${order.fee ? order.fee.toFixed(2) : '0.00'},"${order.channelName}","${paymentMethod}","${status}","${order.createTime}","${order.payTime || ''}"\n`
+      csvContent += `"${order.orderNo}","${order.userId}","${order.userEmail}",${order.balanceBefore.toFixed(2)},${order.amount.toFixed(2)},${order.balanceAfter.toFixed(2)},${order.fee ? order.fee.toFixed(2) : '0.00'},${income},"${order.channelName}","${paymentMethod}","${status}","${order.createTime}","${order.payTime || ''}"\n`
     })
     
     // 创建Blob对象
@@ -745,16 +837,18 @@
     }
     
     // 创建CSV内容
-    let csvContent = '订单号,用户ID,用户名,充值金额,手续费,通道名称,支付方式,订单状态,创建时间,支付时间\n'
+    let csvContent = '订单号,用户ID,用户名,充值前余额,充值金额,充值后余额,手续费,入账金额,通道名称,支付方式,订单状态,创建时间,完成时间\n'
     
     multipleSelection.value.forEach(order => {
-      const status = order.status === 'pending' ? '待支付' : 
-                    (order.status === 'paid' && !order.refunded) ? '已支付' : 
-                    (order.status === 'cancelled' && order.refunded) ? '已退款' : '已取消'
+      const status = order.status === 'pending' ? '待付款' : 
+                    (order.status === 'completed' && !order.isRefunded) ? '已完成' : 
+                    (order.status === 'cancelled') ? '已取消' : 
+                    (order.status === 'refunded') ? '已退款' : '未知状态'
       
       const paymentMethod = getPayMethodLabel(order.paymentMethod)
+      const income = calculateIncome(order).toFixed(2)
       
-      csvContent += `"${order.orderNo}","${order.userId}","${order.userEmail}",${order.amount.toFixed(2)},${order.fee ? order.fee.toFixed(2) : '0.00'},"${order.channelName}","${paymentMethod}","${status}","${order.createTime}","${order.payTime || ''}"\n`
+      csvContent += `"${order.orderNo}","${order.userId}","${order.userEmail}",${order.balanceBefore.toFixed(2)},${order.amount.toFixed(2)},${order.balanceAfter.toFixed(2)},${order.fee ? order.fee.toFixed(2) : '0.00'},${income},"${order.channelName}","${paymentMethod}","${status}","${order.createTime}","${order.payTime || ''}"\n`
     })
     
     // 创建Blob对象
@@ -780,30 +874,6 @@
     ElMessage.success(`成功导出选中订单数据`)
   }
   
-  // 处理删除订单
-  const handleDelete = (row: RechargeOrder) => {
-    ElMessageBox.confirm(
-      `确定要删除订单 ${row.orderNo} 吗？此操作不可恢复。`,
-      '删除确认',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning',
-      }
-    )
-      .then(() => {
-        // 模拟删除操作
-        const index = orderList.value.findIndex(item => item.id === row.id)
-        if (index !== -1) {
-          orderList.value.splice(index, 1)
-          ElMessage.success(`订单 ${row.orderNo} 已成功删除`)
-        }
-      })
-      .catch(() => {
-        ElMessage.info('已取消删除操作')
-      })
-  }
-  
   // 获取支付方式类型
   const getPayMethodType = (method: string) => {
     if (method === 'usdt') return 'danger'
@@ -825,6 +895,33 @@
     // 假设汇率为 1 CNY = 0.14 USDT
     const usdtAmount = (amount * 0.14).toFixed(2)
     return usdtAmount
+  }
+  
+  // 添加总订单数计算
+  const totalOrders = computed(() => {
+    return filteredOrderList.value.length
+  })
+  
+  // 添加成功订单数计算（状态为"completed"的订单）
+  const successOrders = computed(() => {
+    return filteredOrderList.value.filter(order => order.status === 'completed').length
+  })
+  
+  // 添加总手续费计算
+  const totalFee = computed(() => {
+    return filteredOrderList.value.reduce((sum, order) => {
+      return sum + (order.fee || 0)
+    }, 0)
+  })
+  
+  // 添加总入账金额计算（总充值金额 - 总手续费）
+  const totalIncome = computed(() => {
+    return totalAmount.value - totalFee.value
+  })
+  
+  // 计算单个订单的入账金额
+  const calculateIncome = (order: RechargeOrder) => {
+    return order.amount - (order.fee || 0)
   }
   
   onMounted(() => {
@@ -874,6 +971,16 @@
   .fee {
     color: #e6a23c;
     font-weight: bold;
+  }
+  
+  .balance {
+    color: #606266;
+    font-weight: normal;
+  }
+  
+  .balance-after {
+    color: #606266;
+    font-weight: normal;
   }
   
   .pagination-container {

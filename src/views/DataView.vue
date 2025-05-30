@@ -19,15 +19,24 @@
               <el-icon><Money /></el-icon>
             </div>
             <div class="data-info">
-              <div class="data-value">¥{{ formatNumber(getSalesData.sales) }}</div>
+              <div class="data-value">
+                <span class="rmb-text-primary">¥{{ formatNumber(getSalesData.sales) }}</span> 
+                <span class="usdt-text">({{ formatNumber(getSalesData.sales * 0.14) }} USDT)</span>
+              </div>
               <div class="data-extra-info">
                 <div class="data-extra-item">
-                  <span class="label">人民币销售额：</span>
-                  <span class="value red-text">¥{{ formatNumber(getSalesData.sales) }}</span>
+                  <span class="label">商品订单销售额：</span>
+                  <span class="value">
+                    <span class="rmb-text">¥{{ formatNumber(getSalesData.sales) }}</span> 
+                    <span class="usdt-text">({{ formatNumber(getSalesData.sales * 0.14) }} USDT)</span>
+                  </span>
                 </div>
                 <div class="data-extra-item">
-                  <span class="label">USDT销售额：</span>
-                  <span class="value green-text">{{ formatNumber(getSalesData.sales * 0.14) }} USDT</span>
+                  <span class="label">充值订单销售额：</span>
+                  <span class="value">
+                    <span class="rmb-text">¥{{ formatNumber(getSalesData.sales * 0.14 * 7.1) }}</span> 
+                    <span class="usdt-text">({{ formatNumber(getSalesData.sales * 0.14) }} USDT)</span>
+                  </span>
                 </div>
               </div>
             </div>
@@ -306,6 +315,23 @@ onMounted(() => {
 
 .orange-text {
   color: #E6A23C;
+}
+
+.rmb-text {
+  color: #F56C6C;
+  font-weight: 500;
+}
+
+.rmb-text-primary {
+  color: #303133;
+  font-weight: bold;
+}
+
+.usdt-text {
+  color: #67C23A;
+  font-size: 0.85em;
+  margin-left: 5px;
+  font-weight: normal;
 }
 
 .second-row {

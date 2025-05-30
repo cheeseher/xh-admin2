@@ -46,7 +46,6 @@
       <el-table-column label="操作" width="120" fixed="right" align="center">
         <template #default="{ row }">
           <el-button link type="primary" @click="handleEditChannel(row)">
-            <el-icon><Edit /></el-icon>
             编辑
           </el-button>
         </template>

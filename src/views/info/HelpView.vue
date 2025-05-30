@@ -81,7 +81,7 @@
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
-              <el-button link type="primary" :icon="Edit" @click="handleEdit(scope.row)">编辑</el-button>
+              <el-button link type="primary" @click="handleEdit(scope.row)">编辑</el-button>
               <el-popconfirm
                 title="确定要删除该文档吗？"
                 confirm-button-text="确定"
@@ -91,7 +91,7 @@
                 width="200"
               >
                 <template #reference>
-                  <el-button link type="danger" :icon="Delete">删除</el-button>
+                  <el-button link type="danger">删除</el-button>
                 </template>
               </el-popconfirm>
             </div>

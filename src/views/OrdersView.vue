@@ -63,6 +63,7 @@
                 <el-option label="已完成" value="已完成"></el-option>
                 <el-option label="已退款" value="已退款"></el-option>
                 <el-option label="已取消" value="已取消"></el-option>
+                <el-option label="发货失败" value="发货失败"></el-option>
               </el-select>
             </el-form-item>
             <el-form-item label="用户身份">
@@ -95,8 +96,16 @@
           <!-- 添加总金额和导出按钮 -->
           <div class="search-summary">
             <div class="total-amount">
-              <span>筛选结果总金额：</span>
+              <span>总订单数：</span>
+              <span class="amount-value" style="color: #409EFF;">{{ totalOrders }}</span>
+              <span style="margin-left: 20px;">成功订单：</span>
+              <span class="amount-value" style="color: #67C23A;">{{ successOrders }}</span>
+              <span style="margin-left: 20px;">订单总金额：</span>
               <span class="amount-value">¥{{ totalAmount.toFixed(2) }}</span>
+              <span style="margin-left: 20px;">总手续费：</span>
+              <span class="amount-value" style="color: #E6A23C;">¥{{ totalFee.toFixed(2) }}</span>
+              <span style="margin-left: 20px;">总入账金额：</span>
+              <span class="amount-value" style="color: #303133;">¥{{ totalIncome.toFixed(2) }}</span>
               <span v-if="multipleSelection.length > 0" style="margin-left: 20px;">已选择：{{ multipleSelection.length }}笔订单</span>
               <span v-if="multipleSelection.length > 0" class="amount-value">¥{{ selectedTotalAmount.toFixed(2) }}</span>
             </div>
@@ -139,7 +148,7 @@
               </template>
             </el-table-column>
             <el-table-column prop="quantity" label="数量" width="80"></el-table-column>
-            <el-table-column prop="totalPrice" label="总价" width="100">
+            <el-table-column prop="totalPrice" label="订单金额" width="100">
               <template #default="scope">
                 <div class="price-container">
                   <span class="price">{{ scope.row.totalPrice }}</span>
@@ -155,12 +164,18 @@
                 </div>
               </template>
             </el-table-column>
+            <el-table-column label="入账金额" width="120">
+              <template #default="scope">
+                <div class="price-container">
+                  <span>{{ calculateIncome(scope.row) }}</span>
+                </div>
+              </template>
+            </el-table-column>
             <el-table-column prop="status" label="状态" width="100">
               <template #default="scope">
                 <el-tag :type="getStatusType(scope.row.status)">{{ scope.row.status }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="cardId" label="卡密ID" width="100"></el-table-column>
             <el-table-column prop="cardInfo" label="卡密信息" min-width="120">
               <template #default="scope">
                 <el-button link type="primary" @click="viewCardInfo(scope.row)">查看</el-button>
@@ -199,23 +214,17 @@
                   </el-button>
                   <template #dropdown>
                     <el-dropdown-menu>
-                      <el-dropdown-item @click="handleViewDetails(scope.row)">
-                        <el-icon><View /></el-icon>查看详情
-                      </el-dropdown-item>
                       <el-dropdown-item @click="handleEditOrder(scope.row)">
-                        <el-icon><Edit /></el-icon>编辑订单
+                        编辑订单
                       </el-dropdown-item>
                       <el-dropdown-item v-if="scope.row.status === '待发货'" @click="handleDeliver(scope.row)">
-                        <el-icon><Check /></el-icon>发货
+                        发货
                       </el-dropdown-item>
                       <el-dropdown-item @click="handleResendEmail(scope.row)">
-                        <el-icon><Message /></el-icon>重发邮件
+                        重发邮件
                       </el-dropdown-item>
                       <el-dropdown-item v-if="scope.row.status !== '已退款'" @click="handleRefund(scope.row)">
-                        <el-icon><Money /></el-icon>退款
-                      </el-dropdown-item>
-                      <el-dropdown-item @click="handleDelete(scope.row)">
-                        <el-icon><Delete /></el-icon>删除
+                        退款
                       </el-dropdown-item>
                     </el-dropdown-menu>
                   </template>
@@ -256,9 +265,6 @@
         </el-form-item>
         <el-form-item label="用户邮箱">
           <el-input v-model="deliverForm.userEmail" disabled></el-input>
-        </el-form-item>
-        <el-form-item label="卡密ID" prop="cardId">
-          <el-input v-model="deliverForm.cardId" placeholder="请输入卡密ID"></el-input>
         </el-form-item>
         <el-form-item label="卡密信息" prop="cardInfo">
           <el-input 
@@ -327,49 +333,6 @@
       </template>
     </el-dialog>
 
-    <!-- Order Details Dialog -->
-    <el-dialog
-      v-model="orderDetailsDialogVisible"
-      title="订单详情"
-      width="700px"
-      destroy-on-close
-    >
-      <div v-if="selectedOrderDetails" class="order-detail-content">
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="订单ID">{{ selectedOrderDetails.id }}</el-descriptions-item>
-          <el-descriptions-item label="订单号">{{ selectedOrderDetails.orderId }}</el-descriptions-item>
-          <el-descriptions-item label="商品名称">{{ selectedOrderDetails.productName }}</el-descriptions-item>
-          <el-descriptions-item label="商品分类">{{ selectedOrderDetails.category }}</el-descriptions-item>
-          <el-descriptions-item label="数量">{{ selectedOrderDetails.quantity }}</el-descriptions-item>
-          <el-descriptions-item label="商品原价">{{ selectedOrderDetails.originalPrice }}</el-descriptions-item>
-          <el-descriptions-item label="购买价格">{{ selectedOrderDetails.purchasePrice }}</el-descriptions-item>
-          <el-descriptions-item label="总价">{{ selectedOrderDetails.totalPrice }}</el-descriptions-item>
-          <el-descriptions-item label="手续费">{{ selectedOrderDetails.fee }}</el-descriptions-item>
-          <el-descriptions-item label="状态"> <el-tag :type="getStatusType(selectedOrderDetails.status)">{{ selectedOrderDetails.status }}</el-tag></el-descriptions-item>
-          <el-descriptions-item label="卡密ID" v-if="selectedOrderDetails.cardId">{{ selectedOrderDetails.cardId }}</el-descriptions-item>
-          <el-descriptions-item label="用户邮箱">{{ selectedOrderDetails.userEmail }}</el-descriptions-item>
-          <el-descriptions-item label="用户身份"><el-tag :type="getUserRoleType(selectedOrderDetails.userRole)" size="small">{{ selectedOrderDetails.userRole }}</el-tag></el-descriptions-item>
-          <el-descriptions-item label="支付方式"><el-tag :type="getPayMethodType(selectedOrderDetails.payMethod)">{{ getPayMethodLabel(selectedOrderDetails.payMethod) }}</el-tag></el-descriptions-item>
-          <el-descriptions-item label="发货方式"><el-tag :type="selectedOrderDetails.deliveryMethod === '自动发货' ? 'success' : 'info'">{{ selectedOrderDetails.deliveryMethod }}</el-tag></el-descriptions-item>
-          <el-descriptions-item label="创建时间">{{ selectedOrderDetails.createTime }}</el-descriptions-item>
-          <el-descriptions-item label="备注" :span="2" v-if="selectedOrderDetails.remark">{{ selectedOrderDetails.remark }}</el-descriptions-item>
-          <el-descriptions-item label="卡密信息" :span="2" v-if="selectedOrderDetails.cardInfo && (selectedOrderDetails.status === '已完成' || selectedOrderDetails.status === '待发货')">
-            <pre class="card-info-pre">{{ selectedOrderDetails.cardInfo }}</pre>
-          </el-descriptions-item>
-          <template v-if="selectedOrderDetails.refundInfo">
-            <el-descriptions-item label="退款金额" :span="2"><span style="color: #F56C6C; font-weight: bold;">¥{{ selectedOrderDetails.refundInfo.refundAmount.toFixed(2) }}</span></el-descriptions-item>
-            <el-descriptions-item label="退款备注" :span="2">{{ selectedOrderDetails.refundInfo.refundRemark }}</el-descriptions-item>
-            <el-descriptions-item label="退款时间" :span="2">{{ selectedOrderDetails.refundInfo.refundTime }}</el-descriptions-item>
-          </template>
-        </el-descriptions>
-      </div>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="orderDetailsDialogVisible = false">关闭</el-button>
-        </span>
-      </template>
-    </el-dialog>
-
     <!-- Edit Order Dialog -->
     <el-dialog
       v-model="editOrderDialogVisible"
@@ -422,9 +385,6 @@ const orderList = ref<OrderItem[]>([]) // Initialize as empty, will be populated
 const allOrderList = ref<OrderItem[]>([]) // This will hold the initial full list from external data
 
 // Dialog states and forms
-const orderDetailsDialogVisible = ref(false)
-const selectedOrderDetails = ref<OrderItem | null>(null)
-
 const editOrderDialogVisible = ref(false)
 const editOrderFormRef = ref<FormInstance>()
 const editOrderForm = ref<Partial<OrderItem>>({ id: '', remark: '' }) // Allow partial updates, focusing on remark
@@ -498,12 +458,35 @@ const filteredOrderList = computed(() => {
   return result
 })
 
+// 计算筛选后的总订单数
+const totalOrders = computed(() => {
+  return filteredOrderList.value.length
+})
+
+// 计算筛选后的成功订单数（状态为"已完成"的订单）
+const successOrders = computed(() => {
+  return filteredOrderList.value.filter(order => order.status === '已完成').length
+})
+
 // 计算筛选后的总金额
 const totalAmount = computed(() => {
   return filteredOrderList.value.reduce((sum, order) => {
     const price = parseFloat(order.totalPrice.replace('¥', ''))
     return sum + (isNaN(price) ? 0 : price)
   }, 0)
+})
+
+// 计算筛选后的总手续费
+const totalFee = computed(() => {
+  return filteredOrderList.value.reduce((sum, order) => {
+    const fee = parseFloat((order.fee || '¥0.00').replace('¥', ''))
+    return sum + (isNaN(fee) ? 0 : fee)
+  }, 0)
+})
+
+// 计算筛选后的总入账金额
+const totalIncome = computed(() => {
+  return totalAmount.value - totalFee.value
 })
 
 // 计算选中的订单总金额
@@ -529,10 +512,10 @@ const exportOrders = () => {
   }
   
   // 创建CSV内容
-  let csvContent = '订单号,商品名称,商品分类,数量,总价,手续费,用户邮箱,支付方式,发货方式,订单状态,创建时间\n'
+  let csvContent = '订单号,商品名称,商品分类,数量,总价,手续费,入账金额,用户邮箱,支付方式,发货方式,订单状态,创建时间\n'
   
   multipleSelection.value.forEach(order => {
-    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${order.userEmail}","${getPayMethodLabel(order.payMethod)}","${order.deliveryMethod}","${order.status}","${order.createTime}"\n`
+    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${calculateIncome(order)}","${order.userEmail}","${getPayMethodLabel(order.payMethod)}","${order.deliveryMethod}","${order.status}","${order.createTime}"\n`
   })
   
   // 创建Blob对象
@@ -573,16 +556,12 @@ const deliverForm = reactive({
   orderId: '',
   productName: '',
   userEmail: '',
-  cardId: '',
   cardInfo: '',
   remark: ''
 })
 
 // 发货表单验证规则
 const deliverRules = reactive<FormRules>({
-  cardId: [
-    { required: true, message: '请输入卡密ID', trigger: 'blur' }
-  ],
   cardInfo: [
     { required: true, message: '请输入卡密信息', trigger: 'blur' }
   ]
@@ -637,6 +616,8 @@ const getStatusType = (status: string) => {
       return 'danger'
     case '已取消':
       return 'info'
+    case '发货失败':
+      return 'danger'
     default:
       return 'info'
   }
@@ -769,7 +750,6 @@ const handleDeliver = (row: any) => {
   deliverForm.orderId = row.orderId
   deliverForm.productName = row.productName
   deliverForm.userEmail = row.userEmail
-  deliverForm.cardId = ''
   deliverForm.cardInfo = ''
   deliverForm.remark = row.remark || ''
   deliverDialogVisible.value = true
@@ -810,7 +790,6 @@ const submitDeliverForm = async () => {
       const order = orderList.value.find(item => item.id === deliverForm.id)
       if (order) {
         order.status = '已完成'
-        order.cardId = deliverForm.cardId
         order.cardInfo = deliverForm.cardInfo
         if (deliverForm.remark) {
           order.remark = deliverForm.remark
@@ -936,7 +915,7 @@ const submitRefund = async () => {
   })
 }
 
-// 添加导出所有订单的方法
+// 修改导出所有订单的方法
 const exportAllOrders = () => {
   // 导出所有订单
   if (allOrderList.value.length === 0) {
@@ -945,10 +924,10 @@ const exportAllOrders = () => {
   }
   
   // 创建CSV内容
-  let csvContent = '订单号,商品名称,商品分类,数量,总价,手续费,用户邮箱,支付方式,发货方式,订单状态,创建时间\n'
+  let csvContent = '订单号,商品名称,商品分类,数量,总价,手续费,入账金额,用户邮箱,支付方式,发货方式,订单状态,创建时间\n'
   
   allOrderList.value.forEach(order => {
-    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${order.userEmail}","${getPayMethodLabel(order.payMethod)}","${order.deliveryMethod}","${order.status}","${order.createTime}"\n`
+    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${calculateIncome(order)}","${order.userEmail}","${getPayMethodLabel(order.payMethod)}","${order.deliveryMethod}","${order.status}","${order.createTime}"\n`
   })
   
   // 创建Blob对象
@@ -1010,12 +989,15 @@ const getUserRoleType = (role: string) => {
   return 'info'
 }
 
-// Handlers for new dialogs
-const handleViewDetails = (row: OrderItem) => {
-  selectedOrderDetails.value = JSON.parse(JSON.stringify(row)); // Use a deep copy
-  orderDetailsDialogVisible.value = true;
-};
+// 添加 calculateIncome 方法，计算入账金额 = 总价 - 手续费
+const calculateIncome = (row: any): string => {
+  const totalPrice = parseFloat(row.totalPrice.replace('¥', ''))
+  const fee = parseFloat((row.fee || '¥0.00').replace('¥', ''))
+  const income = totalPrice - fee
+  return '¥' + income.toFixed(2)
+}
 
+// Handlers for new dialogs
 const handleEditOrder = (row: OrderItem) => {
   // Only copy relevant fields for editing to avoid unintended modifications
   editOrderForm.value = { 
@@ -1227,7 +1209,7 @@ const submitEditOrderForm = async () => {
   flex-direction: column;
 }
 
-.price, .original-price, .purchase-price, .fee {
+.price, .original-price, .purchase-price, .fee, .income-price {
   /* Consolidating price related styles, specific colors can be added if needed */
   color: #303133;
 }
@@ -1251,6 +1233,11 @@ const submitEditOrderForm = async () => {
   /* font-weight: bold; */ /* Example */
 }
 
+/* 移除入账金额特殊样式，使用默认文本颜色 */
+/* .income-price {
+  color: #409EFF;
+  font-weight: bold;
+} */
 
 .usdt-price {
   font-size: 0.9em;
