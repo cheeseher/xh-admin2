@@ -24,7 +24,7 @@
         <el-table-column prop="condition" label="累充升级条件" min-width="150">
           <template #default="scope">
             <span v-if="scope.row.level === 999">欢迎洽谈</span>
-            <span v-else>{{ scope.row.condition }}</span>
+            <span v-else>{{ scope.row.minRechargeTotal }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="discount" label="会员折扣" width="120">
@@ -34,8 +34,7 @@
             <span v-if="scope.row.isCustomDiscount && scope.row.level !== 999">(可调整)</span>
           </template>
         </el-table-column>
-        <el-table-column prop="description" label="备注" min-width="200"></el-table-column>
-        <el-table-column prop="introduction" label="会员介绍" min-width="200"></el-table-column>
+        <el-table-column prop="introduction" label="会员介绍" min-width="220"></el-table-column>
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
