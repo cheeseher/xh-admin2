@@ -201,29 +201,41 @@
     <!-- 添加用户操作日志弹窗 -->
     <el-dialog
       v-model="userLogsDialogVisible"
-      title="用户操作日志"
+      title="余额变动明细"
       width="750px"
     >
       <div class="user-logs-header">
-        <span>用户昵称：xxxxxxx</span>
+        <span>用户昵称：{{ currentUser?.nickname }}</span>
+      </div>
+      
+      <!-- 添加变动类型筛选 -->
+      <div class="filter-area" style="margin-bottom: 15px;">
+        <el-select v-model="logsFilter.operationType" placeholder="变动类型" style="width: 168px;" clearable @change="handleLogsFilterChange">
+          <el-option label="全部" value=""></el-option>
+          <el-option label="充值" value="充值"></el-option>
+          <el-option label="消费" value="消费"></el-option>
+          <el-option label="退款" value="退款"></el-option>
+          <el-option label="人工增加" value="人工增加"></el-option>
+          <el-option label="人工扣减" value="人工扣减"></el-option>
+        </el-select>
       </div>
       
       <el-table :data="userLogsList" border stripe v-loading="logsLoading" style="width: 100%; margin-top: 15px;">
-        <el-table-column prop="operator" label="操作人" width="120"></el-table-column>
-        <el-table-column prop="operationType" label="操作类型" width="150">
+        <el-table-column prop="operationType" label="变动类型" width="150">
           <template #default="{ row }">
-            <el-tag :type="getOperationTypeTag(row.operationType)">{{ row.operationType }}</el-tag>
+            {{ row.operationType }}
           </template>
         </el-table-column>
-        <el-table-column prop="operationAmount" label="操作金额" width="120">
+        <el-table-column prop="operationAmount" label="变动金额" width="120">
           <template #default="{ row }">
             <span :class="{'text-green': row.operationAmount > 0, 'text-red': row.operationAmount < 0}">
               {{ row.operationAmount > 0 ? '+' : '' }}{{ row.operationAmount.toFixed(2) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="operationDesc" label="操作描述" min-width="200"></el-table-column>
-        <el-table-column prop="operationTime" label="操作时间" width="180"></el-table-column>
+        <el-table-column prop="operationDesc" label="变动说明" min-width="200"></el-table-column>
+        <el-table-column prop="operator" label="操作人" width="120"></el-table-column>
+        <el-table-column prop="operationTime" label="变动时间" width="180"></el-table-column>
       </el-table>
       
       <div class="pagination-container">
@@ -253,8 +265,8 @@
       <el-form :model="balanceForm" label-width="100px" :rules="balanceRules" ref="balanceFormRef">
         <el-form-item label="操作类型" prop="operationType">
           <el-radio-group v-model="balanceForm.operationType">
-            <el-radio label="increase">增加余额</el-radio>
-            <el-radio label="decrease">扣减余额</el-radio>
+            <el-radio label="increase">人工增加</el-radio>
+            <el-radio label="decrease">人工扣减</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="操作金额" prop="amount">
@@ -752,7 +764,7 @@ const userLogsList = ref<any[]>([
     logId: 'log001',
     userId: 'user001',
     operator: 'admin',
-    operationType: '余额充值',
+    operationType: '充值',
     operationAmount: 50.00,
     operationDesc: '用户在线充值',
     operationTime: '2023-05-01 10:00:00',
@@ -789,6 +801,10 @@ const logsLoading = ref(false)
 const logsCurrentPage = ref(1)
 const logsPageSize = ref(10)
 const logsTotalCount = ref(userLogsList.value.length)
+// 添加日志筛选
+const logsFilter = reactive({
+  operationType: ''
+})
 
 // 处理用户日志
 const handleUserLogs = (row: any) => {
@@ -796,6 +812,12 @@ const handleUserLogs = (row: any) => {
   userLogsDialogVisible.value = true
   logsCurrentPage.value = 1
   logsPageSize.value = 10
+  logsFilter.operationType = '' // 重置筛选
+  fetchUserLogs()
+}
+
+// 处理日志筛选变化
+const handleLogsFilterChange = () => {
   fetchUserLogs()
 }
 
@@ -813,7 +835,7 @@ const fetchUserLogs = () => {
         logId: 'L0001',
         userId: currentUser.value.userId,
         operator: 'admin',
-        operationType: '余额增加',
+        operationType: '人工增加',
         operationAmount: 1000.00,
         operationDesc: '人工充值',
         operationTime: '2024-03-15 10:30:22'
@@ -821,43 +843,49 @@ const fetchUserLogs = () => {
       {
         logId: 'L0002',
         userId: currentUser.value.userId,
-        operator: 'admin',
-        operationType: '余额增加',
+        operator: 'system',
+        operationType: '充值',
         operationAmount: 500.00,
-        operationDesc: '活动奖励',
+        operationDesc: '用户在线充值',
         operationTime: '2024-03-14 15:45:10'
       },
       {
         logId: 'L0003',
         userId: currentUser.value.userId,
-        operator: 'admin',
-        operationType: '余额扣减',
+        operator: 'system',
+        operationType: '消费',
         operationAmount: -200.00,
-        operationDesc: '违规扣除',
+        operationDesc: '购买商品消费',
         operationTime: '2024-03-13 09:20:33'
       },
       {
         logId: 'L0004',
         userId: currentUser.value.userId,
         operator: 'admin',
-        operationType: '余额增加',
+        operationType: '退款',
         operationAmount: 50.00,
-        operationDesc: '补偿',
+        operationDesc: '订单退款',
         operationTime: '2024-03-12 14:10:05'
       },
       {
         logId: 'L0005',
         userId: currentUser.value.userId,
         operator: 'admin',
-        operationType: '余额扣减',
+        operationType: '人工扣减',
         operationAmount: -100.00,
         operationDesc: '扣除无效充值',
         operationTime: '2024-03-10 16:30:45'
       }
     ]
     
-    userLogsList.value = mockLogs
-    logsTotalCount.value = mockLogs.length
+    // 根据筛选条件过滤日志
+    let filteredLogs = [...mockLogs]
+    if (logsFilter.operationType) {
+      filteredLogs = filteredLogs.filter(log => log.operationType === logsFilter.operationType)
+    }
+    
+    userLogsList.value = filteredLogs
+    logsTotalCount.value = filteredLogs.length
     logsLoading.value = false
   }, 500)
 }
@@ -865,12 +893,15 @@ const fetchUserLogs = () => {
 // 获取操作类型标签样式
 const getOperationTypeTag = (type: string) => {
   switch (type) {
-    case '余额增加':
+    case '充值':
+    case '人工增加':
+    case '退款':
       return 'success'
-    case '余额扣减':
+    case '消费':
+    case '人工扣减':
       return 'danger'
     default:
-      return ''
+      return 'info'
   }
 }
 
@@ -924,7 +955,7 @@ const submitBalanceOperation = async () => {
   await balanceFormRef.value.validate((valid, fields) => {
     if (valid) {
       const amount = balanceForm.operationType === 'increase' ? balanceForm.amount : -balanceForm.amount
-      const operationType = balanceForm.operationType === 'increase' ? '余额增加' : '余额扣减'
+      const operationType = balanceForm.operationType === 'increase' ? '人工增加' : '人工扣减'
       
       // 更新用户余额
       const index = tableData.value.findIndex(item => item.userId === currentUser.value.userId)

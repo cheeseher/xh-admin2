@@ -197,5 +197,5 @@ export function generateSampleOrders(count) {
 }
 
 // You can uncomment this to add more generated sample data to the list for testing purposes
-// const additionalSampleOrders = generateSampleOrders(20);
-// orderList.value = [...orderList.value, ...additionalSampleOrders]; 
+const additionalSampleOrders = generateSampleOrders(30);
+orderList.value = [...orderList.value, ...additionalSampleOrders]; 

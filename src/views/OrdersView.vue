@@ -189,6 +189,13 @@
                 </el-tag>
               </template>
             </el-table-column>
+            <el-table-column label="折扣" width="80">
+              <template #default="scope">
+                <el-tag type="success" effect="plain" size="small">
+                  {{ getUserDiscount(scope.row.userRole) }}
+                </el-tag>
+              </template>
+            </el-table-column>
             <el-table-column prop="payMethod" label="支付方式" width="100">
               <template #default="scope">
                 <el-tag :type="getPayMethodType(scope.row.payMethod)">
@@ -982,11 +989,38 @@ const convertToUSDT = (price: string): string => {
   return usdtPrice
 }
 
-// 添加获取用户身份类型函数
+// 获取用户角色对应的标签类型
 const getUserRoleType = (role: string) => {
-  if (role.toLowerCase().includes('vip') || role.includes('超级会员')) return 'warning'
-  if (role === '普通用户') return 'success'
-  return 'info'
+  switch (role) {
+    case '超级会员':
+      return 'danger'
+    case 'vip3':
+      return 'warning'
+    case 'vip2':
+      return 'success'
+    case 'vip1':
+      return 'primary'
+    default:
+      return 'info'
+  }
+}
+
+// 获取用户折扣信息
+const getUserDiscount = (role: string) => {
+  switch (role) {
+    case '超级会员':
+      return '折扣优惠'
+    case 'vip3':
+      return '85%'
+    case 'vip2':
+      return '90%'
+    case 'vip1':
+      return '95%'
+    case '普通用户':
+      return '90%'
+    default:
+      return '100%'
+  }
 }
 
 // 添加 calculateIncome 方法，计算入账金额 = 总价 - 手续费
