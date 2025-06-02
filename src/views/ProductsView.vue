@@ -151,6 +151,7 @@
                   <el-dropdown-item @click="handleEditProduct(scope.row)">编辑</el-dropdown-item>
                   <el-dropdown-item @click="handlePackageManager(scope.row)">包管理</el-dropdown-item>
                   <el-dropdown-item @click="handleInventory(scope.row)">库存管理</el-dropdown-item>
+                  <el-dropdown-item @click="handleDeleteProduct(scope.row)" style="color: #F56C6C;">删除</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -1256,29 +1257,35 @@ const handleEditProduct = (row: any) => {
 }
 
 // 删除商品
-// const handleDelete = (row: any) => {
-//   ElMessageBox.confirm(
-//     `确定要删除商品"${row.name}"吗？`,
-//     '警告',
-//     {
-//       confirmButtonText: '确定',
-//       cancelButtonText: '取消',
-//       type: 'warning',
-//     }
-//   )
-//     .then(() => {
-//       ElMessage({
-//         type: 'success',
-//         message: `商品"${row.name}"已删除`,
-//       })
-//     })
-//     .catch(() => {
-//       ElMessage({
-//         type: 'info',
-//         message: '已取消删除',
-//       })
-//     })
-// }
+const handleDeleteProduct = (row: any) => {
+  ElMessageBox.confirm(
+    `确定要删除商品"${row.name}"吗？删除后无法恢复，且所有相关库存数据也会被删除。`,
+    '警告',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  )
+    .then(() => {
+      // 这里可以调用删除API
+      // 模拟删除成功
+      const index = tableData.value.findIndex(item => item.id === row.id);
+      if (index !== -1) {
+        tableData.value.splice(index, 1);
+      }
+      ElMessage({
+        type: 'success',
+        message: '删除成功',
+      });
+    })
+    .catch(() => {
+      ElMessage({
+        type: 'info',
+        message: '已取消删除',
+      });
+    });
+};
 
 // 提交表单
 const submitForm = async () => {

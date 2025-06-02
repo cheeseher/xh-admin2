@@ -221,9 +221,6 @@
                   </el-button>
                   <template #dropdown>
                     <el-dropdown-menu>
-                      <el-dropdown-item @click="handleEditOrder(scope.row)">
-                        编辑订单
-                      </el-dropdown-item>
                       <el-dropdown-item v-if="scope.row.status === '待发货'" @click="handleDeliver(scope.row)">
                         发货
                       </el-dropdown-item>
@@ -257,42 +254,6 @@
       </el-card>
     </el-card>
     
-    <!-- 发货对话框 -->
-    <el-dialog
-      v-model="deliverDialogVisible"
-      title="订单发货"
-      width="550px"
-    >
-      <el-form :model="deliverForm" label-width="100px" :rules="deliverRules" ref="deliverFormRef">
-        <el-form-item label="订单号">
-          <el-input v-model="deliverForm.orderId" disabled></el-input>
-        </el-form-item>
-        <el-form-item label="商品名称">
-          <el-input v-model="deliverForm.productName" disabled></el-input>
-        </el-form-item>
-        <el-form-item label="用户邮箱">
-          <el-input v-model="deliverForm.userEmail" disabled></el-input>
-        </el-form-item>
-        <el-form-item label="卡密信息" prop="cardInfo">
-          <el-input 
-            v-model="deliverForm.cardInfo" 
-            type="textarea" 
-            :rows="4" 
-            placeholder="请输入卡密信息"
-          ></el-input>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="deliverForm.remark" type="textarea" :rows="3" placeholder="请输入备注信息"></el-input>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="deliverDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitDeliverForm">确认发货</el-button>
-        </span>
-      </template>
-    </el-dialog>
-
     <!-- 退款审核对话框 -->
     <el-dialog
       v-model="refundDialogVisible"
@@ -555,25 +516,6 @@ const pageSize = ref(10)
 const total = ref(100)
 const loading = ref(false)
 
-// 发货对话框相关
-const deliverDialogVisible = ref(false)
-const deliverFormRef = ref<FormInstance>()
-const deliverForm = reactive({
-  id: '',
-  orderId: '',
-  productName: '',
-  userEmail: '',
-  cardInfo: '',
-  remark: ''
-})
-
-// 发货表单验证规则
-const deliverRules = reactive<FormRules>({
-  cardInfo: [
-    { required: true, message: '请输入卡密信息', trigger: 'blur' }
-  ]
-})
-
 // 退款对话框相关
 const refundDialogVisible = ref(false)
 const refundFormRef = ref<FormInstance>()
@@ -751,63 +693,27 @@ const handleView = (row: any) => {
   )
 }
 
-// 发货
+// 修改发货处理函数，使用简单确认弹框
 const handleDeliver = (row: any) => {
-  deliverForm.id = row.id
-  deliverForm.orderId = row.orderId
-  deliverForm.productName = row.productName
-  deliverForm.userEmail = row.userEmail
-  deliverForm.cardInfo = ''
-  deliverForm.remark = row.remark || ''
-  deliverDialogVisible.value = true
-}
-
-// 删除
-const handleDelete = (row: any) => {
   ElMessageBox.confirm(
-    `确定要删除订单 ${row.orderId} 吗？`,
-    '警告',
+    `确认该用户已付款并已成功发货？订单号: ${row.orderId}`,
+    '订单发货确认',
     {
-      confirmButtonText: '确定',
+      confirmButtonText: '确认',
       cancelButtonText: '取消',
-      type: 'warning',
+      type: 'warning'
     }
-  )
-    .then(() => {
-      ElMessage({
-        type: 'success',
-        message: `订单 ${row.orderId} 已删除`,
-      })
-    })
-    .catch(() => {
-      ElMessage({
-        type: 'info',
-        message: '已取消删除',
-      })
-    })
-}
-
-// 提交发货表单
-const submitDeliverForm = async () => {
-  if (!deliverFormRef.value) return
-  
-  await deliverFormRef.value.validate((valid, fields) => {
-    if (valid) {
-      // 更新订单状态为已发货
-      const order = orderList.value.find(item => item.id === deliverForm.id)
-      if (order) {
-        order.status = '已完成'
-        order.cardInfo = deliverForm.cardInfo
-        if (deliverForm.remark) {
-          order.remark = deliverForm.remark
-        }
-      }
-      
-      ElMessage.success('订单发货成功')
-      deliverDialogVisible.value = false
-    } else {
-      console.log('表单验证失败', fields)
-    }
+  ).then(() => {
+    // 自动生成卡密信息
+    const autoCardInfo = generateCardInfo(row.category, row.productName)
+    
+    // 更新订单状态为已完成
+    row.status = '已完成'
+    row.cardInfo = autoCardInfo
+    
+    ElMessage.success('订单发货成功')
+  }).catch(() => {
+    ElMessage.info('已取消发货')
   })
 }
 
@@ -1068,6 +974,25 @@ const submitEditOrderForm = async () => {
     ElMessage.error('更新备注失败');
   }
 };
+
+// 自动生成卡密信息的函数
+const generateCardInfo = (category: string, productName: string) => {
+  // 根据不同类型的产品生成不同的卡密信息
+  const timestamp = new Date().getTime().toString().slice(-8)
+  const randomStr = Math.random().toString(36).substring(2, 10).toUpperCase()
+  
+  if (category.includes('邮箱')) {
+    const email = `user_${randomStr}@${category.includes('谷歌') ? 'gmail' : 'outlook'}.com`
+    const password = `Pass_${Math.random().toString(36).substring(2, 10)}`
+    return `账号：${email}\n密码：${password}\n激活码：XH-${timestamp}-${randomStr}`
+  } else if (category.includes('账号')) {
+    const username = `user_${randomStr}`
+    const password = `Pass_${Math.random().toString(36).substring(2, 10)}`
+    return `账号：${username}\n密码：${password}\n平台：${category}\n注册日期：${new Date().toISOString().split('T')[0]}`
+  } else {
+    return `卡密ID：XH-${timestamp}-${randomStr}\n使用说明：登录官网 example.com 使用此卡密激活账号\n有效期：1年`
+  }
+}
 </script>
 
 <style>

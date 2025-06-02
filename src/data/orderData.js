@@ -53,7 +53,7 @@ export const productOptions = ref([
   { label: '其他账号-Steam', value: '其他账号-Steam', price: 79.99 }
 ])
 
-// 表格数据
+// 表格数据 - 仅保留6种状态各一个订单
 /** @type {import('vue').Ref<OrderItem[]>} */
 export const orderList = ref([
   {
@@ -139,8 +139,47 @@ export const orderList = ref([
     createTime: '2023-05-02 14:45:00',
     remark: '用户咨询后下单，等待支付',
     refundInfo: null
+  },
+  {
+    id: 'ORD005',
+    orderId: 'P20230503001',
+    productName: 'Facebook账号 - 商业版',
+    category: 'Facebook账号',
+    originalPrice: '¥199.99',
+    purchasePrice: '¥189.99',
+    quantity: 1,
+    totalPrice: '¥199.99',
+    fee: '¥4.00',
+    status: '已取消',
+    cardInfo: '',
+    userEmail: 'business_user@example.com',
+    userRole: 'vip3',
+    payMethod: 'alipay',
+    deliveryMethod: '手动发货',
+    createTime: '2023-05-03 09:20:00',
+    remark: '用户主动取消订单',
+    refundInfo: null
+  },
+  {
+    id: 'ORD006',
+    orderId: 'P20230503002',
+    productName: 'ChatGPT账号 - 高级版',
+    category: 'ChatGPT账号',
+    originalPrice: '¥299.99',
+    purchasePrice: '¥284.99',
+    quantity: 1,
+    totalPrice: '¥299.99',
+    fee: '¥6.00',
+    status: '发货失败',
+    cardInfo: '账号状态异常，无法激活',
+    userEmail: 'tech_user@example.com',
+    userRole: 'vip1',
+    payMethod: 'wechat',
+    deliveryMethod: '自动发货',
+    createTime: '2023-05-03 16:45:00',
+    remark: '系统发货失败，需手动处理',
+    refundInfo: null
   }
-  // Add more sample orders to make the list longer and test pagination and filtering
 ])
 
 // Function to generate more orders if needed for testing
@@ -196,6 +235,6 @@ export function generateSampleOrders(count) {
   return samples;
 }
 
-// You can uncomment this to add more generated sample data to the list for testing purposes
-const additionalSampleOrders = generateSampleOrders(30);
-orderList.value = [...orderList.value, ...additionalSampleOrders]; 
+// 注释掉生成额外数据的代码
+// const additionalSampleOrders = generateSampleOrders(30);
+// orderList.value = [...orderList.value, ...additionalSampleOrders]; 
