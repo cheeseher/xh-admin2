@@ -1,9 +1,7 @@
 <template>
   <div class="app-container">
     <!-- 登录页面不显示侧边栏和顶部导航栏 -->
-    <template v-if="false">
-      <router-view />
-    </template>
+    <router-view v-if="route.path === '/login'" />
     
     <!-- 其他页面显示完整布局 -->
     <el-container v-else>

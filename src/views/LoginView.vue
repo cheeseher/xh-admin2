@@ -156,8 +156,10 @@ const handleLogin = async () => {
   justify-content: center;
   align-items: center;
   height: 100vh;
+  width: 100vw;
   position: relative;
   overflow: hidden;
+  background: #1976d2;
 }
 
 .login-background {
