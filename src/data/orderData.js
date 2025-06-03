@@ -20,6 +20,7 @@ import { ref } from 'vue'
  * @property {string} totalPrice
  * @property {string} fee
  * @property {string} [cardInfo]
+ * @property {string} userNickname
  * @property {string} userEmail
  * @property {string} userRole
  * @property {string} payMethod
@@ -68,6 +69,7 @@ export const orderList = ref([
     fee: '¥0.50',
     status: '待发货',
     cardInfo: '卡密详情1..., 卡密详情2...',
+    userNickname: '小明',
     userEmail: 'user1@example.com',
     userRole: '普通用户',
     payMethod: 'usdt',
@@ -88,6 +90,7 @@ export const orderList = ref([
     fee: '¥0.00',
     status: '已完成',
     cardInfo: '账号:iguser, 密码:xxxxxx',
+    userNickname: '大卫',
     userEmail: 'user2_vip@example.com',
     userRole: 'vip2',
     payMethod: 'alipay',
@@ -108,6 +111,7 @@ export const orderList = ref([
     fee: '¥1.00',
     status: '已退款',
     cardInfo: '用户申请退款，已处理',
+    userNickname: '游客123',
     userEmail: 'visitor123@example.com',
     userRole: '游客',
     payMethod: 'wechat',
@@ -132,6 +136,7 @@ export const orderList = ref([
     fee: '¥0.80',
     status: '待付款',
     cardInfo: '',
+    userNickname: '超级用户',
     userEmail: 'supermember@example.com',
     userRole: '超级会员',
     payMethod: 'usdt',
@@ -152,6 +157,7 @@ export const orderList = ref([
     fee: '¥4.00',
     status: '已取消',
     cardInfo: '',
+    userNickname: '商业客户',
     userEmail: 'business_user@example.com',
     userRole: 'vip3',
     payMethod: 'alipay',
@@ -172,6 +178,7 @@ export const orderList = ref([
     fee: '¥6.00',
     status: '发货失败',
     cardInfo: '账号状态异常，无法激活',
+    userNickname: '科技达人',
     userEmail: 'tech_user@example.com',
     userRole: 'vip1',
     payMethod: 'wechat',
@@ -196,6 +203,7 @@ export function generateSampleOrders(count) {
   const payMethods = ['usdt', 'wechat', 'alipay'];
   const deliveryMethods = ['自动发货', '手动发货'];
   const userRoles = ['游客', '普通用户', 'vip1', 'vip2', 'vip3', '超级会员'];
+  const nicknames = ['快乐星球', '科技迷', '数码控', '账号达人', '社交狂人', '匿名用户', '高级玩家', 'VIP客户'];
 
   for (let i = 0; i < count; i++) {
     const prodName = productOptions.value[Math.floor(Math.random() * productOptions.value.length)].label;
@@ -206,6 +214,7 @@ export function generateSampleOrders(count) {
     const fee = parseFloat((totalPrice * 0.02).toFixed(2)); // 2% fee
     const status = statuses[Math.floor(Math.random() * statuses.length)];
     const createTime = new Date(baseTime + i * 3600000 * Math.random() * 24); // Random time within days
+    const nickname = nicknames[Math.floor(Math.random() * nicknames.length)] + i;
 
     samples.push({
       id: `ORD${(1000 + orderList.value.length + i).toString().padStart(3, '0')}`,
@@ -219,6 +228,7 @@ export function generateSampleOrders(count) {
       fee: `¥${fee.toFixed(2)}`,
       status: status,
       cardInfo: status === '已完成' || status === '待发货' ? `Generated card info for ${prodName}` : '',
+      userNickname: nickname,
       userEmail: `user${(Math.random() * 1000).toFixed(0)}@sample.com`,
       userRole: userRoles[Math.floor(Math.random() * userRoles.length)],
       payMethod: payMethods[Math.floor(Math.random() * payMethods.length)],

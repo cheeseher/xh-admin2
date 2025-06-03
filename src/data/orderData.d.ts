@@ -18,6 +18,7 @@ export interface OrderItem {
   fee: string;
   cardId?: string;
   cardInfo?: string;
+  userNickname: string;
   userEmail: string;
   userRole: string;
   payMethod: string;

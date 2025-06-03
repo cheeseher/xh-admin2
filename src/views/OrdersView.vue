@@ -24,6 +24,9 @@
             <el-form-item label="订单号">
               <el-input v-model="searchForm.orderId" placeholder="请输入订单号" clearable></el-input>
             </el-form-item>
+            <el-form-item label="用户昵称">
+              <el-input v-model="searchForm.userNickname" placeholder="请输入用户昵称" clearable></el-input>
+            </el-form-item>
             <el-form-item label="用户邮箱">
               <el-input v-model="searchForm.userEmail" placeholder="请输入用户邮箱" clearable></el-input>
             </el-form-item>
@@ -133,6 +136,8 @@
             <el-table-column type="selection" width="55"></el-table-column>
             <el-table-column prop="id" label="商品订单ID" width="100"></el-table-column>
             <el-table-column prop="orderId" label="订单号" width="180"></el-table-column>
+            <el-table-column prop="userNickname" label="用户昵称" width="120"></el-table-column>
+            <el-table-column prop="userEmail" label="用户邮箱" width="180"></el-table-column>
             <el-table-column prop="productName" label="商品名称" min-width="180"></el-table-column>
             <el-table-column prop="category" label="商品分类" width="100">
               <template #default="scope">
@@ -181,7 +186,6 @@
                 <el-button link type="primary" @click="viewCardInfo(scope.row)">查看</el-button>
               </template>
             </el-table-column>
-            <el-table-column prop="userEmail" label="用户邮箱" width="180"></el-table-column>
             <el-table-column prop="userRole" label="用户身份" width="100">
               <template #default="scope">
                 <el-tag :type="getUserRoleType(scope.row.userRole)" size="small">
@@ -336,6 +340,7 @@ import { orderList as externalOrderList, productOptions as externalProductOption
 // 搜索表单
 const searchForm = reactive({
   orderId: '',
+  userNickname: '',
   userEmail: '',
   category: '',
   payMethod: '',
@@ -386,6 +391,10 @@ const filteredOrderList = computed(() => {
   
   if (searchForm.orderId) {
     result = result.filter(item => item.orderId.includes(searchForm.orderId))
+  }
+  
+  if (searchForm.userNickname) {
+    result = result.filter(item => item.userNickname.toLowerCase().includes(searchForm.userNickname.toLowerCase()))
   }
   
   if (searchForm.userEmail) {
@@ -575,6 +584,7 @@ const getStatusType = (status: string) => {
 // 重置
 const resetSearch = () => {
   searchForm.orderId = ''
+  searchForm.userNickname = ''
   searchForm.userEmail = ''
   searchForm.category = ''
   searchForm.payMethod = ''
