@@ -99,7 +99,6 @@
           <el-table-column type="selection" width="55" />
           <el-table-column prop="id" label="订单ID" min-width="100" />
           <el-table-column prop="orderNo" label="订单号" min-width="180" />
-          <el-table-column prop="userId" label="用户ID" min-width="100" />
           <el-table-column prop="userEmail" label="用户昵称" min-width="180" />
           <el-table-column prop="balanceBefore" label="充值前余额" min-width="120">
             <template #default="scope">
@@ -203,7 +202,6 @@
           <el-descriptions :column="2" border>
             <el-descriptions-item label="订单号" :span="2">{{ currentOrder.orderNo }}</el-descriptions-item>
             <el-descriptions-item label="用户昵称">{{ currentOrder.userEmail }}</el-descriptions-item>
-            <el-descriptions-item label="用户ID">{{ currentOrder.userId }}</el-descriptions-item>
             <el-descriptions-item label="充值前余额">
               <div class="price-container">
                 <span class="balance">¥{{ currentOrder.balanceBefore.toFixed(2) }}</span>
@@ -764,7 +762,7 @@
     }
     
     // 创建CSV内容
-    let csvContent = '订单号,用户ID,用户昵称,充值前余额,充值金额,充值后余额,手续费,入账金额,通道名称,支付方式,订单状态,创建时间,完成时间\n'
+    let csvContent = '订单号,用户昵称,充值前余额,充值金额,充值后余额,手续费,入账金额,通道名称,支付方式,订单状态,创建时间,完成时间\n'
     
     orderList.value.forEach(order => {
       const status = order.status === 'pending' ? '待付款' : 
@@ -775,7 +773,7 @@
       const paymentMethod = getPayMethodLabel(order.paymentMethod)
       const income = calculateIncome(order).toFixed(2)
       
-      csvContent += `"${order.orderNo}","${order.userId}","${order.userEmail}",${order.balanceBefore.toFixed(2)},${order.amount.toFixed(2)},${order.balanceAfter.toFixed(2)},${order.fee ? order.fee.toFixed(2) : '0.00'},${income},"${order.channelName}","${paymentMethod}","${status}","${order.createTime}","${order.payTime || ''}"\n`
+      csvContent += `"${order.orderNo}","${order.userEmail}",${order.balanceBefore.toFixed(2)},${order.amount.toFixed(2)},${order.balanceAfter.toFixed(2)},${order.fee ? order.fee.toFixed(2) : '0.00'},${income},"${order.channelName}","${paymentMethod}","${status}","${order.createTime}","${order.payTime || ''}"\n`
     })
     
     // 创建Blob对象
@@ -810,7 +808,7 @@
     }
     
     // 创建CSV内容
-    let csvContent = '订单号,用户ID,用户昵称,充值前余额,充值金额,充值后余额,手续费,入账金额,通道名称,支付方式,订单状态,创建时间,完成时间\n'
+    let csvContent = '订单号,用户昵称,充值前余额,充值金额,充值后余额,手续费,入账金额,通道名称,支付方式,订单状态,创建时间,完成时间\n'
     
     multipleSelection.value.forEach(order => {
       const status = order.status === 'pending' ? '待付款' : 
@@ -821,7 +819,7 @@
       const paymentMethod = getPayMethodLabel(order.paymentMethod)
       const income = calculateIncome(order).toFixed(2)
       
-      csvContent += `"${order.orderNo}","${order.userId}","${order.userEmail}",${order.balanceBefore.toFixed(2)},${order.amount.toFixed(2)},${order.balanceAfter.toFixed(2)},${order.fee ? order.fee.toFixed(2) : '0.00'},${income},"${order.channelName}","${paymentMethod}","${status}","${order.createTime}","${order.payTime || ''}"\n`
+      csvContent += `"${order.orderNo}","${order.userEmail}",${order.balanceBefore.toFixed(2)},${order.amount.toFixed(2)},${order.balanceAfter.toFixed(2)},${order.fee ? order.fee.toFixed(2) : '0.00'},${income},"${order.channelName}","${paymentMethod}","${status}","${order.createTime}","${order.payTime || ''}"\n`
     })
     
     // 创建Blob对象

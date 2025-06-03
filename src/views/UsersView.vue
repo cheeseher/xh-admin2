@@ -15,6 +15,9 @@
       <!-- 搜索区域 -->
       <div class="search-area">
         <el-form :inline="true" :model="searchForm" class="demo-form-inline">
+          <el-form-item label="用户昵称">
+            <el-input v-model="searchForm.nickname" placeholder="请输入用户昵称" clearable></el-input>
+          </el-form-item>
           <el-form-item label="邮箱">
             <el-input v-model="searchForm.email" placeholder="请输入邮箱" clearable></el-input>
           </el-form-item>
@@ -70,6 +73,11 @@
         <el-table-column prop="vipLevel" label="VIP等级" width="120">
           <template #default="scope">
             <el-tag :type="getVipLevelType(scope.row.role)">{{ getVipLevelName(scope.row.role) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="totalRecharge" label="累计充值" width="120">
+          <template #default="scope">
+            <span class="money">¥{{ scope.row.totalRecharge || 0 }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="totalSpent" label="累计消费" width="120">
@@ -305,6 +313,7 @@ import { Edit, Key, Document, Delete, ArrowDown, Money } from '@element-plus/ico
 
 // 搜索表单
 const searchForm = reactive({
+  nickname: '',
   email: '',
   status: '',
   vipLevel: '',
@@ -320,6 +329,7 @@ const tableData = ref([
     password: 'password123',
     balance: 100.50,
     role: 0, // 普通会员
+    totalRecharge: 500.00,
     totalSpent: 250.00,
     status: 'normal',
     statusBool: true,
@@ -332,6 +342,7 @@ const tableData = ref([
     password: 'password456',
     balance: 500.75,
     role: 1, // 银卡会员
+    totalRecharge: 2000.00,
     totalSpent: 1200.00,
     status: 'normal',
     statusBool: true,
@@ -344,6 +355,7 @@ const tableData = ref([
     password: 'password789',
     balance: 2000.00,
     role: 2, // 金卡会员
+    totalRecharge: 8000.00,
     totalSpent: 5000.00,
     status: 'disabled',
     statusBool: false,
@@ -356,6 +368,7 @@ const tableData = ref([
     password: 'passwordabc',
     balance: 150.00,
     role: 3, // 钻石会员
+    totalRecharge: 1500.00,
     totalSpent: 800.00,
     status: 'normal',
     statusBool: true,
@@ -453,6 +466,7 @@ const handleSearch = () => {
 
 // 重置搜索
 const handleReset = () => {
+  searchForm.nickname = ''
   searchForm.email = ''
   searchForm.status = ''
   searchForm.vipLevel = ''
@@ -693,6 +707,10 @@ const getUserList = () => {
   setTimeout(() => {
     // 根据搜索条件和分页参数获取数据
     const filteredData = tableData.value.filter((item: any) => {
+      // 昵称筛选
+      if (searchForm.nickname && !item.nickname.includes(searchForm.nickname)) {
+        return false
+      }
       // 邮箱筛选
       if (searchForm.email && !item.email.includes(searchForm.email)) {
         return false
@@ -747,7 +765,7 @@ const handleCurrentChange = (val: number) => {
 }
 
 // 监听搜索表单变化，重置分页并重新获取数据
-watch([() => searchForm.email, () => searchForm.status, () => searchForm.vipLevel, () => searchForm.dateRange], () => {
+watch([() => searchForm.nickname, () => searchForm.email, () => searchForm.status, () => searchForm.vipLevel, () => searchForm.dateRange], () => {
   currentPage.value = 1
   getUserList()
 })

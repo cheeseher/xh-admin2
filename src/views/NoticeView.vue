@@ -63,7 +63,6 @@
         <el-table-column prop="publishTime" label="发布时间" width="180" />
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
-            <el-button link @click="handleView(row)">查看</el-button>
             <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
             <el-popconfirm title="确认删除?" @confirm="handleDelete(row)">
               <template #reference>
