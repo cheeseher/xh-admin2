@@ -45,6 +45,37 @@
       </el-col>
       <el-col :span="12">
         <el-card shadow="hover" class="data-card">
+          <div class="data-card-content">
+            <div class="icon-container">
+              <el-icon><List /></el-icon>
+            </div>
+            <div class="data-info">
+              <div class="data-title">订单数量</div>
+              <div class="data-value">{{ formatNumber(dashboardStore.orderCount) }}</div>
+              <div class="data-extra-info">
+                <div class="data-extra-item">
+                  <span class="label">商品订单数量：</span>
+                  <span class="value">{{ formatNumber(dashboardStore.productOrderCount) }}</span>
+                </div>
+                <div class="data-extra-item">
+                  <span class="label">充值订单数量：</span>
+                  <span class="value">{{ formatNumber(dashboardStore.rechargeOrderCount) }}</span>
+                </div>
+              </div>
+              <div class="data-trend">
+                <span>较昨日</span>
+                <span class="up">↑ 2.8%</span>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 数据概览卡片 - 第二行 -->
+    <el-row :gutter="20" class="second-row">
+      <el-col :span="8">
+        <el-card shadow="hover" class="data-card">
           <div class="card-header">
             <div class="title">支付笔数</div>
             <div class="actions">
@@ -66,27 +97,6 @@
                   <span class="label">总手续费：</span>
                   <span class="value orange-text">¥{{ formatNumber(getPaymentData.fees) }}</span>
                 </div>
-              </div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <!-- 数据概览卡片 - 第二行 -->
-    <el-row :gutter="20" class="second-row">
-      <el-col :span="8">
-        <el-card shadow="hover" class="data-card">
-          <div class="data-card-content">
-            <div class="icon-container">
-              <el-icon><List /></el-icon>
-            </div>
-            <div class="data-info">
-              <div class="data-title">订单数量</div>
-              <div class="data-value">{{ formatNumber(dashboardStore.orderCount) }}</div>
-              <div class="data-trend">
-                <span>较昨日</span>
-                <span class="up">↑ 2.8%</span>
               </div>
             </div>
           </div>
@@ -192,6 +202,17 @@ onMounted(() => {
 
 .data-card {
   transition: all 0.3s;
+  height: 100%;
+}
+
+.el-card {
+  height: 100%;
+}
+
+.el-card__body {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .data-card:hover {
@@ -203,6 +224,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   padding: 15px;
+  height: 100%;
 }
 
 .icon-container {
@@ -215,6 +237,7 @@ onMounted(() => {
   margin-right: 15px;
   transition: all 0.3s;
   background-color: var(--el-color-primary);
+  flex-shrink: 0;
 }
 
 .data-card:hover .icon-container {
@@ -229,6 +252,8 @@ onMounted(() => {
 
 .data-info {
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .data-title {
@@ -247,6 +272,7 @@ onMounted(() => {
 .data-trend {
   font-size: 12px;
   color: #909399;
+  margin-top: auto;
 }
 
 .up {

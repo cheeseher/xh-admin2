@@ -9,6 +9,11 @@ export const useDashboardStore = defineStore('dashboard', () => {
   
   // 订单数量
   const orderCount = ref(1280)
+  // 商品订单数量
+  const productOrderCount = ref(820)
+  // 充值订单数量
+  const rechargeOrderCount = ref(460)
+  
   // 用户数量
   const userCount = ref(8846)
   // 支付笔数
@@ -69,6 +74,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     todaySales,
     yesterdaySales,
     orderCount,
+    productOrderCount,
+    rechargeOrderCount,
     userCount,
     paymentCount,
     todayPaymentCount,
