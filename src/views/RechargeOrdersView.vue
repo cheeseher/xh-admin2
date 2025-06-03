@@ -23,8 +23,8 @@
             <el-form-item label="订单号">
               <el-input v-model="searchForm.orderId" placeholder="请输入订单号" clearable></el-input>
             </el-form-item>
-            <el-form-item label="用户名">
-              <el-input v-model="searchForm.userEmail" placeholder="请输入用户名" clearable></el-input>
+            <el-form-item label="用户昵称">
+              <el-input v-model="searchForm.userEmail" placeholder="请输入用户昵称" clearable></el-input>
             </el-form-item>
             <el-form-item label="通道名称">
               <el-input v-model="searchForm.channelName" placeholder="请输入通道名称" clearable></el-input>
@@ -100,7 +100,7 @@
           <el-table-column prop="id" label="订单ID" min-width="100" />
           <el-table-column prop="orderNo" label="订单号" min-width="180" />
           <el-table-column prop="userId" label="用户ID" min-width="100" />
-          <el-table-column prop="userEmail" label="用户名" min-width="180" />
+          <el-table-column prop="userEmail" label="用户昵称" min-width="180" />
           <el-table-column prop="balanceBefore" label="充值前余额" min-width="120">
             <template #default="scope">
               <div class="price-container">
@@ -202,7 +202,7 @@
         <div v-if="currentOrder" class="order-detail">
           <el-descriptions :column="2" border>
             <el-descriptions-item label="订单号" :span="2">{{ currentOrder.orderNo }}</el-descriptions-item>
-            <el-descriptions-item label="用户名">{{ currentOrder.userEmail }}</el-descriptions-item>
+            <el-descriptions-item label="用户昵称">{{ currentOrder.userEmail }}</el-descriptions-item>
             <el-descriptions-item label="用户ID">{{ currentOrder.userId }}</el-descriptions-item>
             <el-descriptions-item label="充值前余额">
               <div class="price-container">
@@ -273,13 +273,13 @@
       <el-dialog
         v-model="refundDialogVisible"
         title="充值订单退款"
-        width="550px"
+        width="500px"
       >
         <el-form :model="refundForm" label-width="100px" :rules="refundRules" ref="refundFormRef">
           <el-form-item label="订单号">
             <el-input v-model="refundForm.orderNo" disabled></el-input>
           </el-form-item>
-          <el-form-item label="用户名">
+          <el-form-item label="用户昵称">
             <el-input v-model="refundForm.userEmail" disabled></el-input>
           </el-form-item>
           <el-form-item label="通道名称">
@@ -289,9 +289,6 @@
             <el-input v-model="refundForm.amount" disabled>
               <template #prepend>¥</template>
             </el-input>
-            <div v-if="refundForm.paymentMethod === 'usdt'" class="form-tip">
-              <span class="usdt-price">{{ convertToUSDT(refundForm.amount) }} USDT</span>
-            </div>
           </el-form-item>
           <el-form-item label="退款金额" prop="refundAmount">
             <el-input-number 
@@ -302,18 +299,6 @@
               :step="0.01"
               style="width: 100%;"
             ></el-input-number>
-            <div class="form-tip">
-              <div>默认退款金额: ¥{{ refundForm.refundAmount.toFixed(2) }}（已扣除手续费）</div>
-              <div>最大可退金额: ¥{{ refundForm.amount.toFixed(2) }}</div>
-            </div>
-          </el-form-item>
-          <el-form-item label="退款原因" prop="refundReason">
-            <el-select v-model="refundForm.refundReason" placeholder="请选择退款原因" style="width: 100%;">
-              <el-option label="客户申请退款" value="客户申请退款"></el-option>
-              <el-option label="充值金额错误" value="充值金额错误"></el-option>
-              <el-option label="系统错误" value="系统错误"></el-option>
-              <el-option label="其他原因" value="其他原因"></el-option>
-            </el-select>
           </el-form-item>
           <el-form-item label="退款说明" prop="refundRemark">
             <el-input 
@@ -322,10 +307,6 @@
               :rows="3" 
               placeholder="请输入退款说明"
             ></el-input>
-          </el-form-item>
-          <el-form-item label="扣除余额" prop="deductBalance">
-            <el-switch v-model="refundForm.deductBalance"></el-switch>
-            <div class="form-tip">开启后将从用户账户余额中扣除相应金额，请确保用户余额充足</div>
           </el-form-item>
         </el-form>
         <template #footer>
@@ -465,18 +446,13 @@
     paymentMethod: '',
     channelName: '',
     refundAmount: 0,
-    refundReason: '客户申请退款',
     refundRemark: '',
-    deductBalance: false
   })
   
   // 退款表单验证规则
   const refundRules = reactive<FormRules>({
     refundAmount: [
       { required: true, message: '请输入退款金额', trigger: 'blur' }
-    ],
-    refundReason: [
-      { required: true, message: '请选择退款原因', trigger: 'change' }
     ],
     refundRemark: [
       { max: 200, message: '退款说明不能超过200个字符', trigger: 'blur' }
@@ -718,7 +694,8 @@
     refundForm.userEmail = row.userEmail
     refundForm.amount = row.amount
     refundForm.paymentMethod = row.paymentMethod
-    refundForm.refundAmount = row.amount - (row.fee || 0)
+    refundForm.channelName = row.channelName
+    refundForm.refundAmount = row.amount
     
     refundDialogVisible.value = true
   }
@@ -730,10 +707,6 @@
     await refundFormRef.value.validate((valid: boolean, fields: any) => {
       if (valid) {
         let confirmMessage = `确定要退款 ¥${refundForm.refundAmount.toFixed(2)} 吗？`
-        if (refundForm.deductBalance) {
-          confirmMessage += '将从用户余额中扣除相应金额。'
-        }
-        confirmMessage += '此操作不可逆。'
         
         ElMessageBox.confirm(
           confirmMessage,
@@ -760,7 +733,7 @@
               
               orderList.value[index].logs.push({
                 time: new Date().toLocaleString(),
-                action: `退款 ¥${refundForm.refundAmount.toFixed(2)} - ${refundForm.refundReason}`,
+                action: `退款 ¥${refundForm.refundAmount.toFixed(2)}`,
                 operator: '管理员'
               })
               
@@ -791,7 +764,7 @@
     }
     
     // 创建CSV内容
-    let csvContent = '订单号,用户ID,用户名,充值前余额,充值金额,充值后余额,手续费,入账金额,通道名称,支付方式,订单状态,创建时间,完成时间\n'
+    let csvContent = '订单号,用户ID,用户昵称,充值前余额,充值金额,充值后余额,手续费,入账金额,通道名称,支付方式,订单状态,创建时间,完成时间\n'
     
     orderList.value.forEach(order => {
       const status = order.status === 'pending' ? '待付款' : 
@@ -837,7 +810,7 @@
     }
     
     // 创建CSV内容
-    let csvContent = '订单号,用户ID,用户名,充值前余额,充值金额,充值后余额,手续费,入账金额,通道名称,支付方式,订单状态,创建时间,完成时间\n'
+    let csvContent = '订单号,用户ID,用户昵称,充值前余额,充值金额,充值后余额,手续费,入账金额,通道名称,支付方式,订单状态,创建时间,完成时间\n'
     
     multipleSelection.value.forEach(order => {
       const status = order.status === 'pending' ? '待付款' : 
