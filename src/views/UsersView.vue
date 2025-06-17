@@ -75,6 +75,17 @@
             <el-tag :type="getVipLevelType(scope.row.role)">{{ getVipLevelName(scope.row.role) }}</el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="parentNickname" label="上级用户昵称" width="120"></el-table-column>
+        <el-table-column prop="referralCount" label="邀请人数" width="100">
+          <template #default="scope">
+            <span>{{ scope.row.referralCount || 0 }}人</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="rebateAmount" label="累计返利金额" width="120">
+          <template #default="scope">
+            <span class="money">¥{{ scope.row.rebateAmount || 0 }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="totalRecharge" label="累计充值" width="120">
           <template #default="scope">
             <span class="money">¥{{ scope.row.totalRecharge || 0 }}</span>
@@ -164,6 +175,9 @@
         </el-form-item>
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="userForm.email" placeholder="请输入邮箱"></el-input>
+        </el-form-item>
+        <el-form-item label="上级用户" prop="parentNickname">
+          <el-input v-model="userForm.parentNickname" placeholder="请输入上级用户昵称"></el-input>
         </el-form-item>
         <el-form-item label="VIP等级" prop="role">
           <el-select v-model="userForm.role" placeholder="请选择VIP等级" style="width: 168px;">
@@ -435,6 +449,7 @@ const tableData = ref([
     monthRebate: 5.00,
     rebateOrderCount: 3,
     referralCount: 2,
+    parentNickname: '系统用户',
     role: 0, // 普通会员
     totalRecharge: 500.00,
     totalSpent: 250.00,
@@ -454,6 +469,7 @@ const tableData = ref([
     monthRebate: 15.00,
     rebateOrderCount: 8,
     referralCount: 5,
+    parentNickname: '测试用户一',
     role: 1, // 银卡会员
     totalRecharge: 2000.00,
     totalSpent: 1200.00,
@@ -473,6 +489,7 @@ const tableData = ref([
     monthRebate: 45.00,
     rebateOrderCount: 12,
     referralCount: 10,
+    parentNickname: 'VIP二号',
     role: 2, // 金卡会员
     totalRecharge: 8000.00,
     totalSpent: 5000.00,
@@ -492,6 +509,7 @@ const tableData = ref([
     monthRebate: 10.00,
     rebateOrderCount: 5,
     referralCount: 3,
+    parentNickname: '金卡三',
     role: 3, // 钻石会员
     totalRecharge: 1500.00,
     totalSpent: 800.00,
@@ -700,7 +718,8 @@ const userForm = reactive({
   role: 0,
   balance: 0,
   statusBool: true,
-  rechargeDiscount: 0 // 新增充值折扣
+  rechargeDiscount: 0, // 新增充值折扣
+  parentNickname: '',
 })
 
 // 表单验证规则
@@ -763,6 +782,7 @@ const handleAddUser = () => {
   userForm.role = 0
   userForm.balance = 0
   userForm.statusBool = true
+  userForm.parentNickname = ''
   dialogVisible.value = true
   // 刷新验证码
   refreshCaptcha()
@@ -778,6 +798,7 @@ const handleEdit = (row: any) => {
   userForm.balance = row.balance
   userForm.statusBool = row.statusBool
   userForm.rechargeDiscount = row.rechargeDiscount || 0 // 设置充值折扣
+  userForm.parentNickname = row.parentNickname
   
   dialogVisible.value = true
 }
