@@ -112,6 +112,9 @@
                   <el-dropdown-item @click="handleBalanceOperation(scope.row)">
                     余额操作
                   </el-dropdown-item>
+                  <el-dropdown-item @click="handleRebateCenter(scope.row)">
+                    返利中心
+                  </el-dropdown-item>
                   <el-dropdown-item @click="handleResetPassword(scope.row)">
                     重置密码
                   </el-dropdown-item>
@@ -225,6 +228,8 @@
           <el-option label="退款" value="退款"></el-option>
           <el-option label="人工增加" value="人工增加"></el-option>
           <el-option label="人工扣减" value="人工扣减"></el-option>
+          <el-option label="消费返利" value="消费返利"></el-option>
+          <el-option label="折扣返利" value="折扣返利"></el-option>
         </el-select>
       </div>
       
@@ -302,6 +307,102 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 返利中心对话框 -->
+    <el-dialog
+      v-model="rebateCenterDialogVisible"
+      title="返利中心"
+      width="90%"
+      top="5vh"
+      :fullscreen="false"
+      :destroy-on-close="true"
+    >
+      <div class="rebate-stats-grid">
+        <div class="stat-item">
+          <div class="stat-title">总返利金额</div>
+          <div class="stat-value money">¥{{ currentUser?.rebateAmount || 0 }}</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-title">已邀请人数</div>
+          <div class="stat-value">{{ currentUser?.referralCount || 0 }}</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-title">消费返利金额</div>
+          <div class="stat-value money">¥{{ currentUser?.consumeRebate || 0 }}</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-title">折扣返利金额</div>
+          <div class="stat-value money">¥{{ currentUser?.discountRebate || 0 }}</div>
+        </div>
+      </div>
+      
+      <!-- 筛选条件 -->
+      <div class="filter-container">
+        <el-form :inline="true" :model="rebateFilter" class="filter-form">
+          <el-form-item label="返利类型">
+            <el-select v-model="rebateFilter.type" placeholder="全部类型" clearable style="width: 168px;">
+              <el-option label="全部" value=""></el-option>
+              <el-option label="消费返利" value="消费返利"></el-option>
+              <el-option label="折扣返利" value="折扣返利"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="时间范围">
+            <el-date-picker
+              v-model="rebateFilter.dateRange"
+              type="daterange"
+              range-separator="至"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              value-format="YYYY-MM-DD"
+            ></el-date-picker>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="handleRebateSearch">查询</el-button>
+            <el-button @click="handleRebateReset">重置</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+      
+      <!-- 返利记录表格 -->
+      <el-table :data="rebateRecords" border stripe style="width: 100%; margin-top: 20px;">
+        <el-table-column prop="date" label="日期" width="180"></el-table-column>
+        <el-table-column prop="rebateType" label="返利类型" width="120"></el-table-column>
+        <el-table-column prop="sourceUserNickname" label="来源用户昵称" width="150"></el-table-column>
+        <el-table-column prop="sourceUserLevel" label="来源用户等级" width="120"></el-table-column>
+        <el-table-column prop="sourceUserDiscount" label="来源用户折扣" width="120"></el-table-column>
+        <el-table-column prop="consumeAmount" label="消费金额" width="120">
+          <template #default="scope">
+            <span>¥{{ scope.row.consumeAmount }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="rebateAmount" label="返利金额" width="120">
+          <template #default="scope">
+            <span class="money">¥{{ scope.row.rebateAmount }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="relatedOrderId" label="关联订单号" min-width="180"></el-table-column>
+      </el-table>
+      
+      <!-- 分页 -->
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="rebateCurrentPage"
+          v-model:page-size="rebatePageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="rebateTotalCount"
+          @size-change="handleRebateSizeChange"
+          @current-change="handleRebateCurrentChange"
+          :background="true"
+        ></el-pagination>
+      </div>
+      
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="rebateCenterDialogVisible = false">关闭</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -328,6 +429,12 @@ const tableData = ref([
     nickname: '测试用户一',
     password: 'password123',
     balance: 100.50,
+    rebateAmount: 20.00,
+    consumeRebate: 15.00,
+    discountRebate: 5.00,
+    monthRebate: 5.00,
+    rebateOrderCount: 3,
+    referralCount: 2,
     role: 0, // 普通会员
     totalRecharge: 500.00,
     totalSpent: 250.00,
@@ -341,6 +448,12 @@ const tableData = ref([
     nickname: 'VIP二号',
     password: 'password456',
     balance: 500.75,
+    rebateAmount: 50.00,
+    consumeRebate: 30.00,
+    discountRebate: 20.00,
+    monthRebate: 15.00,
+    rebateOrderCount: 8,
+    referralCount: 5,
     role: 1, // 银卡会员
     totalRecharge: 2000.00,
     totalSpent: 1200.00,
@@ -354,6 +467,12 @@ const tableData = ref([
     nickname: '金卡三',
     password: 'password789',
     balance: 2000.00,
+    rebateAmount: 150.00,
+    consumeRebate: 100.00,
+    discountRebate: 50.00,
+    monthRebate: 45.00,
+    rebateOrderCount: 12,
+    referralCount: 10,
     role: 2, // 金卡会员
     totalRecharge: 8000.00,
     totalSpent: 5000.00,
@@ -367,6 +486,12 @@ const tableData = ref([
     nickname: '钻石头号玩家',
     password: 'passwordabc',
     balance: 150.00,
+    rebateAmount: 30.00,
+    consumeRebate: 18.00,
+    discountRebate: 12.00,
+    monthRebate: 10.00,
+    rebateOrderCount: 5,
+    referralCount: 3,
     role: 3, // 钻石会员
     totalRecharge: 1500.00,
     totalSpent: 800.00,
@@ -893,6 +1018,24 @@ const fetchUserLogs = () => {
         operationAmount: -100.00,
         operationDesc: '扣除无效充值',
         operationTime: '2024-03-10 16:30:45'
+      },
+      {
+        logId: 'L0006',
+        userId: currentUser.value.userId,
+        operator: 'system',
+        operationType: '消费返利',
+        operationAmount: 25.00,
+        operationDesc: '用户张三消费产生的返利',
+        operationTime: '2024-03-08 11:20:15'
+      },
+      {
+        logId: 'L0007',
+        userId: currentUser.value.userId,
+        operator: 'system',
+        operationType: '折扣返利',
+        operationAmount: 30.00,
+        operationDesc: '用户李四使用折扣产生的返利',
+        operationTime: '2024-03-05 09:45:30'
       }
     ]
     
@@ -914,6 +1057,8 @@ const getOperationTypeTag = (type: string) => {
     case '充值':
     case '人工增加':
     case '退款':
+    case '消费返利':
+    case '折扣返利':
       return 'success'
     case '消费':
     case '人工扣减':
@@ -942,6 +1087,152 @@ const balanceForm = reactive({
   amount: 0,
   remark: ''
 })
+
+// 返利中心相关
+const rebateCenterDialogVisible = ref(false)
+const rebateFormRef = ref<FormInstance>()
+const rebateForm = reactive({
+  amount: 0,
+  remark: ''
+})
+
+// 返利记录数据
+const rebateRecords = ref<any[]>([])
+const rebateCurrentPage = ref(1)
+const rebatePageSize = ref(10)
+const rebateTotalCount = ref(0)
+const rebateFilter = reactive({
+  type: '',
+  dateRange: [] as string[]
+})
+
+// 处理返利中心
+const handleRebateCenter = (row: any) => {
+  currentUser.value = row
+  rebateForm.amount = 0
+  rebateForm.remark = ''
+  rebateCenterDialogVisible.value = true
+  rebateCurrentPage.value = 1
+  rebatePageSize.value = 10
+  fetchRebateRecords()
+}
+
+// 获取返利记录
+const fetchRebateRecords = () => {
+  if (!currentUser.value) return
+  
+  // 模拟API请求获取返利记录数据
+  setTimeout(() => {
+    // 模拟返利记录数据
+    const mockRebateRecords = [
+      {
+        id: 'R0001',
+        date: '2024-04-01 10:30:22',
+        rebateType: '消费返利',
+        sourceUserNickname: '张三',
+        sourceUserLevel: 'VIP1',
+        sourceUserDiscount: '95折',
+        consumeAmount: 1000.00,
+        rebateAmount: 50.00,
+        relatedOrderId: 'ORD2024040100001',
+      },
+      {
+        id: 'R0002',
+        date: '2024-04-02 15:45:10',
+        rebateType: '折扣返利',
+        sourceUserNickname: '李四',
+        sourceUserLevel: 'VIP2',
+        sourceUserDiscount: '90折',
+        consumeAmount: 2000.00,
+        rebateAmount: 60.00,
+        relatedOrderId: 'ORD2024040200002',
+      },
+      {
+        id: 'R0003',
+        date: '2024-04-03 09:20:33',
+        rebateType: '消费返利',
+        sourceUserNickname: '王五',
+        sourceUserLevel: '普通用户',
+        sourceUserDiscount: '无折扣',
+        consumeAmount: 500.00,
+        rebateAmount: 25.00,
+        relatedOrderId: 'ORD2024040300003',
+      },
+      {
+        id: 'R0004',
+        date: '2024-04-04 14:10:05',
+        rebateType: '消费返利',
+        sourceUserNickname: '赵六',
+        sourceUserLevel: 'VIP3',
+        sourceUserDiscount: '85折',
+        consumeAmount: 3000.00,
+        rebateAmount: 150.00,
+        relatedOrderId: 'ORD2024040400004',
+      },
+      {
+        id: 'R0005',
+        date: '2024-04-05 16:30:45',
+        rebateType: '折扣返利',
+        sourceUserNickname: '钱七',
+        sourceUserLevel: 'VIP1',
+        sourceUserDiscount: '95折',
+        consumeAmount: 800.00,
+        rebateAmount: 20.00,
+        relatedOrderId: 'ORD2024040500005',
+      }
+    ]
+    
+    // 根据筛选条件过滤数据
+    let filteredRecords = [...mockRebateRecords]
+    
+    // 按返利类型筛选
+    if (rebateFilter.type) {
+      filteredRecords = filteredRecords.filter(record => record.rebateType === rebateFilter.type)
+    }
+    
+    // 按日期范围筛选
+    if (rebateFilter.dateRange && rebateFilter.dateRange.length === 2) {
+      const startDate = new Date(rebateFilter.dateRange[0])
+      const endDate = new Date(rebateFilter.dateRange[1])
+      
+      filteredRecords = filteredRecords.filter(record => {
+        const recordDate = new Date(record.date.split(' ')[0])
+        return recordDate >= startDate && recordDate <= endDate
+      })
+    }
+    
+    // 更新总数
+    rebateTotalCount.value = filteredRecords.length
+    
+    // 分页处理
+    const startIndex = (rebateCurrentPage.value - 1) * rebatePageSize.value
+    const endIndex = startIndex + rebatePageSize.value
+    rebateRecords.value = filteredRecords.slice(startIndex, endIndex)
+  }, 500)
+}
+
+// 处理返利记录分页
+const handleRebateSizeChange = (val: number) => {
+  rebatePageSize.value = val
+  fetchRebateRecords()
+}
+
+const handleRebateCurrentChange = (val: number) => {
+  rebateCurrentPage.value = val
+  fetchRebateRecords()
+}
+
+// 提交返利操作
+const submitRebateOperation = async () => {
+  if (!rebateFormRef.value) return
+  
+  await rebateFormRef.value.validate((valid, fields) => {
+    if (valid) {
+      ElMessage.success('返利操作成功')
+      rebateCenterDialogVisible.value = false
+    }
+  })
+}
 
 // 余额操作表单验证规则
 const balanceRules = reactive<FormRules>({
@@ -1006,6 +1297,20 @@ const submitBalanceOperation = async () => {
       }
     }
   })
+}
+
+// 处理返利搜索
+const handleRebateSearch = () => {
+  rebateCurrentPage.value = 1
+  fetchRebateRecords()
+}
+
+// 重置返利筛选
+const handleRebateReset = () => {
+  rebateFilter.type = ''
+  rebateFilter.dateRange = []
+  rebateCurrentPage.value = 1
+  fetchRebateRecords()
 }
 </script>
 
@@ -1249,5 +1554,77 @@ const submitBalanceOperation = async () => {
 
 .balance-info .money {
   font-size: 16px;
+}
+
+.rebate-stats-grid {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 20px 0;
+}
+
+.stat-item {
+  flex: 1;
+  text-align: center;
+  background-color: #f5f7fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 0 10px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.3s;
+}
+
+.stat-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px 0 rgba(0, 0, 0, 0.1);
+}
+
+.stat-title {
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #606266;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #409EFF;
+}
+
+.stat-value.money {
+  color: #f56c6c;
+}
+
+.filter-container {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #fff;
+  border-radius: 4px;
+  border: 1px solid #ebeef5;
+}
+
+.filter-form {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.filter-form .el-form-item {
+  margin-right: 20px;
+  margin-bottom: 0;
+}
+
+:deep(.el-dialog__header) {
+  border-bottom: 1px solid #ebeef5;
+  padding-bottom: 15px;
+}
+
+:deep(.el-dialog__body) {
+  padding: 20px;
+}
+
+:deep(.el-dialog__footer) {
+  border-top: 1px solid #ebeef5;
+  padding-top: 15px;
 }
 </style> 
