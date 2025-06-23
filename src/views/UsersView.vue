@@ -75,6 +75,11 @@
             <el-tag :type="getVipLevelType(scope.row.role)">{{ getVipLevelName(scope.row.role) }}</el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="discount" label="会员折扣" width="100">
+          <template #default="scope">
+            <span>{{ scope.row.discount }}%</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="parentNickname" label="上级用户昵称" width="120"></el-table-column>
         <el-table-column prop="referralCount" label="邀请人数" width="100">
           <template #default="scope">
@@ -187,6 +192,22 @@
             <el-option label="VIP3" :value="3"></el-option>
             <el-option label="超级VIP" :value="4"></el-option>
           </el-select>
+        </el-form-item>
+        <!-- 超级VIP的折扣设置 -->
+        <el-form-item label="会员折扣" prop="discount" v-if="userForm.role === 4" required>
+          <el-input-number 
+            v-model="userForm.discount" 
+            :precision="1" 
+            :step="10" 
+            :min="0"
+            :max="100" 
+            style="width: 168px;" 
+            placeholder="请设置折扣率"
+          ></el-input-number>
+          <span style="margin-left: 5px;">%</span>
+          <span class="discount-hint" style="margin-left: 8px; color: #909399; font-size: 12px;">
+            (百分比，例如：50表示5折，即0.5折)
+          </span>
         </el-form-item>
         <el-form-item label="状态">
           <el-switch v-model="userForm.statusBool"></el-switch>
@@ -421,7 +442,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch, computed } from 'vue'
+import { ref, reactive, onMounted, watch, computed, watchEffect } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { Edit, Key, Document, Delete, ArrowDown, Money } from '@element-plus/icons-vue'
@@ -451,6 +472,7 @@ const tableData = ref([
     referralCount: 2,
     parentNickname: '系统用户',
     role: 0, // 普通会员
+    discount: 100, // 会员折扣，100%表示不打折
     totalRecharge: 500.00,
     totalSpent: 250.00,
     status: 'normal',
@@ -471,6 +493,7 @@ const tableData = ref([
     referralCount: 5,
     parentNickname: '测试用户一',
     role: 1, // 银卡会员
+    discount: 90, // 会员折扣，90%
     totalRecharge: 2000.00,
     totalSpent: 1200.00,
     status: 'normal',
@@ -491,6 +514,7 @@ const tableData = ref([
     referralCount: 10,
     parentNickname: 'VIP二号',
     role: 2, // 金卡会员
+    discount: 80, // 会员折扣，80%
     totalRecharge: 8000.00,
     totalSpent: 5000.00,
     status: 'disabled',
@@ -511,11 +535,33 @@ const tableData = ref([
     referralCount: 3,
     parentNickname: '金卡三',
     role: 3, // 钻石会员
+    discount: 70, // 会员折扣，70%
     totalRecharge: 1500.00,
     totalSpent: 800.00,
     status: 'normal',
     statusBool: true,
     registerTime: '2023-04-05 18:45:00',
+  },
+  {
+    userId: 'user005',
+    email: 'supervip@example.com',
+    nickname: '超级会员大佬',
+    password: 'password123',
+    balance: 10000.00,
+    rebateAmount: 500.00,
+    consumeRebate: 300.00,
+    discountRebate: 200.00,
+    monthRebate: 100.00,
+    rebateOrderCount: 30,
+    referralCount: 25,
+    parentNickname: '钻石头号玩家',
+    role: 4, // 超级会员
+    discount: 50, // 会员折扣，50%
+    totalRecharge: 20000.00,
+    totalSpent: 15000.00,
+    status: 'normal',
+    statusBool: true,
+    registerTime: '2023-05-20 08:30:00',
   },
 ])
 
@@ -545,6 +591,19 @@ const getVipLevelType = (level: number) => {
   }
   // 所有普通VIP统一使用warning颜色
   return 'warning'
+}
+
+// 折扣颜色处理
+const getDiscountColor = (discount: number) => {
+  if (discount <= 50) {
+    return '#F56C6C' // 红色，超级优惠
+  } else if (discount <= 70) {
+    return '#E6A23C' // 橙色，较大优惠
+  } else if (discount <= 90) {
+    return '#409EFF' // 蓝色，普通优惠
+  } else {
+    return '#67C23A' // 绿色，无优惠或微小优惠
+  }
 }
 
 // 重置密码相关
@@ -706,7 +765,22 @@ const dialogType = ref<'add' | 'edit'>('add')
 const userFormRef = ref<FormInstance>()
 const captchaUrl = ref('https://cube.elemecdn.com/9/3f/2c0938b93c591b218c1beaf08de07jpeg.jpeg')
 
-const userForm = reactive({
+const userForm = reactive<{
+  userId: string;
+  username: string;
+  nickname: string;
+  password: string;
+  confirmPassword: string;
+  phone: string;
+  email: string;
+  captcha: string;
+  role: number;
+  balance: number;
+  statusBool: boolean;
+  rechargeDiscount: number;
+  discount?: number; // 超级VIP的折扣设置，可选类型
+  parentNickname: string;
+}>({
   userId: '',
   username: '',
   nickname: '',
@@ -719,6 +793,7 @@ const userForm = reactive({
   balance: 0,
   statusBool: true,
   rechargeDiscount: 0, // 新增充值折扣
+  discount: undefined, // 超级VIP的折扣设置，默认为空
   parentNickname: '',
 })
 
@@ -759,6 +834,19 @@ const rules = reactive<FormRules>({
   ],
   role: [
     { required: true, message: '请选择会员等级', trigger: 'change' }
+  ],
+  discount: [
+    { 
+      validator: (rule: any, value: number | undefined, callback: any) => {
+        // 仅当用户角色为超级VIP(4)时，验证折扣是否已设置
+        if (userForm.role === 4 && (value === undefined || value === null)) {
+          callback(new Error('请设置会员折扣'))
+        } else {
+          callback()
+        }
+      }, 
+      trigger: 'blur' 
+    }
   ]
 })
 
@@ -782,6 +870,7 @@ const handleAddUser = () => {
   userForm.role = 0
   userForm.balance = 0
   userForm.statusBool = true
+  userForm.discount = undefined // 设置默认折扣为空
   userForm.parentNickname = ''
   dialogVisible.value = true
   // 刷新验证码
@@ -798,6 +887,24 @@ const handleEdit = (row: any) => {
   userForm.balance = row.balance
   userForm.statusBool = row.statusBool
   userForm.rechargeDiscount = row.rechargeDiscount || 0 // 设置充值折扣
+  
+  // 设置超级VIP折扣
+  // 如果是超级VIP且已有折扣值，则设置折扣值
+  if (row.role === 4) {
+    if (row.discount !== undefined) {
+      // 如果已有折扣值是0-1之间的小数，则转换为百分比
+      if (row.discount <= 1) {
+        userForm.discount = row.discount * 100
+      } else {
+        userForm.discount = row.discount
+      }
+    } else {
+      userForm.discount = undefined // 默认为空
+    }
+  } else {
+    userForm.discount = undefined
+  }
+  
   userForm.parentNickname = row.parentNickname
   
   dialogVisible.value = true
@@ -809,6 +916,19 @@ const submitForm = async () => {
   
   await userFormRef.value.validate((valid, fields) => {
     if (valid) {
+      // 在提交到后端前，需要将折扣百分比转换为小数
+      const submitData: any = { ...userForm }
+      
+      if (submitData.role === 4 && submitData.discount !== undefined) {
+        // 将百分比转换为小数，例如：90% => 0.9
+        submitData.discountDecimal = submitData.discount / 100
+      } else {
+        // 对于非超级VIP用户，不需要折扣字段
+        delete submitData.discount
+      }
+      
+      console.log('提交数据:', submitData)
+      
       if (dialogType.value === 'add') {
         ElMessage.success('新增用户成功')
       } else {
@@ -845,6 +965,14 @@ const handleDelete = (row: any) => {
       })
     })
 }
+
+// 监听VIP等级变化
+watch(() => userForm.role, (newRole) => {
+  // 如果VIP等级不是超级VIP(4)，则将折扣设置为undefined
+  if (newRole !== 4) {
+    userForm.discount = undefined
+  }
+})
 
 // 获取用户列表数据
 const getUserList = () => {
