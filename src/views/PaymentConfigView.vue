@@ -1,94 +1,120 @@
 <template>
   <div class="payment-config-view">
-    <el-card shadow="never" class="filter-container">
-      <!-- 支付等待时间设置区域 -->
-      <div class="waiting-time-display">
-        <div class="setting-item">
-          <span class="setting-label">支付等待时间：</span>
-          <span class="setting-value">{{ paymentStore.waitingTime }} 分钟</span>
-          <el-button type="primary" link :icon="Edit" @click="openWaitingTimeDialog">编辑</el-button>
-        </div>
-      </div>
-      
-      <!-- Tabs区域 -->
-      <el-tabs v-model="activePaymentMethod" class="payment-tabs">
-        <el-tab-pane label="微信支付" name="wechat">
-          <payment-channel-list payment-method-key="wechat" />
-        </el-tab-pane>
-        <el-tab-pane label="支付宝支付" name="alipay">
-          <payment-channel-list payment-method-key="alipay" />
-        </el-tab-pane>
-        <el-tab-pane label="USDT支付" name="usdt">
-          <payment-channel-list payment-method-key="usdt" />
-        </el-tab-pane>
-      </el-tabs>
-    </el-card>
-    
-    <!-- 等待时间编辑弹窗 -->
-    <el-dialog
-      v-model="waitingTimeDialogVisible"
-      title="编辑支付等待时间"
-      width="400px"
-      destroy-on-close
-    >
-      <el-form :model="waitingTimeForm" label-width="120px">
-        <el-form-item label="等待时间" required>
-          <el-input-number
-            v-model="waitingTimeForm.time"
-            :min="1"
-            :max="60"
-            :step="1"
-            controls-position="right"
-            style="width: 168px;"
-          />
-          <span class="unit-text">分钟</span>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="waitingTimeDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="saveWaitingTime" :loading="saving">确定</el-button>
+    <el-card shadow="never" class="config-container">
+      <template #header>
+        <div class="card-header">
+          <span>支付系统配置</span>
         </div>
       </template>
-    </el-dialog>
+      
+      <div class="page-description">
+        <p>配置商户信息，用于对接支付系统。请确保商户号和密钥的准确性。</p>
+      </div>
+      
+      <!-- 支付配置表单 -->
+      <el-form :model="paymentConfig" label-width="120px" :rules="rules" ref="formRef">
+        <el-form-item label="商户号" prop="merchantId" required>
+          <el-input 
+            v-model="paymentConfig.merchantId"
+            placeholder="请输入商户号"
+            style="width: 350px;"
+          ></el-input>
+        </el-form-item>
+        
+        <el-form-item label="商户密钥" prop="merchantKey" required>
+          <el-input 
+            v-model="paymentConfig.merchantKey"
+            type="password"
+            placeholder="请输入商户密钥"
+            style="width: 350px;"
+            show-password
+          ></el-input>
+          <span class="key-hint">商户密钥用于签名验证，请妥善保管</span>
+        </el-form-item>
+        
+        <el-form-item>
+          <el-button type="primary" @click="saveConfig" :loading="saving">保存配置</el-button>
+          <el-button @click="resetForm">重置</el-button>
+        </el-form-item>
+      </el-form>
+      
+      <!-- 操作说明 -->
+      <div class="instructions-container">
+        <h4>操作说明：</h4>
+        <ol>
+          <li>联系下方客服获取商户号和商户密钥</li>
+          <li>将获取的商户号和密钥填入上方对应输入框</li>
+          <li>点击"保存配置"按钮完成设置</li>
+          <li>配置成功后，系统将自动对接支付功能</li>
+        </ol>
+      </div>
+      
+      <!-- 联系方式 -->
+      <div class="contact-container">
+        <h4>技术支持与合作：</h4>
+        <div class="highlight-box">
+          <div class="highlight-text">定制开发、对接第三方支付通道、业务合作</div>
+        </div>
+        <div class="contact-info">
+          <p><strong>QQ：</strong>3909001743</p>
+          <p><strong>Telegram：</strong>@sy9088</p>
+        </div>
+      </div>
+    </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue';
 import { ElMessage } from 'element-plus';
-import { Edit } from '@element-plus/icons-vue';
-import PaymentChannelList from '../components/PaymentChannelList.vue';
-import { usePaymentStore } from '../stores/paymentStore';
+import type { FormInstance, FormRules } from 'element-plus';
 
-const paymentStore = usePaymentStore();
-const activePaymentMethod = ref<'wechat' | 'alipay' | 'usdt'>('wechat');
-const waitingTimeDialogVisible = ref(false);
+// 表单引用
+const formRef = ref<FormInstance>();
 const saving = ref(false);
 
-// 编辑表单数据
-const waitingTimeForm = reactive({
-  time: paymentStore.waitingTime
+// 支付配置数据
+const paymentConfig = reactive({
+  merchantId: '',
+  merchantKey: ''
 });
 
-// 打开等待时间编辑弹窗
-const openWaitingTimeDialog = () => {
-  waitingTimeForm.time = paymentStore.waitingTime;
-  waitingTimeDialogVisible.value = true;
+// 表单验证规则
+const rules = reactive<FormRules>({
+  merchantId: [
+    { required: true, message: '请输入商户号', trigger: 'blur' },
+    { min: 4, max: 30, message: '商户号长度应在4-30个字符之间', trigger: 'blur' }
+  ],
+  merchantKey: [
+    { required: true, message: '请输入商户密钥', trigger: 'blur' },
+    { min: 8, max: 64, message: '商户密钥长度应在8-64个字符之间', trigger: 'blur' }
+  ]
+});
+
+// 保存配置
+const saveConfig = async () => {
+  if (!formRef.value) return;
+  
+  await formRef.value.validate((valid, fields) => {
+    if (valid) {
+      saving.value = true;
+      
+      // 模拟API调用
+      setTimeout(() => {
+        saving.value = false;
+        ElMessage.success('支付系统配置保存成功');
+        console.log('保存的配置数据:', paymentConfig);
+      }, 800);
+    } else {
+      console.log('表单验证失败:', fields);
+    }
+  });
 };
 
-// 保存等待时间
-const saveWaitingTime = () => {
-  saving.value = true;
-  const success = paymentStore.setWaitingTime(waitingTimeForm.time);
-  saving.value = false;
-  
-  if (success) {
-    ElMessage.success('支付等待时间已保存');
-    waitingTimeDialogVisible.value = false;
-  } else {
-    ElMessage.error('请输入1-60分钟的有效时间');
-  }
+// 重置表单
+const resetForm = () => {
+  if (!formRef.value) return;
+  formRef.value.resetFields();
 };
 </script>
 
@@ -96,37 +122,96 @@ const saveWaitingTime = () => {
 .payment-config-view {
   padding: 20px;
 }
-.filter-container {
-  margin-bottom: 16px;
+
+.config-container {
+  max-width: 800px;
+  margin: 0 auto;
 }
-.waiting-time-display {
-  padding: 0 0 16px 0;
-  border-bottom: 1px solid #EBEEF5;
-  margin-bottom: 16px;
-}
-.setting-item {
+
+.card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
-.setting-label {
-  font-weight: 500;
+
+.page-description {
+  margin-bottom: 24px;
   color: #606266;
-  margin-right: 8px;
-}
-.setting-value {
   font-size: 14px;
+  line-height: 1.5;
+}
+
+.key-hint {
+  margin-left: 10px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.instructions-container {
+  margin-top: 30px;
+  padding: 16px;
+  background-color: #f8f8f8;
+  border-radius: 4px;
+}
+
+.instructions-container h4 {
+  margin-top: 0;
+  margin-bottom: 12px;
   color: #303133;
-  margin-right: 16px;
+  font-size: 14px;
 }
-.unit-text {
-  margin-left: 8px;
+
+.instructions-container ol {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.instructions-container li {
+  line-height: 1.6;
+  margin-bottom: 8px;
   color: #606266;
+  font-size: 13px;
 }
-.payment-tabs {
-  padding: 10px 0;
+
+.instructions-container li:last-child {
+  margin-bottom: 0;
 }
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
+
+.contact-container {
+  margin-top: 24px;
+  padding: 16px;
+  background-color: #f0f9ff;
+  border-radius: 4px;
+  border-left: 4px solid #409EFF;
+}
+
+.contact-container h4 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #303133;
+  font-size: 14px;
+}
+
+.contact-info p {
+  margin: 5px 0;
+  color: #606266;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.highlight-box {
+  margin-bottom: 15px;
+  padding: 12px;
+  background: linear-gradient(135deg, #409EFF10, #409EFF20);
+  border-radius: 4px;
+  border-left: 4px solid #409EFF;
+  text-align: center;
+}
+
+.highlight-text {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+  letter-spacing: 1px;
 }
 </style> 
