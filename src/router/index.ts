@@ -19,6 +19,15 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/transaction-records',
+    name: 'transactionRecords',
+    component: () => import('../views/TransactionRecordsView.vue'),
+    meta: {
+      title: '流水记录',
+      requiresAuth: true
+    }
+  },
+  {
     path: '/user',
     name: 'user',
     redirect: '/user/profile',

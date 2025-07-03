@@ -96,11 +96,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="成本价" width="100">
-          <template #default="scope">
-            <span>¥{{ scope.row.costPrice ? scope.row.costPrice.toFixed(2) : '0.00' }}</span>
-          </template>
-        </el-table-column>
+
         <el-table-column prop="stock" label="库存" width="80">
           <template #default="scope">
             <span :class="{ 'low-stock': scope.row.stock < (scope.row.stockWarning || 50) }">{{ scope.row.stock }}</span>
@@ -219,13 +215,10 @@
           <div class="form-tip">请上传商品缩略图，建议尺寸 400x400 像素，最大不超过 2MB</div>
         </el-form-item>
         <el-form-item label="商品价格" prop="currentPrice">
-          <el-input-number v-model="productForm.currentPrice" :min="0" :precision="2" :step="0.01" style="width: 100%;" @change="validateCostPrice"></el-input-number>
+          <el-input-number v-model="productForm.currentPrice" :min="0" :precision="2" :step="0.01" style="width: 100%;"></el-input-number>
         </el-form-item>
         
-        <el-form-item label="成本价" prop="costPrice">
-          <el-input-number v-model="productForm.costPrice" :min="0" :max="productForm.currentPrice" :precision="2" :step="0.01" style="width: 100%;"></el-input-number>
-          <div class="form-tip">商品的成本价格，用于计算利润，不可高于当前价格</div>
-        </el-form-item>
+
         
         <el-form-item label="原价" prop="originalPrice">
           <el-input-number v-model="productForm.originalPrice" :min="0" :precision="2" :step="0.01" style="width: 100%;"></el-input-number>
@@ -461,6 +454,7 @@
                 <el-select v-model="inventorySearchForm.status" placeholder="请选择" clearable>
                   <el-option label="未售出" value="unsold"></el-option>
                   <el-option label="已售出" value="sold"></el-option>
+                  <el-option label="已作废" value="voided"></el-option>
                 </el-select>
               </el-form-item>
               <el-form-item>
@@ -476,14 +470,19 @@
             <el-table-column prop="cardId" label="卡密ID" width="120"></el-table-column>
             <el-table-column prop="status" label="状态" width="100">
               <template #default="scope">
-                <el-tag :type="scope.row.status === 'unsold' ? 'success' : 'info'">
-                  {{ scope.row.status === 'unsold' ? '未售出' : '已售出' }}
+                <el-tag :type="scope.row.status === 'unsold' ? 'success' : scope.row.status === 'sold' ? 'info' : 'danger'">
+                  {{ scope.row.status === 'unsold' ? '未售出' : scope.row.status === 'sold' ? '已售出' : '已作废' }}
                 </el-tag>
               </template>
             </el-table-column>
             <el-table-column prop="cardInfo" label="卡密信息" min-width="200">
               <template #default="scope">
                 <el-button link type="primary" @click="showCardInfo(scope.row)">查看</el-button>
+              </template>
+            </el-table-column>
+            <el-table-column prop="cost" label="成本价" width="100">
+              <template #default="scope">
+                {{ scope.row.cost ? `¥${scope.row.cost}` : '-' }}
               </template>
             </el-table-column>
             <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
@@ -533,10 +532,15 @@
             placeholder="请输入卡密信息，格式：用户名----密码----注册邮箱----邮箱密码"
           ></el-input>
         </el-form-item>
+        <el-form-item label="成本价" prop="cost" required>
+          <el-input-number v-model="inventoryForm.cost" :min="0" :precision="2" :step="0.01" style="width: 100%;" required></el-input-number>
+          <div class="form-tip">该卡密的成本价格，用于计算利润</div>
+        </el-form-item>
         <el-form-item label="状态" required>
           <el-select v-model="inventoryForm.status" placeholder="请选择状态" style="width: 100%;">
             <el-option label="未售出" value="unsold"></el-option>
             <el-option label="已售出" value="sold"></el-option>
+            <el-option label="已作废" value="voided"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="备注">
@@ -573,11 +577,17 @@
             placeholder="请输入备注信息"
           ></el-input>
         </el-form-item>
+        <el-form-item label="成本价" prop="cost" required>
+          <el-input-number v-model="importForm.cost" :min="0" :precision="2" :step="0.01" style="width: 100%;" required></el-input-number>
+          <div class="form-tip">为所有导入的卡密设置成本价</div>
+        </el-form-item>
       </el-form>
       <div class="import-description">
         <h4>导入说明：</h4>
         <ol>
           <li>请按照以下格式准备txt文件：每行一个卡密</li>
+          <li>每行一个卡密信息（例如：username----password----email----emailpass）</li>
+          <li>成本价设置（必填）：将为所有导入的卡密设置统一成本价</li>
           <li>支持txt文件导入，文件大小不超过2MB</li>
           <li>导入时将自动过滤重复的卡密信息</li>
         </ol>
@@ -603,6 +613,50 @@
           <el-button type="primary" @click="submitImportInventory" :loading="importing">
             {{ importing ? '导入中...' : '开始导入' }}
           </el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑库存对话框 -->
+    <el-dialog
+      v-model="editInventoryDialogVisible"
+      title="编辑库存"
+      width="600px"
+      :destroy-on-close="true"
+    >
+      <el-form :model="editInventoryForm" label-width="100px" ref="editInventoryFormRef">
+        <el-form-item label="卡密信息" prop="cardInfo" required>
+          <el-input
+            type="textarea"
+            v-model="editInventoryForm.cardInfo"
+            :rows="4"
+            placeholder="请输入卡密信息，格式：用户名----密码----注册邮箱----邮箱密码"
+          ></el-input>
+        </el-form-item>
+        <el-form-item label="成本价">
+          <el-input-number v-model="editInventoryForm.cost" :min="0" :precision="2" :step="0.01" style="width: 100%;"></el-input-number>
+          <div class="form-tip">该卡密的成本价格，用于计算利润</div>
+        </el-form-item>
+        <el-form-item label="状态" required>
+          <el-select v-model="editInventoryForm.status" placeholder="请选择状态" style="width: 100%;">
+            <el-option label="未售出" value="unsold"></el-option>
+            <el-option label="已售出" value="sold"></el-option>
+            <el-option label="已作废" value="voided"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input
+            type="textarea"
+            v-model="editInventoryForm.remark"
+            :rows="2"
+            placeholder="请输入备注信息"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="editInventoryDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitEditInventoryForm">确定</el-button>
         </span>
       </template>
     </el-dialog>
@@ -1858,13 +1912,7 @@ const hasBatchPrices = computed(() => {
   return productForm.wholesalePrices && productForm.wholesalePrices.length > 0;
 });
 
-// 验证成本价不能高于当前价格
-const validateCostPrice = () => {
-  if (productForm.costPrice > productForm.currentPrice) {
-    productForm.costPrice = productForm.currentPrice;
-    ElMessage.warning('成本价不能高于当前价格，已自动调整');
-  }
-}
+
 
 // 在script setup部分添加以下函数
 const getPayMethodType = (method: string) => {
@@ -1932,27 +1980,31 @@ const inventoryTableData = ref<InventoryTableItem[]>([
     status: 'unsold',
     cardInfo: 'CardNumber12345:CardPassword54321 (P001 - 卡密)',
     createTime: '2023-05-01 10:00:00',
-    remark: '未使用'
+    remark: '未使用',
+    cost: 15.00
   },
   {
     cardId: 'inv002',
     status: 'sold',
     cardInfo: 'CardNumber67890:CardPassword09876 (P001 - 卡密)',
     createTime: '2023-05-01 10:05:00',
-    remark: '已售出，订单ORD10086'
+    remark: '已售出，订单ORD10086',
+    cost: 18.50
   },
   {
     cardId: 'inv003',
     status: 'unsold',
     cardInfo: 'User:testuser Pass:testpass123 (P002 - 账号密码)',
     createTime: '2023-05-02 11:00:00',
+    cost: 20.00
   },
   {
     cardId: 'inv004',
     status: 'unsold',
     cardInfo: 'User:twitterold Pass:oldtwitter (P004 - 账号密码)',
     createTime: '2023-05-03 16:00:00',
-    remark: '库存锁定'
+    remark: '库存锁定',
+    cost: 12.75
   },
 ]);
 const inventoryTotal = ref(inventoryTableData.value.length); // 更新 inventoryTotal
@@ -1962,11 +2014,12 @@ const inventoryPageSize = ref(10)
 
 // 新增库存相关
 const addInventoryDialogVisible = ref(false)
-const inventoryForm = reactive({
+const inventoryForm = reactive<InventoryForm>({
   cardInfo: '',
   productId: '',
   status: 'unsold',
-  remark: ''
+  remark: '',
+  cost: undefined
 })
 const inventoryFormRef = ref<FormInstance>()
 const inventoryRules = reactive<FormRules>({
@@ -1978,6 +2031,9 @@ const inventoryRules = reactive<FormRules>({
   ],
   status: [
     { required: true, message: '请选择状态', trigger: 'change' }
+  ],
+  cost: [
+    { required: true, message: '请输入成本价', trigger: 'change' }
   ]
 })
 
@@ -1993,7 +2049,8 @@ const editInventoryForm = reactive({
   id: '',
   cardInfo: '',
   status: 'unsold',
-  remark: ''
+  remark: '',
+  cost: undefined as number | undefined
 })
 
 // 处理新增库存
@@ -2003,11 +2060,18 @@ const handleAddInventory = () => {
   inventoryForm.productId = ''
   inventoryForm.status = 'unsold'
   inventoryForm.remark = ''
+  inventoryForm.cost = 0 // 默认设置为0
 }
 
 // 提交新增库存表单
 const submitInventoryForm = async () => {
   if (!inventoryFormRef.value) return
+  
+  // 确保成本价不为空
+  if (inventoryForm.cost === undefined) {
+    ElMessage.warning('请输入成本价')
+    return
+  }
   
   await inventoryFormRef.value.validate((valid) => {
     if (valid) {
@@ -2024,6 +2088,7 @@ const submitInventoryForm = async () => {
 const handleImportInventory = () => {
   importInventoryDialogVisible.value = true
   importFile.value = null
+  importForm.cost = 0 // 默认设置为0
 }
 
 // 处理文件选择
@@ -2042,11 +2107,20 @@ const submitImportInventory = async () => {
     return
   }
   
+  if (importForm.cost === undefined) {
+    ElMessage.warning('请输入成本价')
+    return
+  }
+  
   importing.value = true
   try {
-    // TODO: 调用API上传文件并导入库存
-    await new Promise(resolve => setTimeout(resolve, 1500)) // 模拟上传过程
-    ElMessage.success('导入成功')
+    // 在实际实现中，这里应该读取文件内容，处理每一行，解析卡密信息和成本价
+    // 以下是模拟过程
+    await new Promise(resolve => setTimeout(resolve, 1500)) // 模拟上传处理过程
+    
+    // 提示导入成功
+    ElMessage.success(`导入成功，已为所有卡密设置成本价：¥${importForm.cost.toFixed(2)}`)
+    
     importInventoryDialogVisible.value = false
     // 刷新库存列表
     loadInventoryData()
@@ -2076,14 +2150,24 @@ const loadInventoryData = () => {
         status: 'unsold',
         cardInfo: 'username----password----email----emailpass',
         createTime: '2024-03-20 10:00:00',
-        remark: '测试账号'
+        remark: '测试账号',
+        cost: 25.00
       },
       {
         cardId: 'CARD002',
         status: 'sold',
         cardInfo: 'username2----password2----email2----emailpass2',
         createTime: '2024-03-20 11:00:00',
-        remark: '已售出账号'
+        remark: '已售出账号',
+        cost: 30.50
+      },
+      {
+        cardId: 'CARD003',
+        status: 'voided',
+        cardInfo: 'username3----password3----email3----emailpass3',
+        createTime: '2024-03-21 09:30:00',
+        remark: '账号异常，已作废',
+        cost: 22.80
       }
     ]
 
@@ -2131,6 +2215,7 @@ const handleEditInventoryItem = (row: any) => {
   editInventoryForm.cardInfo = row.cardInfo
   editInventoryForm.status = row.status
   editInventoryForm.remark = row.remark
+  editInventoryForm.cost = row.cost
   editInventoryDialogVisible.value = true
 }
 
@@ -2159,6 +2244,16 @@ const handleDeleteInventoryItem = (row: any) => {
     })
 }
 
+// 提交编辑库存表单
+const submitEditInventoryForm = async () => {
+  // 模拟提交编辑后的数据
+  await new Promise(resolve => setTimeout(resolve, 800))
+  ElMessage.success('库存信息更新成功')
+  editInventoryDialogVisible.value = false
+  // 刷新库存列表
+  loadInventoryData()
+}
+
 // 查看卡密信息
 const showCardInfo = (row: any) => {
   ElMessageBox.alert(
@@ -2177,9 +2272,13 @@ const showCardInfo = (row: any) => {
       </div>
       <div class="card-info-item">
         <span class="label">状态：</span>
-        <span class="value ${row.status === 'unsold' ? 'text-success' : 'text-info'}">
-          ${row.status === 'unsold' ? '未售出' : '已售出'}
+        <span class="value ${row.status === 'unsold' ? 'text-success' : row.status === 'sold' ? 'text-info' : 'text-danger'}">
+          ${row.status === 'unsold' ? '未售出' : row.status === 'sold' ? '已售出' : '已作废'}
         </span>
+      </div>
+      <div class="card-info-item">
+        <span class="label">成本价：</span>
+        <span class="value">${row.cost !== undefined ? '¥' + row.cost.toFixed(2) : '未设置'}</span>
       </div>
       <div class="card-info-item">
         <span class="label">备注：</span>
@@ -2389,7 +2488,8 @@ const styleContent = `
 // 导入相关的变量声明
 const importForm = reactive({
   productId: '',
-  remark: ''
+  remark: '',
+  cost: undefined as number | undefined
 })
 
 // 安装包管理相关
@@ -2615,12 +2715,21 @@ const calculateMaxPurchase = (stock: number, purchaseLimit: any) => {
 }
 
 // 定义接口
+interface InventoryForm {
+  cardInfo: string;
+  productId: string;
+  status: 'unsold' | 'sold' | 'voided';
+  remark: string;
+  cost?: number;
+}
+
 interface InventoryTableItem {
   cardId: string;
-  status: 'unsold' | 'sold';
+  status: 'unsold' | 'sold' | 'voided';
   cardInfo: string;
   createTime: string;
   remark?: string;
+  cost?: number;
 }
 
 interface CustomUploadRawFile extends File {

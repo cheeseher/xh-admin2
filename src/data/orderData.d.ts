@@ -18,14 +18,17 @@ export interface OrderItem {
   fee: string;
   cardId?: string;
   cardInfo?: string;
+  costPrice?: number;
   userNickname: string;
   userEmail: string;
   userRole: string;
   payMethod: string;
+  payChannel: string;
   deliveryMethod: string;
   status: string;
   remark?: string;
   createTime: string;
+  completionTime?: string;
   refundInfo: RefundInfo | null;
 }
 

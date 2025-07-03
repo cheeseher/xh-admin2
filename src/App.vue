@@ -26,6 +26,11 @@
             <template #title>数据概览</template>
           </el-menu-item>
 
+          <el-menu-item index="/transaction-records">
+            <el-icon><Money /></el-icon>
+            <template #title>流水记录</template>
+          </el-menu-item>
+
           <el-sub-menu index="/orders-main">
             <template #title>
               <el-icon><ShoppingCart /></el-icon>
@@ -142,6 +147,7 @@ import {
   Key,
   SwitchButton,
   Document,
+  Money,
 } from '@element-plus/icons-vue'
 import Breadcrumb from './components/Breadcrumb.vue'
 

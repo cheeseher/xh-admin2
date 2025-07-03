@@ -24,10 +24,12 @@ import { ref } from 'vue'
  * @property {string} userEmail
  * @property {string} userRole
  * @property {string} payMethod
+ * @property {string} payChannel
  * @property {string} deliveryMethod
  * @property {string} status
  * @property {string} [remark]
  * @property {string} createTime
+ * @property {string} [completionTime]
  * @property {RefundInfo | null} refundInfo
  */
 
@@ -73,6 +75,7 @@ export const orderList = ref([
     userEmail: 'user1@example.com',
     userRole: '普通用户',
     payMethod: 'usdt',
+    payChannel: 'k4',
     deliveryMethod: '自动发货',
     createTime: '2023-05-01 10:00:00',
     remark: '用户要求尽快发货',
@@ -94,8 +97,10 @@ export const orderList = ref([
     userEmail: 'user2_vip@example.com',
     userRole: 'vip2',
     payMethod: 'alipay',
+    payChannel: 'speedzf',
     deliveryMethod: '手动发货',
     createTime: '2023-05-01 11:30:00',
+    completionTime: '2023-05-01 14:45:00',
     remark: '已通过邮件发送账号信息',
     refundInfo: null
   },
@@ -115,6 +120,7 @@ export const orderList = ref([
     userEmail: 'visitor123@example.com',
     userRole: '游客',
     payMethod: 'wechat',
+    payChannel: 'k4',
     deliveryMethod: '自动发货',
     createTime: '2023-05-02 09:15:00',
     remark: '订单因用户原因取消并退款',
@@ -140,6 +146,7 @@ export const orderList = ref([
     userEmail: 'supermember@example.com',
     userRole: '超级会员',
     payMethod: 'usdt',
+    payChannel: 'speedzf',
     deliveryMethod: '自动发货',
     createTime: '2023-05-02 14:45:00',
     remark: '用户咨询后下单，等待支付',
@@ -161,6 +168,7 @@ export const orderList = ref([
     userEmail: 'business_user@example.com',
     userRole: 'vip3',
     payMethod: 'alipay',
+    payChannel: 'k4',
     deliveryMethod: '手动发货',
     createTime: '2023-05-03 09:20:00',
     remark: '用户主动取消订单',
@@ -182,6 +190,7 @@ export const orderList = ref([
     userEmail: 'tech_user@example.com',
     userRole: 'vip1',
     payMethod: 'wechat',
+    payChannel: 'speedzf',
     deliveryMethod: '自动发货',
     createTime: '2023-05-03 16:45:00',
     remark: '系统发货失败，需手动处理',
@@ -201,6 +210,7 @@ export function generateSampleOrders(count) {
   const productCats = ['谷歌邮箱', '微软邮箱', 'Instagram账号', 'Twitter账号', 'Facebook账号', 'Discord账号', 'ChatGPT账号', '其他账号'];
   const statuses = ['待付款', '待发货', '已完成', '已退款', '已取消'];
   const payMethods = ['usdt', 'wechat', 'alipay'];
+  const payChannels = ['k4', 'speedzf', 'quickpay', 'fastpay'];
   const deliveryMethods = ['自动发货', '手动发货'];
   const userRoles = ['游客', '普通用户', 'vip1', 'vip2', 'vip3', '超级会员'];
   const nicknames = ['快乐星球', '科技迷', '数码控', '账号达人', '社交狂人', '匿名用户', '高级玩家', 'VIP客户'];
@@ -215,6 +225,8 @@ export function generateSampleOrders(count) {
     const status = statuses[Math.floor(Math.random() * statuses.length)];
     const createTime = new Date(baseTime + i * 3600000 * Math.random() * 24); // Random time within days
     const nickname = nicknames[Math.floor(Math.random() * nicknames.length)] + i;
+    const payMethod = payMethods[Math.floor(Math.random() * payMethods.length)];
+    const payChannel = payChannels[Math.floor(Math.random() * payChannels.length)];
 
     samples.push({
       id: `ORD${(1000 + orderList.value.length + i).toString().padStart(3, '0')}`,
@@ -231,7 +243,8 @@ export function generateSampleOrders(count) {
       userNickname: nickname,
       userEmail: `user${(Math.random() * 1000).toFixed(0)}@sample.com`,
       userRole: userRoles[Math.floor(Math.random() * userRoles.length)],
-      payMethod: payMethods[Math.floor(Math.random() * payMethods.length)],
+      payMethod: payMethod,
+      payChannel: payChannel,
       deliveryMethod: deliveryMethods[Math.floor(Math.random() * deliveryMethods.length)],
       createTime: createTime.toISOString().replace('T', ' ').substring(0, 19),
       remark: status === '已取消' || status === '已退款' ? 'Sample remark for order status.' : '',

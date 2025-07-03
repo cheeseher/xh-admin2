@@ -80,17 +80,6 @@
             <span>{{ scope.row.discount }}%</span>
           </template>
         </el-table-column>
-        <el-table-column prop="parentNickname" label="上级用户昵称" width="120"></el-table-column>
-        <el-table-column prop="referralCount" label="邀请人数" width="100">
-          <template #default="scope">
-            <span>{{ scope.row.referralCount || 0 }}人</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="rebateAmount" label="累计返利金额" width="120">
-          <template #default="scope">
-            <span class="money">¥{{ scope.row.rebateAmount || 0 }}</span>
-          </template>
-        </el-table-column>
         <el-table-column prop="totalRecharge" label="累计充值" width="120">
           <template #default="scope">
             <span class="money">¥{{ scope.row.totalRecharge || 0 }}</span>
@@ -109,7 +98,6 @@
               :inactive-value="false"
               @change="(val: boolean) => handleStatusChange(val, scope.row)"
             ></el-switch>
-            <span class="status-text">{{ scope.row.statusBool ? '正常' : '禁用' }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="registerTime" label="注册时间" width="180"></el-table-column>
@@ -181,9 +169,6 @@
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="userForm.email" placeholder="请输入邮箱"></el-input>
         </el-form-item>
-        <el-form-item label="上级用户" prop="parentNickname">
-          <el-input v-model="userForm.parentNickname" placeholder="请输入上级用户昵称"></el-input>
-        </el-form-item>
         <el-form-item label="VIP等级" prop="role">
           <el-select v-model="userForm.role" placeholder="请选择VIP等级" style="width: 168px;">
             <el-option label="普通" :value="0"></el-option>
@@ -211,7 +196,6 @@
         </el-form-item>
         <el-form-item label="状态">
           <el-switch v-model="userForm.statusBool"></el-switch>
-          <span class="status-text">{{ userForm.statusBool ? '正常' : '禁用' }}</span>
         </el-form-item>
       </el-form>
       <template #footer>

@@ -24,11 +24,8 @@
             <el-form-item label="订单号">
               <el-input v-model="searchForm.orderId" placeholder="请输入订单号" clearable></el-input>
             </el-form-item>
-            <el-form-item label="用户昵称">
-              <el-input v-model="searchForm.userNickname" placeholder="请输入用户昵称" clearable></el-input>
-            </el-form-item>
-            <el-form-item label="用户邮箱">
-              <el-input v-model="searchForm.userEmail" placeholder="请输入用户邮箱" clearable></el-input>
+            <el-form-item label="用户信息">
+              <el-input v-model="searchForm.userInfo" placeholder="请输入昵称或邮箱" clearable></el-input>
             </el-form-item>
             <el-form-item label="商品分类">
               <el-select v-model="searchForm.category" placeholder="请选择" clearable style="width: 168px;">
@@ -44,11 +41,18 @@
               </el-select>
             </el-form-item>
             <el-form-item label="支付方式">
-              <el-select v-model="searchForm.payMethod" placeholder="请选择" clearable style="width: 168px;">
-                <el-option label="全部" value=""></el-option>
+              <el-select v-model="searchForm.payMethod" placeholder="请选择支付方式" clearable style="width: 168px">
                 <el-option label="USDT" value="usdt"></el-option>
                 <el-option label="微信" value="wechat"></el-option>
                 <el-option label="支付宝" value="alipay"></el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="支付通道">
+              <el-select v-model="searchForm.payChannel" placeholder="请选择支付通道" clearable style="width: 168px">
+                <el-option label="k4" value="k4"></el-option>
+                <el-option label="speedzf" value="speedzf"></el-option>
+                <el-option label="quickpay" value="quickpay"></el-option>
+                <el-option label="fastpay" value="fastpay"></el-option>
               </el-select>
             </el-form-item>
             <el-form-item label="发货方式">
@@ -134,14 +138,28 @@
             @selection-change="handleSelectionChange"
           >
             <el-table-column type="selection" width="55"></el-table-column>
-            <el-table-column prop="id" label="商品订单ID" width="100"></el-table-column>
-            <el-table-column prop="orderId" label="订单号" width="180"></el-table-column>
-            <el-table-column prop="userNickname" label="用户昵称" width="120"></el-table-column>
-            <el-table-column prop="userEmail" label="用户邮箱" width="180"></el-table-column>
-            <el-table-column prop="productName" label="商品名称" min-width="180"></el-table-column>
-            <el-table-column prop="category" label="商品分类" width="100">
+            <el-table-column prop="orderId" label="订单号" width="180" fixed="left"></el-table-column>
+            <el-table-column label="用户信息" width="220">
               <template #default="scope">
-                {{ scope.row.category }}
+                <div class="user-info">
+                  <div class="user-nickname">
+                    <template v-if="scope.row.userRole === '游客'">
+                      <el-tag size="small" type="info">游客</el-tag>
+                    </template>
+                    <template v-else>
+                      {{ scope.row.userNickname }}
+                    </template>
+                  </div>
+                  <div class="user-email">{{ scope.row.userEmail }}</div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="商品信息" min-width="180">
+              <template #default="scope">
+                <div class="product-info">
+                  <div>{{ scope.row.productName }}</div>
+                  <el-tag size="small" effect="plain">{{ scope.row.category }}</el-tag>
+                </div>
               </template>
             </el-table-column>
             <el-table-column prop="originalPrice" label="商品价格" width="100">
@@ -176,35 +194,36 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="status" label="状态" width="100">
+            <el-table-column prop="status" label="状态" width="100" fixed="right">
               <template #default="scope">
                 <el-tag :type="getStatusType(scope.row.status)">{{ scope.row.status }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column prop="cardInfo" label="卡密信息" min-width="120">
               <template #default="scope">
-                <el-button link type="primary" @click="viewCardInfo(scope.row)">查看</el-button>
+                <div>
+                  <div v-if="scope.row.deliveryMethod === '自动发货' && scope.row.cardId">
+                    <span class="card-id">ID: {{ scope.row.cardId }}</span>
+                  </div>
+                  <el-button link type="primary" @click="viewCardInfo(scope.row)">查看</el-button>
+                </div>
               </template>
             </el-table-column>
-            <el-table-column prop="userRole" label="用户身份" width="100">
+            <el-table-column prop="userRole" label="用户身份/折扣" width="120">
               <template #default="scope">
                 <el-tag :type="getUserRoleType(scope.row.userRole)" size="small">
-                  {{ scope.row.userRole }}
+                  {{ scope.row.userRole }} ({{ getUserDiscount(scope.row.userRole) }})
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="折扣" width="80">
+            <el-table-column label="支付方式" width="120">
               <template #default="scope">
-                <el-tag type="success" effect="plain" size="small">
-                  {{ getUserDiscount(scope.row.userRole) }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="payMethod" label="支付方式" width="100">
-              <template #default="scope">
-                <el-tag :type="getPayMethodType(scope.row.payMethod)">
-                  {{ getPayMethodLabel(scope.row.payMethod) }}
-                </el-tag>
+                <div class="payment-info">
+                  <el-tag :type="getPayMethodType(scope.row.payMethod)">
+                    {{ getPayMethodLabel(scope.row.payMethod) }}
+                  </el-tag>
+                  <div class="payment-channel">{{ scope.row.payChannel }}</div>
+                </div>
               </template>
             </el-table-column>
             <el-table-column prop="deliveryMethod" label="发货方式" width="100">
@@ -214,11 +233,18 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
-            <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
-            <el-table-column label="操作" width="120" fixed="right">
+            <el-table-column prop="createTime" label="创建时间" width="180" fixed="right"></el-table-column>
+            <el-table-column label="完成时间" width="180">
               <template #default="scope">
-                <el-dropdown trigger="hover">
+                <span v-if="scope.row.completionTime">{{ scope.row.completionTime }}</span>
+                <span v-else-if="scope.row.status === '已完成'">-</span>
+                <span v-else>-</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
+            <el-table-column label="操作" width="90" fixed="right">
+              <template #default="scope">
+                <el-dropdown trigger="hover" size="small">
                   <el-button type="primary" size="small">
                     操作
                     <el-icon class="el-icon--right"><arrow-down /></el-icon>
@@ -227,6 +253,9 @@
                     <el-dropdown-menu>
                       <el-dropdown-item v-if="scope.row.status === '待发货'" @click="handleDeliver(scope.row)">
                         发货
+                      </el-dropdown-item>
+                      <el-dropdown-item v-if="scope.row.status === '已完成' && scope.row.deliveryMethod === '手动发货'" @click="handleEditDeliveryInfo(scope.row)">
+                        编辑卡密信息
                       </el-dropdown-item>
                       <el-dropdown-item @click="handleResendEmail(scope.row)">
                         重发邮件
@@ -327,6 +356,67 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 发货对话框 -->
+    <el-dialog
+      v-model="deliverDialogVisible"
+      :title="deliverDialogTitle"
+      width="500px"
+      class="deliver-dialog"
+      :close-on-click-modal="false"
+      destroy-on-close
+    >
+      <div class="deliver-info">
+        <div class="info-item">
+          <span class="label">订单号：</span>
+          <span class="value">{{ deliverForm.orderId }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">商品名称：</span>
+          <span class="value">{{ deliverForm.productName }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">商品分类：</span>
+          <span class="value">{{ deliverForm.category }}</span>
+        </div>
+      </div>
+      
+      <el-form :model="deliverForm" label-width="80px" :rules="deliverRules" ref="deliverFormRef">
+        <el-form-item label="成本价" prop="costPrice">
+          <el-input-number 
+            v-model="deliverForm.costPrice" 
+            :precision="2" 
+            :step="0.01" 
+            :min="0" 
+            style="width: 100%;"
+            placeholder="请输入成本价"
+          ></el-input-number>
+        </el-form-item>
+        <el-form-item label="卡密信息" prop="cardInfo">
+          <el-input
+            v-model="deliverForm.cardInfo"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入卡密信息"
+          ></el-input>
+        </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input
+            v-model="deliverForm.remark"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入发货备注信息（选填）"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="deliverDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitDeliverForm">确认发货</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -340,14 +430,14 @@ import { orderList as externalOrderList, productOptions as externalProductOption
 // 搜索表单
 const searchForm = reactive({
   orderId: '',
-  userNickname: '',
-  userEmail: '',
+  userInfo: '',
   category: '',
   payMethod: '',
   deliveryMethod: '',
   status: '',
   userRole: '',
-  dateRange: [] as string[]
+  dateRange: [] as string[],
+  payChannel: ''
 })
 
 // 商品选项 - Use from external file
@@ -371,6 +461,7 @@ onMounted(() => {
   handleSearch() // Initial filter/display
   // Initialize total for pagination
   total.value = filteredOrderList.value.length;
+  addDemoOrder()
 })
 
 // 查询
@@ -393,12 +484,11 @@ const filteredOrderList = computed(() => {
     result = result.filter(item => item.orderId.includes(searchForm.orderId))
   }
   
-  if (searchForm.userNickname) {
-    result = result.filter(item => item.userNickname.toLowerCase().includes(searchForm.userNickname.toLowerCase()))
-  }
-  
-  if (searchForm.userEmail) {
-    result = result.filter(item => item.userEmail.toLowerCase().includes(searchForm.userEmail.toLowerCase()))
+  if (searchForm.userInfo) {
+    result = result.filter(item => 
+      item.userNickname.toLowerCase().includes(searchForm.userInfo.toLowerCase()) || 
+      item.userEmail.toLowerCase().includes(searchForm.userInfo.toLowerCase())
+    )
   }
   
   if (searchForm.category) {
@@ -407,6 +497,10 @@ const filteredOrderList = computed(() => {
   
   if (searchForm.payMethod) {
     result = result.filter(item => item.payMethod === searchForm.payMethod)
+  }
+  
+  if (searchForm.payChannel) {
+    result = result.filter(item => item.payChannel === searchForm.payChannel)
   }
   
   if (searchForm.deliveryMethod) {
@@ -489,10 +583,10 @@ const exportOrders = () => {
   }
   
   // 创建CSV内容
-  let csvContent = '订单号,商品名称,商品分类,数量,总价,手续费,入账金额,用户邮箱,支付方式,发货方式,订单状态,创建时间\n'
+  let csvContent = '订单号,商品名称,商品分类,数量,总价,手续费,入账金额,用户信息,支付方式,支付通道,发货方式,订单状态,创建时间,完成时间\n'
   
   multipleSelection.value.forEach(order => {
-    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${calculateIncome(order)}","${order.userEmail}","${getPayMethodLabel(order.payMethod)}","${order.deliveryMethod}","${order.status}","${order.createTime}"\n`
+    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${calculateIncome(order)}","${order.userNickname} (${order.userEmail})","${getPayMethodLabel(order.payMethod)}","${order.payChannel}","${order.deliveryMethod}","${order.status}","${order.createTime}","${order.completionTime || ''}"\n`
   })
   
   // 创建Blob对象
@@ -584,14 +678,14 @@ const getStatusType = (status: string) => {
 // 重置
 const resetSearch = () => {
   searchForm.orderId = ''
-  searchForm.userNickname = ''
-  searchForm.userEmail = ''
+  searchForm.userInfo = ''
   searchForm.category = ''
   searchForm.payMethod = ''
   searchForm.deliveryMethod = ''
   searchForm.status = ''
   searchForm.userRole = ''
   searchForm.dateRange = []
+  searchForm.payChannel = ''
   
   // 重置后重新查询
   handleSearch()
@@ -626,6 +720,11 @@ const handleView = (row: any) => {
           <span class="label">创建时间：</span>
           <span>${row.createTime}</span>
         </div>
+        ${row.status === '已完成' ? `
+        <div class="detail-item">
+          <span class="label">完成时间：</span>
+          <span>${row.completionTime || '-'}</span>
+        </div>` : ''}
         <div class="detail-item">
           <span class="label">订单状态：</span>
           <span><el-tag size="small" :type="getStatusType(row.status)">${row.status}</el-tag></span>
@@ -654,6 +753,11 @@ const handleView = (row: any) => {
           <span class="label">手续费：</span>
           <span class="fee">{{ row.fee || '¥0.00' }}</span>
         </div>
+        ${row.costPrice !== undefined ? `
+        <div class="detail-item">
+          <span class="label">成本价：</span>
+          <span class="cost-price">¥${row.costPrice.toFixed(2)}</span>
+        </div>` : ''}
         <div class="detail-item">
           <span class="label">发货方式：</span>
           <span><el-tag size="small" :type="row.deliveryMethod === '自动发货' ? 'success' : 'info'">${row.deliveryMethod}</el-tag></span>
@@ -662,10 +766,11 @@ const handleView = (row: any) => {
       
       <h4>卡密信息</h4>
       <div class="detail-section">
+        ${row.deliveryMethod === '自动发货' ? `
         <div class="detail-item">
           <span class="label">卡密ID：</span>
-          <span>${row.cardId || '暂无'}</span>
-        </div>
+          <span class="card-id-value">${row.cardId || '暂无'}</span>
+        </div>` : ''}
         <div class="detail-item account-info">
           <span class="label">卡密详情：</span>
           <pre>${row.cardInfo || '暂无'}</pre>
@@ -674,6 +779,10 @@ const handleView = (row: any) => {
       
       <h4>用户信息</h4>
       <div class="detail-section">
+        <div class="detail-item">
+          <span class="label">用户昵称：</span>
+          <span>${row.userRole === '游客' ? '<el-tag size="small" type="info">游客</el-tag>' : row.userNickname}</span>
+        </div>
         <div class="detail-item">
           <span class="label">用户邮箱：</span>
           <span>${row.userEmail}</span>
@@ -690,6 +799,12 @@ const handleView = (row: any) => {
             {{ getPayMethodLabel(row.payMethod) }}
           </el-tag></span>
         </div>
+        <div class="detail-item">
+          <span class="label">支付通道：</span>
+          <span><el-tag size="small" effect="plain" type="info">
+            {{ row.payChannel }}
+          </el-tag></span>
+        </div>
       </div>
       
       ${refundInfoHtml}
@@ -703,27 +818,136 @@ const handleView = (row: any) => {
   )
 }
 
-// 修改发货处理函数，使用简单确认弹框
+// 发货表单相关数据
+const deliverDialogVisible = ref(false)
+const deliverFormRef = ref<FormInstance>()
+const deliverDialogTitle = ref('订单发货')
+const isEditingDeliveryInfo = ref(false)
+const deliverForm = reactive({
+  id: '',
+  orderId: '',
+  productName: '',
+  category: '',
+  cardInfo: '',
+  cardId: '',
+  costPrice: 0,
+  remark: ''
+})
+
+// 发货表单验证规则
+const deliverRules = reactive<FormRules>({
+  costPrice: [
+    { required: true, message: '请输入成本价', trigger: 'blur' },
+    { type: 'number', message: '成本价必须为数字', trigger: 'blur' }
+  ],
+  cardInfo: [
+    { required: true, message: '请输入卡密信息', trigger: 'blur' }
+  ]
+})
+
+// 修改发货处理函数，使用弹窗表单
 const handleDeliver = (row: any) => {
-  ElMessageBox.confirm(
-    `确认该用户已付款并已成功发货？订单号: ${row.orderId}`,
-    '订单发货确认',
-    {
-      confirmButtonText: '确认',
-      cancelButtonText: '取消',
-      type: 'warning'
+  deliverForm.id = row.id
+  deliverForm.orderId = row.orderId
+  deliverForm.productName = row.productName
+  deliverForm.category = row.category
+  
+  // 生成卡密信息和ID
+  const generatedCard = generateCardInfo(row.category, row.productName)
+  deliverForm.cardInfo = generatedCard.cardInfo
+  deliverForm.cardId = generatedCard.cardId
+  
+  deliverForm.costPrice = 0
+  deliverForm.remark = ''
+  
+  // 重置对话框标题和编辑状态
+  deliverDialogTitle.value = '订单发货'
+  isEditingDeliveryInfo.value = false
+  deliverDialogVisible.value = true
+}
+
+// 添加编辑卡密信息的处理函数
+const handleEditDeliveryInfo = (row: any) => {
+  // 复用发货表单
+  deliverForm.id = row.id
+  deliverForm.orderId = row.orderId
+  deliverForm.productName = row.productName
+  deliverForm.category = row.category
+  deliverForm.cardInfo = row.cardInfo || ''
+  deliverForm.costPrice = row.costPrice || 0
+  deliverForm.remark = row.remark || ''
+  
+  // 更改对话框标题
+  deliverDialogTitle.value = '编辑卡密信息'
+  isEditingDeliveryInfo.value = true
+  deliverDialogVisible.value = true
+}
+
+      // 修改提交发货表单函数
+const submitDeliverForm = async () => {
+  if (!deliverFormRef.value) return
+  
+  await deliverFormRef.value.validate((valid, fields) => {
+    if (valid) {
+      // 获取订单
+      const index = orderList.value.findIndex(item => item.id === deliverForm.id)
+      if (index !== -1) {
+        // 如果是编辑模式，只更新卡密信息和成本价
+        if (isEditingDeliveryInfo.value) {
+          orderList.value[index].cardInfo = deliverForm.cardInfo
+          orderList.value[index].cardId = deliverForm.cardId
+          orderList.value[index].costPrice = deliverForm.costPrice
+          
+          // 如果有备注，更新订单备注
+          if (deliverForm.remark) {
+            orderList.value[index].remark = deliverForm.remark
+          }
+          
+          // 更新在allOrderList中的数据
+          const allIndex = allOrderList.value.findIndex(item => item.id === deliverForm.id)
+          if (allIndex !== -1) {
+            allOrderList.value[allIndex].cardInfo = deliverForm.cardInfo
+            allOrderList.value[allIndex].costPrice = deliverForm.costPrice
+            if (deliverForm.remark) {
+              allOrderList.value[allIndex].remark = deliverForm.remark
+            }
+          }
+          
+          ElMessage.success(`订单 ${deliverForm.orderId} 卡密信息已更新`)
+        } else {
+          // 原有的发货逻辑
+          orderList.value[index].status = '已完成'
+          orderList.value[index].cardInfo = deliverForm.cardInfo
+          orderList.value[index].cardId = deliverForm.cardId
+          orderList.value[index].costPrice = deliverForm.costPrice
+          
+          // 如果有备注，添加到订单备注中
+          if (deliverForm.remark) {
+            orderList.value[index].remark = deliverForm.remark
+          }
+          
+          // 更新在allOrderList中的数据
+          const allIndex = allOrderList.value.findIndex(item => item.id === deliverForm.id)
+          if (allIndex !== -1) {
+            allOrderList.value[allIndex].status = '已完成'
+            allOrderList.value[allIndex].cardInfo = deliverForm.cardInfo
+            allOrderList.value[allIndex].cardId = deliverForm.cardId
+            allOrderList.value[allIndex].costPrice = deliverForm.costPrice
+            if (deliverForm.remark) {
+              allOrderList.value[allIndex].remark = deliverForm.remark
+            }
+          }
+          
+          ElMessage.success(`订单 ${deliverForm.orderId} 发货成功`)
+        }
+      }
+      
+      deliverDialogVisible.value = false
+      isEditingDeliveryInfo.value = false
+      deliverDialogTitle.value = '订单发货'
+    } else {
+      console.log('发货表单验证失败', fields)
     }
-  ).then(() => {
-    // 自动生成卡密信息
-    const autoCardInfo = generateCardInfo(row.category, row.productName)
-    
-    // 更新订单状态为已完成
-    row.status = '已完成'
-    row.cardInfo = autoCardInfo
-    
-    ElMessage.success('订单发货成功')
-  }).catch(() => {
-    ElMessage.info('已取消发货')
   })
 }
 
@@ -743,7 +967,11 @@ const handleCurrentChange = (val: number) => {
 
 // 在script部分添加新的方法
 const viewCardInfo = (row: any) => {
-  ElMessageBox.alert(row.cardInfo, '卡密信息', {
+  let cardTitle = '卡密信息';
+  if (row.cardId && row.deliveryMethod === '自动发货') {
+    cardTitle = `卡密信息 (ID: ${row.cardId})`;
+  }
+  ElMessageBox.alert(row.cardInfo, cardTitle, {
     confirmButtonText: '确定'
   })
 }
@@ -847,10 +1075,10 @@ const exportAllOrders = () => {
   }
   
   // 创建CSV内容
-  let csvContent = '订单号,商品名称,商品分类,数量,总价,手续费,入账金额,用户邮箱,支付方式,发货方式,订单状态,创建时间\n'
+  let csvContent = '订单号,商品名称,商品分类,数量,总价,手续费,入账金额,用户信息,支付方式,支付通道,发货方式,订单状态,创建时间,完成时间\n'
   
   allOrderList.value.forEach(order => {
-    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${calculateIncome(order)}","${order.userEmail}","${getPayMethodLabel(order.payMethod)}","${order.deliveryMethod}","${order.status}","${order.createTime}"\n`
+    csvContent += `"${order.orderId}","${order.productName}","${order.category}",${order.quantity},"${order.totalPrice}","${order.fee || '¥0.00'}","${calculateIncome(order)}","${order.userNickname} (${order.userEmail})","${getPayMethodLabel(order.payMethod)}","${order.payChannel}","${order.deliveryMethod}","${order.status}","${order.createTime}","${order.completionTime || ''}"\n`
   })
   
   // 创建Blob对象
@@ -925,7 +1153,7 @@ const getUserRoleType = (role: string) => {
 const getUserDiscount = (role: string) => {
   switch (role) {
     case '超级会员':
-      return '折扣优惠'
+      return '80%'
     case 'vip3':
       return '85%'
     case 'vip2':
@@ -985,22 +1213,71 @@ const submitEditOrderForm = async () => {
   }
 };
 
-// 自动生成卡密信息的函数
+  // 自动生成卡密信息的函数
 const generateCardInfo = (category: string, productName: string) => {
   // 根据不同类型的产品生成不同的卡密信息
-  const timestamp = new Date().getTime().toString().slice(-8)
-  const randomStr = Math.random().toString(36).substring(2, 10).toUpperCase()
+  const cardId = Math.floor(10000 + Math.random() * 90000).toString() // 生成5位数字ID
   
   if (category.includes('邮箱')) {
-    const email = `user_${randomStr}@${category.includes('谷歌') ? 'gmail' : 'outlook'}.com`
+    // 生成随机字符串作为账号
+    const randomChars = Math.random().toString(36).substring(2, 10)
+    const email = `user_${randomChars}@${category.includes('谷歌') ? 'gmail' : 'outlook'}.com`
     const password = `Pass_${Math.random().toString(36).substring(2, 10)}`
-    return `账号：${email}\n密码：${password}\n激活码：XH-${timestamp}-${randomStr}`
+    return {
+      cardId,
+      cardInfo: `账号：${email}\n密码：${password}\n卡密ID：${cardId}`
+    }
   } else if (category.includes('账号')) {
-    const username = `user_${randomStr}`
+    // 生成随机字符串作为用户名
+    const randomChars = Math.random().toString(36).substring(2, 10)
+    const username = `user_${randomChars}`
     const password = `Pass_${Math.random().toString(36).substring(2, 10)}`
-    return `账号：${username}\n密码：${password}\n平台：${category}\n注册日期：${new Date().toISOString().split('T')[0]}`
+    return {
+      cardId,
+      cardInfo: `账号：${username}\n密码：${password}\n平台：${category}\n注册日期：${new Date().toISOString().split('T')[0]}`
+    }
   } else {
-    return `卡密ID：XH-${timestamp}-${randomStr}\n使用说明：登录官网 example.com 使用此卡密激活账号\n有效期：1年`
+    return {
+      cardId,
+      cardInfo: `卡密ID：${cardId}\n使用说明：登录官网 example.com 使用此卡密激活账号\n有效期：1年`
+    }
+  }
+}
+
+// 在页面加载时检查并添加模拟待发货订单
+const addDemoOrder = () => {
+  // 检查是否已存在ID为DEMO001的订单
+  const existingOrder = orderList.value.find(item => item.id === 'DEMO001')
+  if (!existingOrder) {
+    // 添加一条模拟的待发货订单
+    orderList.value.push({
+      id: 'DEMO001',
+      orderId: 'P20230601001',
+      productName: 'Gmail邮箱-稳定可用 (演示)',
+      category: '谷歌邮箱',
+      originalPrice: '¥15.99',
+      purchasePrice: '¥15.00',
+      quantity: 1,
+      totalPrice: '¥15.99',
+      fee: '¥0.50',
+      status: '待发货',
+      cardId: '10086',
+      cardInfo: '演示卡密',
+      userNickname: '演示用户',
+      userEmail: 'demo@example.com',
+      userRole: '普通用户',
+      payMethod: 'alipay',
+      payChannel: 'k4',
+      deliveryMethod: '自动发货',
+      createTime: '2023-06-01 10:00:00',
+      remark: '这是一个演示订单，显示发货按钮',
+      refundInfo: null
+    })
+    // 也添加到所有订单列表中
+    if(allOrderList && allOrderList.value) {
+      allOrderList.value.push(orderList.value[orderList.value.length - 1])
+    }
+    console.log('已添加演示订单')
   }
 }
 </script>
@@ -1155,6 +1432,48 @@ const generateCardInfo = (category: string, productName: string) => {
   border-radius: 4px;
 }
 
+/* 用户信息列样式 */
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-nickname {
+  font-weight: bold;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.user-email {
+  font-size: 12px;
+  color: #909399;
+}
+
+.product-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.product-info div {
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.product-info .el-tag {
+  width: fit-content;
+}
+
+.payment-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.payment-info .payment-channel {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
+}
+
 .total-amount span {
   margin-right: 10px;
   font-size: 14px;
@@ -1178,9 +1497,14 @@ const generateCardInfo = (category: string, productName: string) => {
   flex-direction: column;
 }
 
-.price, .original-price, .purchase-price, .fee, .income-price {
+.price, .original-price, .purchase-price, .fee, .income-price, .cost-price {
   /* Consolidating price related styles, specific colors can be added if needed */
   color: #303133;
+}
+
+.cost-price {
+  color: #67C23A; /* 成本价使用绿色 */
+  font-weight: bold;
 }
 
 .price {
@@ -1241,9 +1565,32 @@ const generateCardInfo = (category: string, productName: string) => {
   color: #303133;
 }
 
-.refund-dialog .info-item .price {
+.refund-dialog .info-item .price,
+.deliver-dialog .info-item .price {
   color: #F56C6C;
   font-weight: bold;
+}
+
+/* 发货对话框样式 */
+.deliver-dialog .deliver-info {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+
+.deliver-dialog .info-item {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.deliver-dialog .info-item .label {
+  color: #606266;
+  margin-right: 5px;
+}
+
+.deliver-dialog .info-item .value {
+  color: #303133;
 }
 
 /* Removing potentially conflicting deep selectors and general cleanup */
@@ -1257,5 +1604,17 @@ const generateCardInfo = (category: string, productName: string) => {
   white-space: pre-wrap; 
   word-break: break-all; 
   font-family: monospace;
+}
+
+.card-id {
+  display: block;
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 4px;
+}
+
+.card-id-value {
+  color: #409EFF;
+  font-weight: 500;
 }
 </style>

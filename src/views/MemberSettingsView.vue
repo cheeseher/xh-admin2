@@ -46,37 +46,6 @@
 
     </el-card>
     
-    <!-- 消费返利折扣设置 -->
-    <el-card class="box-card">
-      <template #header>
-        <div class="card-header">
-          <span>消费返利设置</span>
-        </div>
-      </template>
-      
-      <div class="page-description">
-        <p>设置消费返利比例。消费返利是指用户消费后获得的返利金额。</p>
-      </div>
-      
-      <!-- 返利设置表单 -->
-      <el-form :model="globalRebateForm" label-width="150px" :rules="globalRebateRules" ref="globalRebateFormRef">
-        <el-form-item label="消费返利比例" prop="consumeRebateRate">
-          <el-input-number 
-            v-model="globalRebateForm.consumeRebateRate" 
-            :min="0" 
-            :max="100" 
-            :precision="1" 
-            :step="0.1"
-            style="width: 180px;"
-          ></el-input-number>
-          <span class="form-tip">%（百分比，例如：1.5表示消费金额的1.5%将作为返利）</span>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="saveGlobalRebateSettings">保存设置</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
-    
     <!-- 会员等级表单对话框 -->
     <el-dialog
       v-model="levelDialogVisible"
@@ -462,31 +431,7 @@ onMounted(() => {
   // 可以在这里加载数据
 })
 
-// 全局返利表单相关
-const globalRebateFormRef = ref<FormInstance>()
-const globalRebateForm = reactive({
-  consumeRebateRate: 2.0
-})
-
-const globalRebateRules = reactive<FormRules>({
-  consumeRebateRate: [
-    { required: true, message: '请输入消费返利比例', trigger: 'blur' }
-  ]
-})
-
-const saveGlobalRebateSettings = async () => {
-  if (!globalRebateFormRef.value) return
-  
-  await globalRebateFormRef.value.validate((valid, fields) => {
-    if (valid) {
-      // 模拟保存设置
-      // 这里应该将设置保存到后端
-      ElMessage.success('全局返利设置保存成功')
-    } else {
-      console.log('表单验证失败', fields)
-    }
-  })
-}
+// 初始化数据相关内容
 </script>
 
 <style scoped>
