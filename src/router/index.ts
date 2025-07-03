@@ -19,11 +19,11 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
-    path: '/transaction-records',
-    name: 'transactionRecords',
-    component: () => import('../views/TransactionRecordsView.vue'),
+    path: '/cost-center',
+    name: 'costCenter',
+    component: () => import('../views/CostCenterView.vue'),
     meta: {
-      title: '流水记录',
+      title: '成本中心',
       requiresAuth: true
     }
   },

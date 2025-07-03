@@ -26,9 +26,9 @@
             <template #title>数据概览</template>
           </el-menu-item>
 
-          <el-menu-item index="/transaction-records">
+          <el-menu-item index="/cost-center">
             <el-icon><Money /></el-icon>
-            <template #title>流水记录</template>
+            <template #title>成本中心</template>
           </el-menu-item>
 
           <el-sub-menu index="/orders-main">

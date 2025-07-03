@@ -442,6 +442,7 @@
           <div class="operation-buttons">
             <el-button type="primary" @click="handleImportInventory">批量导入</el-button>
             <el-button type="success" @click="handleAddInventory">新增库存</el-button>
+            <el-button type="warning" @click="handleBatchUpdateCost">批量修改成本价</el-button>
           </div>
           
           <!-- 搜索区域 -->
@@ -449,6 +450,9 @@
             <el-form :inline="true" :model="inventorySearchForm" class="demo-form-inline">
               <el-form-item label="卡密ID">
                 <el-input v-model="inventorySearchForm.cardId" placeholder="请输入卡密ID" clearable></el-input>
+              </el-form-item>
+              <el-form-item label="批次ID">
+                <el-input v-model="inventorySearchForm.batchId" placeholder="请输入批次ID" clearable></el-input>
               </el-form-item>
               <el-form-item label="销售状态">
                 <el-select v-model="inventorySearchForm.status" placeholder="请选择" clearable>
@@ -468,6 +472,7 @@
           <el-table :data="inventoryTableData" style="width: 100%" v-loading="inventoryLoading" border stripe>
             <el-table-column type="selection" width="55"></el-table-column>
             <el-table-column prop="cardId" label="卡密ID" width="120"></el-table-column>
+            <el-table-column prop="batchId" label="批次ID" width="150"></el-table-column>
             <el-table-column prop="status" label="状态" width="100">
               <template #default="scope">
                 <el-tag :type="scope.row.status === 'unsold' ? 'success' : scope.row.status === 'sold' ? 'info' : 'danger'">
@@ -524,6 +529,10 @@
       :destroy-on-close="true"
     >
       <el-form :model="inventoryForm" label-width="100px" :rules="inventoryRules" ref="inventoryFormRef">
+        <el-form-item label="批次ID" prop="batchId">
+          <el-input v-model="inventoryForm.batchId" placeholder="批次ID将自动生成，格式：P+日期+批次号" disabled></el-input>
+          <div class="form-tip">批次ID格式：P+日期+批次号，例如：P20250213001</div>
+        </el-form-item>
         <el-form-item label="卡密信息" prop="cardInfo" required>
           <el-input
             type="textarea"
@@ -569,6 +578,10 @@
       class="import-dialog"
     >
       <el-form :model="importForm" label-width="100px">
+        <el-form-item label="批次ID">
+          <el-input v-model="importForm.batchId" placeholder="批次ID将自动生成" disabled></el-input>
+          <div class="form-tip">批次ID格式：P+日期+批次号，例如：P20250213001</div>
+        </el-form-item>
         <el-form-item label="备注">
           <el-input
             type="textarea"
@@ -625,6 +638,9 @@
       :destroy-on-close="true"
     >
       <el-form :model="editInventoryForm" label-width="100px" ref="editInventoryFormRef">
+        <el-form-item label="批次ID" prop="batchId">
+          <el-input v-model="editInventoryForm.batchId" placeholder="批次ID" disabled></el-input>
+        </el-form-item>
         <el-form-item label="卡密信息" prop="cardInfo" required>
           <el-input
             type="textarea"
@@ -807,6 +823,53 @@
         <span class="dialog-footer">
           <el-button @click="packageDialogVisible = false">取消</el-button>
           <el-button type="primary" @click="savePackages">保存</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 批量修改成本价弹窗 -->
+    <el-dialog
+      v-model="batchUpdateCostDialogVisible"
+      title="批量修改成本价"
+      width="500px"
+      :destroy-on-close="true"
+    >
+      <el-form :model="batchUpdateCostForm" label-width="100px">
+        <el-form-item label="选择批次" prop="batchId" required>
+          <el-select v-model="batchUpdateCostForm.batchId" placeholder="请选择批次" style="width: 100%;" filterable>
+            <el-option 
+              v-for="batch in batchOptions" 
+              :key="batch.value" 
+              :label="`${batch.label} (${batch.count}张卡密)`" 
+              :value="batch.value"
+            ></el-option>
+          </el-select>
+          <div class="form-tip">选择要修改成本价的批次</div>
+        </el-form-item>
+        <el-form-item label="新成本价" prop="newCost" required>
+          <el-input-number 
+            v-model="batchUpdateCostForm.newCost" 
+            :min="0" 
+            :precision="2" 
+            :step="0.01" 
+            style="width: 100%;" 
+            required
+          ></el-input-number>
+          <div class="form-tip">该批次下所有卡密将更新为此成本价</div>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input
+            type="textarea"
+            v-model="batchUpdateCostForm.remark"
+            :rows="2"
+            placeholder="可选：添加修改原因等备注信息"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="batchUpdateCostDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitBatchUpdateCost" :loading="batchUpdating">确定</el-button>
         </span>
       </template>
     </el-dialog>
@@ -1972,7 +2035,8 @@ const inventoryDrawerVisible = ref(false)
 const selectedProduct = ref<any>(null)
 const inventorySearchForm = reactive({
   status: '',
-  cardId: ''
+  cardId: '',
+  batchId: ''
 })
 const inventoryTableData = ref<InventoryTableItem[]>([
   {
@@ -2019,7 +2083,8 @@ const inventoryForm = reactive<InventoryForm>({
   productId: '',
   status: 'unsold',
   remark: '',
-  cost: undefined
+  cost: undefined,
+  batchId: ''
 })
 const inventoryFormRef = ref<FormInstance>()
 const inventoryRules = reactive<FormRules>({
@@ -2050,8 +2115,24 @@ const editInventoryForm = reactive({
   cardInfo: '',
   status: 'unsold',
   remark: '',
-  cost: undefined as number | undefined
+  cost: undefined as number | undefined,
+  batchId: ''
 })
+
+// 生成批次ID
+const generateBatchId = () => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  const dateStr = `${year}${month}${day}`
+  
+  // 这里模拟获取当天的批次号，实际应该从数据库查询当天最大批次号
+  const batchNumber = Math.floor(Math.random() * 5) + 1 // 模拟1-5批
+  const batchNumberStr = String(batchNumber).padStart(3, '0')
+  
+  return `P${dateStr}${batchNumberStr}`
+}
 
 // 处理新增库存
 const handleAddInventory = () => {
@@ -2061,6 +2142,7 @@ const handleAddInventory = () => {
   inventoryForm.status = 'unsold'
   inventoryForm.remark = ''
   inventoryForm.cost = 0 // 默认设置为0
+  inventoryForm.batchId = generateBatchId() // 自动生成批次ID
 }
 
 // 提交新增库存表单
@@ -2089,6 +2171,7 @@ const handleImportInventory = () => {
   importInventoryDialogVisible.value = true
   importFile.value = null
   importForm.cost = 0 // 默认设置为0
+  importForm.batchId = generateBatchId() // 自动生成批次ID
 }
 
 // 处理文件选择
@@ -2151,7 +2234,8 @@ const loadInventoryData = () => {
         cardInfo: 'username----password----email----emailpass',
         createTime: '2024-03-20 10:00:00',
         remark: '测试账号',
-        cost: 25.00
+        cost: 25.00,
+        batchId: 'P20240320001'
       },
       {
         cardId: 'CARD002',
@@ -2159,7 +2243,8 @@ const loadInventoryData = () => {
         cardInfo: 'username2----password2----email2----emailpass2',
         createTime: '2024-03-20 11:00:00',
         remark: '已售出账号',
-        cost: 30.50
+        cost: 30.50,
+        batchId: 'P20240320001'
       },
       {
         cardId: 'CARD003',
@@ -2167,7 +2252,8 @@ const loadInventoryData = () => {
         cardInfo: 'username3----password3----email3----emailpass3',
         createTime: '2024-03-21 09:30:00',
         remark: '账号异常，已作废',
-        cost: 22.80
+        cost: 22.80,
+        batchId: 'P20240321002'
       }
     ]
 
@@ -2175,6 +2261,10 @@ const loadInventoryData = () => {
     const filteredData = allData.filter(item => {
       // 卡密 ID 筛选
       if (inventorySearchForm.cardId && !item.cardId.toLowerCase().includes(inventorySearchForm.cardId.toLowerCase())) {
+        return false
+      }
+      // 批次 ID 筛选
+      if (inventorySearchForm.batchId && item.batchId && !item.batchId.toLowerCase().includes(inventorySearchForm.batchId.toLowerCase())) {
         return false
       }
       // 状态筛选
@@ -2197,6 +2287,7 @@ const handleInventorySearch = () => {
 const resetInventorySearch = () => {
   inventorySearchForm.status = ''
   inventorySearchForm.cardId = ''
+  inventorySearchForm.batchId = ''
   loadInventoryData()
 }
 
@@ -2216,6 +2307,7 @@ const handleEditInventoryItem = (row: any) => {
   editInventoryForm.status = row.status
   editInventoryForm.remark = row.remark
   editInventoryForm.cost = row.cost
+  editInventoryForm.batchId = row.batchId || ''
   editInventoryDialogVisible.value = true
 }
 
@@ -2261,6 +2353,10 @@ const showCardInfo = (row: any) => {
       <div class="card-info-item">
         <span class="label">卡密ID：</span>
         <span class="value">${row.cardId}</span>
+      </div>
+      <div class="card-info-item">
+        <span class="label">批次ID：</span>
+        <span class="value">${row.batchId || '未分配'}</span>
       </div>
       <div class="card-info-item">
         <span class="label">卡密信息：</span>
@@ -2489,7 +2585,8 @@ const styleContent = `
 const importForm = reactive({
   productId: '',
   remark: '',
-  cost: undefined as number | undefined
+  cost: undefined as number | undefined,
+  batchId: ''
 })
 
 // 安装包管理相关
@@ -2721,6 +2818,7 @@ interface InventoryForm {
   status: 'unsold' | 'sold' | 'voided';
   remark: string;
   cost?: number;
+  batchId: string;
 }
 
 interface InventoryTableItem {
@@ -2730,6 +2828,7 @@ interface InventoryTableItem {
   createTime: string;
   remark?: string;
   cost?: number;
+  batchId?: string;
 }
 
 interface CustomUploadRawFile extends File {
@@ -2754,6 +2853,115 @@ const cancelSimulatedUpload = (index: number) => {
   pkg.uploading = false;
   pkg.uploadProgress = 0;
   pkg.fileName = '';
+}
+
+// 批量修改成本价相关
+const batchUpdateCostDialogVisible = ref(false)
+const batchUpdateCostForm = reactive({
+  batchId: '',
+  newCost: 0,
+  remark: ''
+})
+const batchUpdating = ref(false)
+
+// 处理批量修改成本价
+const handleBatchUpdateCost = () => {
+  // 重置表单
+  batchUpdateCostForm.batchId = ''
+  batchUpdateCostForm.newCost = 0
+  batchUpdateCostForm.remark = ''
+  batchUpdateCostDialogVisible.value = true
+}
+
+// 获取批次选项
+const batchOptions = computed(() => {
+  if (!inventoryTableData.value || inventoryTableData.value.length === 0) {
+    return []
+  }
+  
+  // 统计每个批次的卡密数量
+  const batchMap = new Map()
+  inventoryTableData.value.forEach(item => {
+    if (item.batchId) {
+      if (!batchMap.has(item.batchId)) {
+        batchMap.set(item.batchId, { count: 1, label: item.batchId })
+      } else {
+        const batch = batchMap.get(item.batchId)
+        batch.count += 1
+      }
+    }
+  })
+  
+  // 转换为选项数组
+  return Array.from(batchMap.values()).map(batch => ({
+    value: batch.label,
+    label: batch.label,
+    count: batch.count
+  }))
+})
+
+const submitBatchUpdateCost = async () => {
+  // 验证表单
+  if (!batchUpdateCostForm.batchId) {
+    ElMessage.warning('请选择批次')
+    return
+  }
+  
+  if (batchUpdateCostForm.newCost <= 0) {
+    ElMessage.warning('请输入有效的成本价')
+    return
+  }
+  
+  // 计算将要更新的卡密数量
+  const affectedCards = inventoryTableData.value.filter(item => item.batchId === batchUpdateCostForm.batchId)
+  const unsoldCards = affectedCards.filter(item => item.status === 'unsold')
+  
+  // 显示确认对话框
+  ElMessageBox.confirm(
+    `<div class="batch-update-confirm">
+      <p>您将修改批次 <strong>${batchUpdateCostForm.batchId}</strong> 的成本价：</p>
+      <ul>
+        <li>影响卡密总数：<strong>${affectedCards.length}</strong> 张</li>
+        <li>其中未售出卡密：<strong>${unsoldCards.length}</strong> 张</li>
+        <li>新成本价：<strong>¥${batchUpdateCostForm.newCost.toFixed(2)}</strong></li>
+      </ul>
+      <p>确定要继续操作吗？</p>
+    </div>`,
+    '批量修改成本价确认',
+    {
+      confirmButtonText: '确认修改',
+      cancelButtonText: '取消',
+      type: 'warning',
+      dangerouslyUseHTMLString: true
+    }
+  ).then(async () => {
+    batchUpdating.value = true
+    try {
+      // 这里应该调用API更新成本价
+      // 以下是模拟过程
+      await new Promise(resolve => setTimeout(resolve, 1000)) // 模拟更新处理过程
+      
+      // 更新本地数据
+      let updatedCount = 0
+      inventoryTableData.value.forEach(item => {
+        if (item.batchId === batchUpdateCostForm.batchId) {
+          item.cost = batchUpdateCostForm.newCost
+          updatedCount++
+        }
+      })
+      
+      ElMessage.success(`成功更新${updatedCount}张卡密的成本价`)
+      batchUpdateCostDialogVisible.value = false
+      // 刷新库存列表
+      loadInventoryData()
+    } catch (error) {
+      ElMessage.error('更新失败，请重试')
+    } finally {
+      batchUpdating.value = false
+    }
+  }).catch(() => {
+    ElMessage.info('已取消修改操作')
+  })
 }
 </script>
 
@@ -3930,5 +4138,33 @@ const cancelSimulatedUpload = (index: number) => {
 .no-limit {
   color: #909399;
   font-size: 12px;
+}
+
+/* 批量修改成本价确认对话框样式 */
+:deep(.batch-update-confirm) {
+  padding: 10px 0;
+}
+
+:deep(.batch-update-confirm p) {
+  margin: 10px 0;
+  line-height: 1.5;
+}
+
+:deep(.batch-update-confirm ul) {
+  background-color: #f8f8f8;
+  border-radius: 4px;
+  padding: 12px 20px;
+  margin: 15px 0;
+}
+
+:deep(.batch-update-confirm li) {
+  line-height: 1.8;
+  list-style-type: disc;
+  margin-left: 10px;
+}
+
+:deep(.batch-update-confirm strong) {
+  color: #E6A23C;
+  font-weight: bold;
 }
 </style>

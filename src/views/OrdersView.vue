@@ -55,6 +55,12 @@
                 <el-option label="fastpay" value="fastpay"></el-option>
               </el-select>
             </el-form-item>
+            <el-form-item label="通道名称">
+              <el-select v-model="searchForm.channelName" placeholder="请选择通道名称" clearable style="width: 168px">
+                <el-option label="speedzf" value="speedzf"></el-option>
+                <el-option label="K4" value="K4"></el-option>
+              </el-select>
+            </el-form-item>
             <el-form-item label="发货方式">
               <el-select v-model="searchForm.deliveryMethod" placeholder="请选择" clearable style="width: 168px;">
                 <el-option label="全部" value=""></el-option>
@@ -382,7 +388,7 @@
       </div>
       
       <el-form :model="deliverForm" label-width="80px" :rules="deliverRules" ref="deliverFormRef">
-        <el-form-item label="成本价" prop="costPrice">
+        <el-form-item label="成本价" prop="costPrice" v-if="deliverForm.deliveryMethod !== '自动发货'">
           <el-input-number 
             v-model="deliverForm.costPrice" 
             :precision="2" 
@@ -392,7 +398,17 @@
             placeholder="请输入成本价"
           ></el-input-number>
         </el-form-item>
-        <el-form-item label="卡密信息" prop="cardInfo">
+        
+        <!-- 自动发货模式下显示成本价 -->
+        <el-form-item label="成本价" v-if="deliverForm.deliveryMethod === '自动发货'">
+          <div class="auto-cost-price">
+            <span v-if="deliverForm.selectedCardId">¥{{ deliverForm.costPrice.toFixed(2) }}</span>
+            <span v-else class="select-card-tip">选择卡密后自动获取</span>
+          </div>
+        </el-form-item>
+        
+        <!-- 修改卡密信息输入方式 -->
+        <el-form-item label="卡密信息" prop="cardInfo" v-if="deliverForm.deliveryMethod !== '自动发货' && !isEditingDeliveryInfo">
           <el-input
             v-model="deliverForm.cardInfo"
             type="textarea"
@@ -400,6 +416,34 @@
             placeholder="请输入卡密信息"
           ></el-input>
         </el-form-item>
+        
+        <!-- 添加卡密选择功能，仅在自动发货且不是编辑模式时显示 -->
+        <el-form-item label="选择卡密" prop="selectedCardId" v-if="deliverForm.deliveryMethod === '自动发货' && !isEditingDeliveryInfo">
+          <el-select 
+            v-model="deliverForm.selectedCardId" 
+            filterable 
+            placeholder="请选择未售出的卡密" 
+            style="width: 100%;"
+            @change="handleCardSelect"
+          >
+            <el-option
+              v-for="card in availableCards"
+              :key="card.cardId"
+              :label="card.cardId"
+              :value="card.cardId"
+            >
+              <div class="card-option">
+                <div class="card-id">ID: {{ card.cardId }}</div>
+                <div class="card-batch" v-if="card.batchId">批次: {{ card.batchId }}</div>
+              </div>
+            </el-option>
+          </el-select>
+          <div class="card-preview" v-if="deliverForm.selectedCardId">
+            <div class="card-preview-title">卡密预览:</div>
+            <div class="card-preview-content">{{ getSelectedCardInfo() }}</div>
+          </div>
+        </el-form-item>
+        
         <el-form-item label="备注" prop="remark">
           <el-input
             v-model="deliverForm.remark"
@@ -437,7 +481,8 @@ const searchForm = reactive({
   status: '',
   userRole: '',
   dateRange: [] as string[],
-  payChannel: ''
+  payChannel: '',
+  channelName: ''
 })
 
 // 商品选项 - Use from external file
@@ -501,6 +546,10 @@ const filteredOrderList = computed(() => {
   
   if (searchForm.payChannel) {
     result = result.filter(item => item.payChannel === searchForm.payChannel)
+  }
+  
+  if (searchForm.channelName) {
+    result = result.filter(item => item.channelName === searchForm.channelName)
   }
   
   if (searchForm.deliveryMethod) {
@@ -686,6 +735,7 @@ const resetSearch = () => {
   searchForm.userRole = ''
   searchForm.dateRange = []
   searchForm.payChannel = ''
+  searchForm.channelName = ''
   
   // 重置后重新查询
   handleSearch()
@@ -831,17 +881,131 @@ const deliverForm = reactive({
   cardInfo: '',
   cardId: '',
   costPrice: 0,
-  remark: ''
+  remark: '',
+  deliveryMethod: '',
+  selectedCardId: '' // 新增：选中的卡密ID
 })
+
+// 模拟可用卡密数据
+const availableCards = ref([
+  {
+    cardId: 'CARD001',
+    status: 'unsold',
+    cardInfo: 'username1----password1----email1@example.com----emailpass1',
+    createTime: '2024-03-20 10:00:00',
+    cost: 25.00,
+    batchId: 'P20240320001'
+  },
+  {
+    cardId: 'CARD002',
+    status: 'unsold',
+    cardInfo: 'username2----password2----email2@example.com----emailpass2',
+    createTime: '2024-03-20 11:00:00',
+    cost: 30.50,
+    batchId: 'P20240320001'
+  },
+  {
+    cardId: 'CARD003',
+    status: 'unsold',
+    cardInfo: 'username3----password3----email3@example.com----emailpass3',
+    createTime: '2024-03-21 09:30:00',
+    cost: 22.80,
+    batchId: 'P20240321002'
+  },
+  {
+    cardId: 'CARD004',
+    status: 'unsold',
+    cardInfo: 'username4----password4----email4@example.com----emailpass4',
+    createTime: '2024-03-21 10:30:00',
+    cost: 28.50,
+    batchId: 'P20240321002'
+  },
+  {
+    cardId: 'CARD005',
+    status: 'unsold',
+    cardInfo: 'username5----password5----email5@example.com----emailpass5',
+    createTime: '2024-03-22 09:30:00',
+    cost: 26.80,
+    batchId: 'P20240322003'
+  }
+])
+
+// 根据选中的卡密ID获取卡密信息
+const getSelectedCardInfo = () => {
+  const selectedCard = availableCards.value.find(card => card.cardId === deliverForm.selectedCardId)
+  return selectedCard ? selectedCard.cardInfo : ''
+}
+
+// 处理卡密选择
+const handleCardSelect = (cardId: string) => {
+  const selectedCard = availableCards.value.find(card => card.cardId === cardId)
+  if (selectedCard) {
+    deliverForm.cardInfo = selectedCard.cardInfo
+    deliverForm.cardId = selectedCard.cardId
+    deliverForm.costPrice = selectedCard.cost
+  }
+}
 
 // 发货表单验证规则
 const deliverRules = reactive<FormRules>({
   costPrice: [
-    { required: true, message: '请输入成本价', trigger: 'blur' },
-    { type: 'number', message: '成本价必须为数字', trigger: 'blur' }
+    { 
+      required: true, 
+      message: '请输入成本价', 
+      trigger: 'blur',
+      validator: (rule, value, callback) => {
+        // 只在非自动发货时验证
+        if (deliverForm.deliveryMethod !== '自动发货') {
+          if (!value && value !== 0) {
+            callback(new Error('请输入成本价'))
+          } else if (typeof value !== 'number') {
+            callback(new Error('成本价必须为数字'))
+          } else {
+            callback()
+          }
+        } else {
+          callback()
+        }
+      }
+    }
   ],
   cardInfo: [
-    { required: true, message: '请输入卡密信息', trigger: 'blur' }
+    { 
+      required: true, 
+      message: '请输入卡密信息', 
+      trigger: 'blur',
+      validator: (rule, value, callback) => {
+        // 只在非编辑模式且非自动发货时验证
+        if (!isEditingDeliveryInfo.value && deliverForm.deliveryMethod !== '自动发货') {
+          if (!value) {
+            callback(new Error('请输入卡密信息'))
+          } else {
+            callback()
+          }
+        } else {
+          callback()
+        }
+      }
+    }
+  ],
+  selectedCardId: [
+    { 
+      required: true, 
+      message: '请选择卡密', 
+      trigger: 'change',
+      validator: (rule, value, callback) => {
+        // 只在自动发货且不是编辑模式时验证
+        if (deliverForm.deliveryMethod === '自动发货' && !isEditingDeliveryInfo.value) {
+          if (!value) {
+            callback(new Error('请选择卡密'))
+          } else {
+            callback()
+          }
+        } else {
+          callback()
+        }
+      }
+    }
   ]
 })
 
@@ -851,11 +1015,18 @@ const handleDeliver = (row: any) => {
   deliverForm.orderId = row.orderId
   deliverForm.productName = row.productName
   deliverForm.category = row.category
+  deliverForm.deliveryMethod = row.deliveryMethod
+  deliverForm.selectedCardId = ''
   
-  // 生成卡密信息和ID
-  const generatedCard = generateCardInfo(row.category, row.productName)
-  deliverForm.cardInfo = generatedCard.cardInfo
-  deliverForm.cardId = generatedCard.cardId
+  // 如果是非自动发货，则生成卡密信息和ID
+  if (row.deliveryMethod !== '自动发货') {
+    const generatedCard = generateCardInfo(row.category, row.productName)
+    deliverForm.cardInfo = generatedCard.cardInfo
+    deliverForm.cardId = generatedCard.cardId
+  } else {
+    deliverForm.cardInfo = ''
+    deliverForm.cardId = ''
+  }
   
   deliverForm.costPrice = 0
   deliverForm.remark = ''
@@ -876,6 +1047,7 @@ const handleEditDeliveryInfo = (row: any) => {
   deliverForm.cardInfo = row.cardInfo || ''
   deliverForm.costPrice = row.costPrice || 0
   deliverForm.remark = row.remark || ''
+  deliverForm.deliveryMethod = row.deliveryMethod
   
   // 更改对话框标题
   deliverDialogTitle.value = '编辑卡密信息'
@@ -883,7 +1055,7 @@ const handleEditDeliveryInfo = (row: any) => {
   deliverDialogVisible.value = true
 }
 
-      // 修改提交发货表单函数
+// 修改提交发货表单函数
 const submitDeliverForm = async () => {
   if (!deliverFormRef.value) return
   
@@ -892,10 +1064,9 @@ const submitDeliverForm = async () => {
       // 获取订单
       const index = orderList.value.findIndex(item => item.id === deliverForm.id)
       if (index !== -1) {
-        // 如果是编辑模式，只更新卡密信息和成本价
+        // 如果是编辑模式，只更新成本价和备注
         if (isEditingDeliveryInfo.value) {
-          orderList.value[index].cardInfo = deliverForm.cardInfo
-          orderList.value[index].cardId = deliverForm.cardId
+          // 只更新成本价，不更新卡密信息
           orderList.value[index].costPrice = deliverForm.costPrice
           
           // 如果有备注，更新订单备注
@@ -906,14 +1077,13 @@ const submitDeliverForm = async () => {
           // 更新在allOrderList中的数据
           const allIndex = allOrderList.value.findIndex(item => item.id === deliverForm.id)
           if (allIndex !== -1) {
-            allOrderList.value[allIndex].cardInfo = deliverForm.cardInfo
             allOrderList.value[allIndex].costPrice = deliverForm.costPrice
             if (deliverForm.remark) {
               allOrderList.value[allIndex].remark = deliverForm.remark
             }
           }
           
-          ElMessage.success(`订单 ${deliverForm.orderId} 卡密信息已更新`)
+          ElMessage.success(`订单 ${deliverForm.orderId} 信息已更新`)
         } else {
           // 原有的发货逻辑
           orderList.value[index].status = '已完成'
@@ -935,6 +1105,15 @@ const submitDeliverForm = async () => {
             allOrderList.value[allIndex].costPrice = deliverForm.costPrice
             if (deliverForm.remark) {
               allOrderList.value[allIndex].remark = deliverForm.remark
+            }
+          }
+          
+          // 如果是自动发货，将选中的卡密标记为已售出
+          if (deliverForm.deliveryMethod === '自动发货' && deliverForm.selectedCardId) {
+            const cardIndex = availableCards.value.findIndex(card => card.cardId === deliverForm.selectedCardId)
+            if (cardIndex !== -1) {
+              availableCards.value[cardIndex].status = 'sold'
+              // 在实际应用中，这里应该调用API更新卡密状态
             }
           }
           
@@ -1268,6 +1447,7 @@ const addDemoOrder = () => {
       userRole: '普通用户',
       payMethod: 'alipay',
       payChannel: 'k4',
+      channelName: 'K4',
       deliveryMethod: '自动发货',
       createTime: '2023-06-01 10:00:00',
       remark: '这是一个演示订单，显示发货按钮',
@@ -1616,5 +1796,68 @@ const addDemoOrder = () => {
 .card-id-value {
   color: #409EFF;
   font-weight: 500;
+}
+
+/* 添加卡密选择相关样式 */
+.card-option {
+  display: flex;
+  flex-direction: column;
+  padding: 5px 0;
+}
+
+.card-id {
+  font-weight: bold;
+  color: #303133;
+}
+
+.card-batch {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 2px;
+}
+
+.card-preview {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  border: 1px solid #ebeef5;
+}
+
+.card-preview-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #606266;
+  font-size: 13px;
+}
+
+.card-preview-content {
+  font-family: monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: #303133;
+  font-size: 12px;
+  background-color: #fff;
+  padding: 8px;
+  border-radius: 3px;
+  border: 1px solid #ebeef5;
+}
+
+/* 自动成本价显示样式 */
+.auto-cost-price {
+  font-size: 14px;
+  line-height: 32px;
+  height: 32px;
+}
+
+.auto-cost-price span {
+  color: #67C23A;
+  font-weight: bold;
+}
+
+.select-card-tip {
+  color: #909399 !important;
+  font-weight: normal !important;
+  font-style: italic;
 }
 </style>

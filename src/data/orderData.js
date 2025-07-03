@@ -25,6 +25,7 @@ import { ref } from 'vue'
  * @property {string} userRole
  * @property {string} payMethod
  * @property {string} payChannel
+ * @property {string} [channelName]
  * @property {string} deliveryMethod
  * @property {string} status
  * @property {string} [remark]
@@ -76,6 +77,7 @@ export const orderList = ref([
     userRole: '普通用户',
     payMethod: 'usdt',
     payChannel: 'k4',
+    channelName: 'K4',
     deliveryMethod: '自动发货',
     createTime: '2023-05-01 10:00:00',
     remark: '用户要求尽快发货',
@@ -98,6 +100,7 @@ export const orderList = ref([
     userRole: 'vip2',
     payMethod: 'alipay',
     payChannel: 'speedzf',
+    channelName: 'speedzf',
     deliveryMethod: '手动发货',
     createTime: '2023-05-01 11:30:00',
     completionTime: '2023-05-01 14:45:00',
@@ -121,6 +124,7 @@ export const orderList = ref([
     userRole: '游客',
     payMethod: 'wechat',
     payChannel: 'k4',
+    channelName: 'K4',
     deliveryMethod: '自动发货',
     createTime: '2023-05-02 09:15:00',
     remark: '订单因用户原因取消并退款',
@@ -147,6 +151,7 @@ export const orderList = ref([
     userRole: '超级会员',
     payMethod: 'usdt',
     payChannel: 'speedzf',
+    channelName: 'speedzf',
     deliveryMethod: '自动发货',
     createTime: '2023-05-02 14:45:00',
     remark: '用户咨询后下单，等待支付',
@@ -169,6 +174,7 @@ export const orderList = ref([
     userRole: 'vip3',
     payMethod: 'alipay',
     payChannel: 'k4',
+    channelName: 'K4',
     deliveryMethod: '手动发货',
     createTime: '2023-05-03 09:20:00',
     remark: '用户主动取消订单',
@@ -191,6 +197,7 @@ export const orderList = ref([
     userRole: 'vip1',
     payMethod: 'wechat',
     payChannel: 'speedzf',
+    channelName: 'speedzf',
     deliveryMethod: '自动发货',
     createTime: '2023-05-03 16:45:00',
     remark: '系统发货失败，需手动处理',
@@ -245,6 +252,7 @@ export function generateSampleOrders(count) {
       userRole: userRoles[Math.floor(Math.random() * userRoles.length)],
       payMethod: payMethod,
       payChannel: payChannel,
+      channelName: payChannel,
       deliveryMethod: deliveryMethods[Math.floor(Math.random() * deliveryMethods.length)],
       createTime: createTime.toISOString().replace('T', ' ').substring(0, 19),
       remark: status === '已取消' || status === '已退款' ? 'Sample remark for order status.' : '',

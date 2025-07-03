@@ -24,6 +24,7 @@ export interface OrderItem {
   userRole: string;
   payMethod: string;
   payChannel: string;
+  channelName?: string;
   deliveryMethod: string;
   status: string;
   remark?: string;

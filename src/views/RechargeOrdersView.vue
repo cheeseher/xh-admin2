@@ -97,7 +97,6 @@
           @selection-change="handleSelectionChange"
         >
           <el-table-column type="selection" width="55" />
-          <el-table-column prop="id" label="订单ID" min-width="100" />
           <el-table-column prop="orderNo" label="订单号" min-width="180" />
           <el-table-column prop="userEmail" label="用户昵称" min-width="180" />
           <el-table-column prop="balanceBefore" label="充值前余额" min-width="120">
