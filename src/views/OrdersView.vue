@@ -90,9 +90,19 @@
                 <el-option label="超级会员" value="超级会员"></el-option>
               </el-select>
             </el-form-item>
-            <el-form-item label="下单时间">
+            <el-form-item label="创建时间">
               <el-date-picker
-                v-model="searchForm.dateRange"
+                v-model="searchForm.createDateRange"
+                type="daterange"
+                range-separator="至"
+                start-placeholder="开始日期"
+                end-placeholder="结束日期"
+                value-format="YYYY-MM-DD"
+              ></el-date-picker>
+            </el-form-item>
+            <el-form-item label="完成时间">
+              <el-date-picker
+                v-model="searchForm.completionDateRange"
                 type="daterange"
                 range-separator="至"
                 start-placeholder="开始日期"
@@ -144,7 +154,7 @@
             @selection-change="handleSelectionChange"
           >
             <el-table-column type="selection" width="55"></el-table-column>
-            <el-table-column prop="orderId" label="订单号" width="180" fixed="left"></el-table-column>
+            <el-table-column prop="orderId" label="订单号" width="130" fixed="left" align="center"></el-table-column>
             <el-table-column label="用户信息" width="220">
               <template #default="scope">
                 <div class="user-info">
@@ -200,7 +210,7 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="status" label="状态" width="100" fixed="right">
+            <el-table-column label="状态" width="80" fixed="right" align="center">
               <template #default="scope">
                 <el-tag :type="getStatusType(scope.row.status)">{{ scope.row.status }}</el-tag>
               </template>
@@ -239,7 +249,7 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="createTime" label="创建时间" width="180" fixed="right"></el-table-column>
+            <el-table-column prop="createTime" label="创建时间" width="170" fixed="right" align="center"></el-table-column>
             <el-table-column label="完成时间" width="180">
               <template #default="scope">
                 <span v-if="scope.row.completionTime">{{ scope.row.completionTime }}</span>
@@ -248,7 +258,7 @@
               </template>
             </el-table-column>
             <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
-            <el-table-column label="操作" width="90" fixed="right">
+            <el-table-column label="操作" width="90" fixed="right" align="center">
               <template #default="scope">
                 <el-dropdown trigger="hover" size="small">
                   <el-button type="primary" size="small">
@@ -256,18 +266,80 @@
                     <el-icon class="el-icon--right"><arrow-down /></el-icon>
                   </el-button>
                   <template #dropdown>
-                    <el-dropdown-menu>
-                      <el-dropdown-item v-if="scope.row.status === '待发货'" @click="handleDeliver(scope.row)">
-                        发货
+                    <el-dropdown-menu class="wider-dropdown-menu">
+                      <!-- 自动发货 - 已完成 - 退款 -->
+                      <el-dropdown-item v-if="scope.row.status === '已完成' && scope.row.deliveryMethod === '自动发货'" @click="handleRefund(scope.row)">
+                        退款
                       </el-dropdown-item>
-                      <el-dropdown-item v-if="scope.row.status === '已完成' && scope.row.deliveryMethod === '手动发货'" @click="handleEditDeliveryInfo(scope.row)">
-                        编辑卡密信息
-                      </el-dropdown-item>
-                      <el-dropdown-item @click="handleResendEmail(scope.row)">
+                      
+                      <!-- 自动发货 - 已完成 - 重发邮件 -->
+                      <el-dropdown-item v-if="scope.row.status === '已完成' && scope.row.deliveryMethod === '自动发货' && scope.row.hasEmail" @click="handleResendEmail(scope.row)">
                         重发邮件
                       </el-dropdown-item>
-                      <el-dropdown-item v-if="scope.row.status !== '已退款'" @click="handleRefund(scope.row)">
+                      
+                      <!-- 自动发货 - 已完成 - 更改卡密信息 -->
+                      <el-dropdown-item v-if="scope.row.status === '已完成' && scope.row.deliveryMethod === '自动发货'" @click="handleEditDeliveryInfo(scope.row)">
+                        更改卡密信息
+                      </el-dropdown-item>
+                      
+                      <!-- 自动发货 - 已支付 - 发货 -->
+                      <el-dropdown-item v-if="scope.row.status === '已支付' && scope.row.deliveryMethod === '自动发货'" @click="handleDeliver(scope.row)">
+                        发货
+                      </el-dropdown-item>
+                      
+                      <!-- 自动发货 - 已支付 - 退款 -->
+                      <el-dropdown-item v-if="scope.row.status === '已支付' && scope.row.deliveryMethod === '自动发货'" @click="handleRefund(scope.row)">
                         退款
+                      </el-dropdown-item>
+                      
+                      <!-- 自动发货 - 已取消 - 发货 -->
+                      <el-dropdown-item v-if="scope.row.status === '已取消' && scope.row.deliveryMethod === '自动发货'" @click="handleDeliver(scope.row)">
+                        发货
+                      </el-dropdown-item>
+                      
+                      <!-- 自动发货 - 待支付 - 发货 -->
+                      <el-dropdown-item v-if="scope.row.status === '待支付' && scope.row.deliveryMethod === '自动发货'" @click="handleDeliver(scope.row)">
+                        发货
+                      </el-dropdown-item>
+                      
+                      <!-- 自动发货 - 已退款 - 无操作项 -->
+                      <el-dropdown-item v-if="scope.row.status === '已退款' && scope.row.deliveryMethod === '自动发货'" disabled>
+                        无操作项
+                      </el-dropdown-item>
+                      
+                      <!-- 手动发货 - 已完成 - 更改卡密信息 -->
+                      <el-dropdown-item v-if="scope.row.status === '已完成' && scope.row.deliveryMethod === '手动发货'" @click="handleEditDeliveryInfo(scope.row)">
+                        更改卡密信息
+                      </el-dropdown-item>
+                      
+                      <!-- 手动发货 - 已完成 - 退款 -->
+                      <el-dropdown-item v-if="scope.row.status === '已完成' && scope.row.deliveryMethod === '手动发货'" @click="handleRefund(scope.row)">
+                        退款
+                      </el-dropdown-item>
+                      
+                      <!-- 手动发货 - 已支付 - 发货 -->
+                      <el-dropdown-item v-if="scope.row.status === '已支付' && scope.row.deliveryMethod === '手动发货'" @click="handleDeliver(scope.row)">
+                        发货
+                      </el-dropdown-item>
+                      
+                      <!-- 手动发货 - 已支付 - 退款 -->
+                      <el-dropdown-item v-if="scope.row.status === '已支付' && scope.row.deliveryMethod === '手动发货'" @click="handleRefund(scope.row)">
+                        退款
+                      </el-dropdown-item>
+                      
+                      <!-- 手动发货 - 已取消 - 发货 -->
+                      <el-dropdown-item v-if="scope.row.status === '已取消' && scope.row.deliveryMethod === '手动发货'" @click="handleDeliver(scope.row)">
+                        发货
+                      </el-dropdown-item>
+                      
+                      <!-- 手动发货 - 待支付 - 发货 -->
+                      <el-dropdown-item v-if="scope.row.status === '待支付' && scope.row.deliveryMethod === '手动发货'" @click="handleDeliver(scope.row)">
+                        发货
+                      </el-dropdown-item>
+                      
+                      <!-- 手动发货 - 已退款 - 无操作项 -->
+                      <el-dropdown-item v-if="scope.row.status === '已退款' && scope.row.deliveryMethod === '手动发货'" disabled>
+                        无操作项
                       </el-dropdown-item>
                     </el-dropdown-menu>
                   </template>
@@ -302,7 +374,7 @@
       :close-on-click-modal="false"
       destroy-on-close
     >
-      <div class="refund-info">
+      <div class="dialog-info-box">
         <div class="info-item">
           <span class="label">订单号：</span>
           <span class="value">{{ refundForm.orderId }}</span>
@@ -372,7 +444,7 @@
       :close-on-click-modal="false"
       destroy-on-close
     >
-      <div class="deliver-info">
+      <div class="dialog-info-box">
         <div class="info-item">
           <span class="label">订单号：</span>
           <span class="value">{{ deliverForm.orderId }}</span>
@@ -388,7 +460,7 @@
       </div>
       
       <el-form :model="deliverForm" label-width="80px" :rules="deliverRules" ref="deliverFormRef">
-        <el-form-item label="成本价" prop="costPrice" v-if="deliverForm.deliveryMethod !== '自动发货'">
+        <el-form-item label="成本价" v-if="deliverForm.deliveryMethod !== '自动发货'">
           <el-input-number 
             v-model="deliverForm.costPrice" 
             :precision="2" 
@@ -407,6 +479,14 @@
           </div>
         </el-form-item>
         
+        <!-- 显示当前卡密信息，仅在编辑模式下显示 -->
+        <el-form-item label="当前卡密" v-if="isEditingDeliveryInfo">
+          <div class="current-card-display">
+            <div class="current-card-title">卡密ID: {{ deliverForm.cardId }}</div>
+            <div class="current-card-content">{{ deliverForm.currentCardInfo }}</div>
+          </div>
+        </el-form-item>
+        
         <!-- 修改卡密信息输入方式 -->
         <el-form-item label="卡密信息" prop="cardInfo" v-if="deliverForm.deliveryMethod !== '自动发货' && !isEditingDeliveryInfo">
           <el-input
@@ -414,6 +494,16 @@
             type="textarea"
             :rows="4"
             placeholder="请输入卡密信息"
+          ></el-input>
+        </el-form-item>
+        
+        <!-- 在编辑模式下为非自动发货类型添加新卡密信息输入 -->
+        <el-form-item label="新卡密信息" prop="cardInfo" v-if="deliverForm.deliveryMethod !== '自动发货' && isEditingDeliveryInfo">
+          <el-input
+            v-model="deliverForm.cardInfo"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入新的卡密信息"
           ></el-input>
         </el-form-item>
         
@@ -444,6 +534,33 @@
           </div>
         </el-form-item>
         
+        <!-- 添加新卡密选择功能，仅在自动发货且编辑模式时显示 -->
+        <el-form-item label="更改为" prop="selectedCardId" v-if="deliverForm.deliveryMethod === '自动发货' && isEditingDeliveryInfo">
+          <el-select 
+            v-model="deliverForm.selectedCardId" 
+            filterable 
+            placeholder="请选择新的卡密" 
+            style="width: 100%;"
+            @change="handleCardSelect"
+          >
+            <el-option
+              v-for="card in availableCards"
+              :key="card.cardId"
+              :label="card.cardId"
+              :value="card.cardId"
+            >
+              <div class="card-option">
+                <div class="card-id">ID: {{ card.cardId }}</div>
+                <div class="card-batch" v-if="card.batchId">批次: {{ card.batchId }}</div>
+              </div>
+            </el-option>
+          </el-select>
+          <div class="card-preview" v-if="deliverForm.selectedCardId">
+            <div class="card-preview-title">新卡密预览:</div>
+            <div class="card-preview-content">{{ getSelectedCardInfo() }}</div>
+          </div>
+        </el-form-item>
+        
         <el-form-item label="备注" prop="remark">
           <el-input
             v-model="deliverForm.remark"
@@ -457,7 +574,7 @@
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="deliverDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitDeliverForm">确认发货</el-button>
+          <el-button type="primary" @click="submitDeliverForm">{{ isEditingDeliveryInfo ? '确认更改' : '确认发货' }}</el-button>
         </div>
       </template>
     </el-dialog>
@@ -480,7 +597,8 @@ const searchForm = reactive({
   deliveryMethod: '',
   status: '',
   userRole: '',
-  dateRange: [] as string[],
+  createDateRange: [] as string[],
+  completionDateRange: [] as string[],
   payChannel: '',
   channelName: ''
 })
@@ -564,14 +682,26 @@ const filteredOrderList = computed(() => {
     result = result.filter(item => item.userRole === searchForm.userRole)
   }
   
-  if (searchForm.dateRange && searchForm.dateRange.length === 2) {
-    const startDate = new Date(searchForm.dateRange[0])
-    const endDate = new Date(searchForm.dateRange[1])
+  if (searchForm.createDateRange && searchForm.createDateRange.length === 2) {
+    const startDate = new Date(searchForm.createDateRange[0])
+    const endDate = new Date(searchForm.createDateRange[1])
     endDate.setHours(23, 59, 59, 999) // 设置为当天结束时间
     
     result = result.filter(item => {
       const createTime = new Date(item.createTime)
       return createTime >= startDate && createTime <= endDate
+    })
+  }
+  
+  if (searchForm.completionDateRange && searchForm.completionDateRange.length === 2) {
+    const startDate = new Date(searchForm.completionDateRange[0])
+    const endDate = new Date(searchForm.completionDateRange[1])
+    endDate.setHours(23, 59, 59, 999) // 设置为当天结束时间
+    
+    result = result.filter(item => {
+      if (!item.completionTime) return false
+      const completionTime = new Date(item.completionTime)
+      return completionTime >= startDate && completionTime <= endDate
     })
   }
   
@@ -733,7 +863,8 @@ const resetSearch = () => {
   searchForm.deliveryMethod = ''
   searchForm.status = ''
   searchForm.userRole = ''
-  searchForm.dateRange = []
+  searchForm.createDateRange = []
+  searchForm.completionDateRange = []
   searchForm.payChannel = ''
   searchForm.channelName = ''
   
@@ -868,11 +999,22 @@ const handleView = (row: any) => {
   )
 }
 
-// 发货表单相关数据
+// 发货对话框相关
 const deliverDialogVisible = ref(false)
-const deliverFormRef = ref<FormInstance>()
 const deliverDialogTitle = ref('订单发货')
+const deliverFormRef = ref<FormInstance>()
 const isEditingDeliveryInfo = ref(false)
+
+// 可用卡密列表，这里模拟数据
+const availableCards = ref([
+  { cardId: 'CARD001', cardInfo: 'username001@gmail.com----password001----recovery001@example.com', batchId: 'BATCH001', cost: 10.00, status: 'available' },
+  { cardId: 'CARD002', cardInfo: 'username002@gmail.com----password002----recovery002@example.com', batchId: 'BATCH001', cost: 10.00, status: 'available' },
+  { cardId: 'CARD003', cardInfo: 'username003@gmail.com----password003----recovery003@example.com', batchId: 'BATCH002', cost: 12.50, status: 'available' },
+  { cardId: 'CARD004', cardInfo: 'instagram_user001----password001----recovery001@example.com', batchId: 'BATCH003', cost: 25.00, status: 'available' },
+  { cardId: 'CARD005', cardInfo: 'twitter_user001----password001----recovery001@example.com', batchId: 'BATCH004', cost: 20.00, status: 'available' }
+])
+
+// 发货表单
 const deliverForm = reactive({
   id: '',
   orderId: '',
@@ -883,52 +1025,9 @@ const deliverForm = reactive({
   costPrice: 0,
   remark: '',
   deliveryMethod: '',
-  selectedCardId: '' // 新增：选中的卡密ID
+  selectedCardId: '',
+  currentCardInfo: '' // 添加当前卡密信息属性
 })
-
-// 模拟可用卡密数据
-const availableCards = ref([
-  {
-    cardId: 'CARD001',
-    status: 'unsold',
-    cardInfo: 'username1----password1----email1@example.com----emailpass1',
-    createTime: '2024-03-20 10:00:00',
-    cost: 25.00,
-    batchId: 'P20240320001'
-  },
-  {
-    cardId: 'CARD002',
-    status: 'unsold',
-    cardInfo: 'username2----password2----email2@example.com----emailpass2',
-    createTime: '2024-03-20 11:00:00',
-    cost: 30.50,
-    batchId: 'P20240320001'
-  },
-  {
-    cardId: 'CARD003',
-    status: 'unsold',
-    cardInfo: 'username3----password3----email3@example.com----emailpass3',
-    createTime: '2024-03-21 09:30:00',
-    cost: 22.80,
-    batchId: 'P20240321002'
-  },
-  {
-    cardId: 'CARD004',
-    status: 'unsold',
-    cardInfo: 'username4----password4----email4@example.com----emailpass4',
-    createTime: '2024-03-21 10:30:00',
-    cost: 28.50,
-    batchId: 'P20240321002'
-  },
-  {
-    cardId: 'CARD005',
-    status: 'unsold',
-    cardInfo: 'username5----password5----email5@example.com----emailpass5',
-    createTime: '2024-03-22 09:30:00',
-    cost: 26.80,
-    batchId: 'P20240322003'
-  }
-])
 
 // 根据选中的卡密ID获取卡密信息
 const getSelectedCardInfo = () => {
@@ -1048,6 +1147,8 @@ const handleEditDeliveryInfo = (row: any) => {
   deliverForm.costPrice = row.costPrice || 0
   deliverForm.remark = row.remark || ''
   deliverForm.deliveryMethod = row.deliveryMethod
+  deliverForm.cardId = row.cardId || ''  // 添加当前卡密ID
+  deliverForm.currentCardInfo = row.cardInfo || '' // 保存当前卡密信息
   
   // 更改对话框标题
   deliverDialogTitle.value = '编辑卡密信息'
@@ -1064,10 +1165,27 @@ const submitDeliverForm = async () => {
       // 获取订单
       const index = orderList.value.findIndex(item => item.id === deliverForm.id)
       if (index !== -1) {
-        // 如果是编辑模式，只更新成本价和备注
+        // 如果是编辑模式，更新卡密信息和成本价
         if (isEditingDeliveryInfo.value) {
-          // 只更新成本价，不更新卡密信息
-          orderList.value[index].costPrice = deliverForm.costPrice
+          // 如果是自动发货模式且选择了新卡密
+          if (deliverForm.deliveryMethod === '自动发货' && deliverForm.selectedCardId) {
+            const selectedCard = availableCards.value.find(card => card.cardId === deliverForm.selectedCardId)
+            if (selectedCard) {
+              // 更新卡密信息和ID
+              orderList.value[index].cardInfo = selectedCard.cardInfo
+              orderList.value[index].cardId = selectedCard.cardId
+              orderList.value[index].costPrice = selectedCard.cost
+              
+              // 在实际应用中，这里应该将原卡密标记为可用，新卡密标记为已售出
+              ElMessage.success(`订单 ${deliverForm.orderId} 卡密信息已更新为新卡密 ${selectedCard.cardId}`)
+            }
+          } else if (deliverForm.deliveryMethod !== '自动发货' && deliverForm.cardInfo) {
+            // 手动发货模式，更新卡密信息
+            orderList.value[index].cardInfo = deliverForm.cardInfo
+            orderList.value[index].costPrice = deliverForm.costPrice
+            
+            ElMessage.success(`订单 ${deliverForm.orderId} 卡密信息已更新`)
+          }
           
           // 如果有备注，更新订单备注
           if (deliverForm.remark) {
@@ -1077,13 +1195,23 @@ const submitDeliverForm = async () => {
           // 更新在allOrderList中的数据
           const allIndex = allOrderList.value.findIndex(item => item.id === deliverForm.id)
           if (allIndex !== -1) {
-            allOrderList.value[allIndex].costPrice = deliverForm.costPrice
+            // 如果是自动发货模式且选择了新卡密
+            if (deliverForm.deliveryMethod === '自动发货' && deliverForm.selectedCardId) {
+              const selectedCard = availableCards.value.find(card => card.cardId === deliverForm.selectedCardId)
+              if (selectedCard) {
+                allOrderList.value[allIndex].cardInfo = selectedCard.cardInfo
+                allOrderList.value[allIndex].cardId = selectedCard.cardId
+                allOrderList.value[allIndex].costPrice = selectedCard.cost
+              }
+            } else if (deliverForm.deliveryMethod !== '自动发货' && deliverForm.cardInfo) {
+              allOrderList.value[allIndex].cardInfo = deliverForm.cardInfo
+              allOrderList.value[allIndex].costPrice = deliverForm.costPrice
+            }
+            
             if (deliverForm.remark) {
               allOrderList.value[allIndex].remark = deliverForm.remark
             }
           }
-          
-          ElMessage.success(`订单 ${deliverForm.orderId} 信息已更新`)
         } else {
           // 原有的发货逻辑
           orderList.value[index].status = '已完成'
@@ -1423,42 +1551,593 @@ const generateCardInfo = (category: string, productName: string) => {
   }
 }
 
-// 在页面加载时检查并添加模拟待发货订单
+// 添加示例订单数据，覆盖所有流程图中的状态
 const addDemoOrder = () => {
-  // 检查是否已存在ID为DEMO001的订单
-  const existingOrder = orderList.value.find(item => item.id === 'DEMO001')
-  if (!existingOrder) {
-    // 添加一条模拟的待发货订单
-    orderList.value.push({
-      id: 'DEMO001',
-      orderId: 'P20230601001',
-      productName: 'Gmail邮箱-稳定可用 (演示)',
-      category: '谷歌邮箱',
-      originalPrice: '¥15.99',
-      purchasePrice: '¥15.00',
-      quantity: 1,
-      totalPrice: '¥15.99',
-      fee: '¥0.50',
-      status: '待发货',
-      cardId: '10086',
-      cardInfo: '演示卡密',
-      userNickname: '演示用户',
-      userEmail: 'demo@example.com',
-      userRole: '普通用户',
-      payMethod: 'alipay',
-      payChannel: 'k4',
-      channelName: 'K4',
-      deliveryMethod: '自动发货',
-      createTime: '2023-06-01 10:00:00',
-      remark: '这是一个演示订单，显示发货按钮',
-      refundInfo: null
-    })
-    // 也添加到所有订单列表中
-    if(allOrderList && allOrderList.value) {
-      allOrderList.value.push(orderList.value[orderList.value.length - 1])
-    }
-    console.log('已添加演示订单')
-  }
+  // 清空现有订单数据，以便展示所有流程图中的状态
+  orderList.value = []
+  allOrderList.value = []
+  
+  // 1. 自动发货 - 填写邮箱 - 已完成
+  orderList.value.push({
+    id: 'DEMO001',
+    orderId: 'P20240501001',
+    productName: 'Gmail邮箱账号 - 高级版',
+    category: '谷歌邮箱',
+    originalPrice: '¥15.99',
+    purchasePrice: '¥15.00',
+    quantity: 1,
+    totalPrice: '¥15.99',
+    fee: '¥0.50',
+    status: '已完成',
+    cardInfo: 'username123@gmail.com----password123----recovery@example.com',
+    cardId: 'CARD20240501001',
+    userNickname: '自动发货填邮箱完成',
+    userEmail: 'user1@example.com',
+    userRole: '普通用户',
+    payMethod: 'alipay',
+    payChannel: 'k4',
+    channelName: 'K4',
+    deliveryMethod: '自动发货',
+    createTime: '2024-05-01 10:00:00',
+    completionTime: '2024-05-01 10:05:00',
+    remark: '已填写邮箱的已完成订单',
+    refundInfo: null,
+    hasEmail: true
+  })
+  
+  // 2. 自动发货 - 填写邮箱 - 已支付
+  orderList.value.push({
+    id: 'DEMO002',
+    orderId: 'P20240501002',
+    productName: 'Gmail邮箱账号 - 标准版',
+    category: '谷歌邮箱',
+    originalPrice: '¥12.99',
+    purchasePrice: '¥12.00',
+    quantity: 1,
+    totalPrice: '¥12.99',
+    fee: '¥0.40',
+    status: '已支付',
+    cardInfo: '',
+    cardId: '',
+    userNickname: '自动发货填邮箱已支付',
+    userEmail: 'user2@example.com',
+    userRole: '普通用户',
+    payMethod: 'wechat',
+    payChannel: 'speedzf',
+    channelName: 'speedzf',
+    deliveryMethod: '自动发货',
+    createTime: '2024-05-01 11:00:00',
+    completionTime: '',
+    remark: '已填写邮箱的已支付订单，待发货',
+    refundInfo: null,
+    hasEmail: true
+  })
+  
+  // 3. 自动发货 - 填写邮箱 - 已取消
+  orderList.value.push({
+    id: 'DEMO003',
+    orderId: 'P20240501003',
+    productName: 'Gmail邮箱账号 - 基础版',
+    category: '谷歌邮箱',
+    originalPrice: '¥9.99',
+    purchasePrice: '¥9.00',
+    quantity: 1,
+    totalPrice: '¥9.99',
+    fee: '¥0.30',
+    status: '已取消',
+    cardInfo: '',
+    cardId: '',
+    userNickname: '自动发货填邮箱已取消',
+    userEmail: 'user3@example.com',
+    userRole: '普通用户',
+    payMethod: 'alipay',
+    payChannel: 'k4',
+    channelName: 'K4',
+    deliveryMethod: '自动发货',
+    createTime: '2024-05-01 12:00:00',
+    completionTime: '',
+    remark: '已填写邮箱的已取消订单',
+    refundInfo: null,
+    hasEmail: true
+  })
+  
+  // 4. 自动发货 - 填写邮箱 - 待支付
+  orderList.value.push({
+    id: 'DEMO004',
+    orderId: 'P20240501004',
+    productName: 'Gmail邮箱账号 - 入门版',
+    category: '谷歌邮箱',
+    originalPrice: '¥7.99',
+    purchasePrice: '¥7.00',
+    quantity: 1,
+    totalPrice: '¥7.99',
+    fee: '¥0.20',
+    status: '待支付',
+    cardInfo: '',
+    cardId: '',
+    userNickname: '自动发货填邮箱待支付',
+    userEmail: 'user4@example.com',
+    userRole: '普通用户',
+    payMethod: 'wechat',
+    payChannel: 'speedzf',
+    channelName: 'speedzf',
+    deliveryMethod: '自动发货',
+    createTime: '2024-05-01 13:00:00',
+    completionTime: '',
+    remark: '已填写邮箱的待支付订单',
+    refundInfo: null,
+    hasEmail: true
+  })
+  
+  // 5. 自动发货 - 填写邮箱 - 已退款
+  orderList.value.push({
+    id: 'DEMO005',
+    orderId: 'P20240501005',
+    productName: 'Gmail邮箱账号 - 豪华版',
+    category: '谷歌邮箱',
+    originalPrice: '¥19.99',
+    purchasePrice: '¥18.00',
+    quantity: 1,
+    totalPrice: '¥19.99',
+    fee: '¥0.60',
+    status: '已退款',
+    cardInfo: '',
+    cardId: '',
+    userNickname: '自动发货填邮箱已退款',
+    userEmail: 'user5@example.com',
+    userRole: '普通用户',
+    payMethod: 'usdt',
+    payChannel: 'k4',
+    channelName: 'K4',
+    deliveryMethod: '自动发货',
+    createTime: '2024-05-01 14:00:00',
+    completionTime: '',
+    remark: '已填写邮箱的已退款订单',
+    refundInfo: {
+      refundAmount: 19.99,
+      refundRemark: '用户申请退款，已处理',
+      refundTime: '2024-05-01 15:00:00'
+    },
+    hasEmail: true
+  })
+  
+  // 6. 自动发货 - 未填写邮箱 - 已完成
+  orderList.value.push({
+    id: 'DEMO006',
+    orderId: 'P20240502001',
+    productName: 'Instagram账号 - 高级版',
+    category: 'Instagram账号',
+    originalPrice: '¥39.99',
+    purchasePrice: '¥35.00',
+    quantity: 1,
+    totalPrice: '¥39.99',
+    fee: '¥1.00',
+    status: '已完成',
+    cardInfo: 'instagram_user123----password123----recovery@example.com',
+    cardId: 'CARD20240502001',
+    userNickname: '自动发货未填邮箱完成',
+    userEmail: '',
+    userRole: '普通用户',
+    payMethod: 'alipay',
+    payChannel: 'k4',
+    channelName: 'K4',
+    deliveryMethod: '自动发货',
+    createTime: '2024-05-02 10:00:00',
+    completionTime: '2024-05-02 10:05:00',
+    remark: '未填写邮箱的已完成订单',
+    refundInfo: null,
+    hasEmail: false
+  })
+  
+  // 7. 自动发货 - 未填写邮箱 - 已支付
+  orderList.value.push({
+    id: 'DEMO007',
+    orderId: 'P20240502002',
+    productName: 'Instagram账号 - 标准版',
+    category: 'Instagram账号',
+    originalPrice: '¥29.99',
+    purchasePrice: '¥25.00',
+    quantity: 1,
+    totalPrice: '¥29.99',
+    fee: '¥0.90',
+    status: '已支付',
+    cardInfo: '',
+    cardId: '',
+    userNickname: '自动发货未填邮箱已支付',
+    userEmail: '',
+    userRole: '普通用户',
+    payMethod: 'wechat',
+    payChannel: 'speedzf',
+    channelName: 'speedzf',
+    deliveryMethod: '自动发货',
+    createTime: '2024-05-02 11:00:00',
+    completionTime: '',
+    remark: '未填写邮箱的已支付订单，待发货',
+    refundInfo: null,
+    hasEmail: false
+  })
+  
+  // 8. 自动发货 - 未填写邮箱 - 已取消
+  orderList.value.push({
+    id: 'DEMO008',
+    orderId: 'P20240502003',
+    productName: 'Instagram账号 - 基础版',
+    category: 'Instagram账号',
+    originalPrice: '¥19.99',
+    purchasePrice: '¥18.00',
+    quantity: 1,
+    totalPrice: '¥19.99',
+    fee: '¥0.60',
+    status: '已取消',
+    cardInfo: '',
+    cardId: '',
+    userNickname: '自动发货未填邮箱已取消',
+    userEmail: '',
+    userRole: '普通用户',
+    payMethod: 'alipay',
+    payChannel: 'k4',
+    channelName: 'K4',
+    deliveryMethod: '自动发货',
+    createTime: '2024-05-02 12:00:00',
+    completionTime: '',
+    remark: '未填写邮箱的已取消订单',
+    refundInfo: null,
+    hasEmail: false
+  })
+  
+  // 9. 自动发货 - 未填写邮箱 - 待支付
+  orderList.value.push({
+    id: 'DEMO009',
+    orderId: 'P20240502004',
+    productName: 'Instagram账号 - 入门版',
+    category: 'Instagram账号',
+    originalPrice: '¥15.99',
+    purchasePrice: '¥14.00',
+    quantity: 1,
+    totalPrice: '¥15.99',
+    fee: '¥0.50',
+    status: '待支付',
+    cardInfo: '',
+    cardId: '',
+    userNickname: '自动发货未填邮箱待支付',
+    userEmail: '',
+    userRole: '普通用户',
+    payMethod: 'wechat',
+    payChannel: 'speedzf',
+    channelName: 'speedzf',
+    deliveryMethod: '自动发货',
+    createTime: '2024-05-02 13:00:00',
+    completionTime: '',
+    remark: '未填写邮箱的待支付订单',
+    refundInfo: null,
+    hasEmail: false
+  })
+  
+  // 10. 自动发货 - 未填写邮箱 - 已退款
+  orderList.value.push({
+    id: 'DEMO010',
+    orderId: 'P20240502005',
+    productName: 'Instagram账号 - 豪华版',
+    category: 'Instagram账号',
+    originalPrice: '¥49.99',
+    purchasePrice: '¥45.00',
+    quantity: 1,
+    totalPrice: '¥49.99',
+    fee: '¥1.50',
+    status: '已退款',
+    cardInfo: '',
+    cardId: '',
+    userNickname: '自动发货未填邮箱已退款',
+    userEmail: '',
+    userRole: '普通用户',
+    payMethod: 'usdt',
+    payChannel: 'k4',
+    channelName: 'K4',
+    deliveryMethod: '自动发货',
+    createTime: '2024-05-02 14:00:00',
+    completionTime: '',
+    remark: '未填写邮箱的已退款订单',
+    refundInfo: {
+      refundAmount: 49.99,
+      refundRemark: '用户申请退款，已处理',
+      refundTime: '2024-05-02 15:00:00'
+    },
+    hasEmail: false
+  })
+  
+  // 11. 手动发货 - 填写邮箱 - 已完成
+  orderList.value.push({
+    id: 'DEMO011',
+    orderId: 'P20240503001',
+    productName: 'Twitter账号 - 高级版',
+    category: 'Twitter账号',
+    originalPrice: '¥59.99',
+    purchasePrice: '¥55.00',
+    quantity: 1,
+    totalPrice: '¥59.99',
+    fee: '¥1.80',
+    status: '已完成',
+    cardInfo: 'twitter_user123----password123----recovery@example.com',
+    cardId: 'CARD20240503001',
+    userNickname: '手动发货填邮箱完成',
+    userEmail: 'user11@example.com',
+    userRole: '普通用户',
+    payMethod: 'alipay',
+    payChannel: 'k4',
+    channelName: 'K4',
+    deliveryMethod: '手动发货',
+    createTime: '2024-05-03 10:00:00',
+    completionTime: '2024-05-03 10:30:00',
+    remark: '已填写邮箱的已完成订单',
+    refundInfo: null,
+    hasEmail: true
+  })
+  
+  // 12. 手动发货 - 填写邮箱 - 已支付
+  orderList.value.push({
+    id: 'DEMO012',
+    orderId: 'P20240503002',
+    productName: 'Twitter账号 - 标准版',
+    category: 'Twitter账号',
+    originalPrice: '¥49.99',
+    purchasePrice: '¥45.00',
+    quantity: 1,
+    totalPrice: '¥49.99',
+    fee: '¥1.50',
+    status: '已支付',
+    cardInfo: '',
+    cardId: '',
+    userNickname: '手动发货填邮箱已支付',
+    userEmail: 'user12@example.com',
+    userRole: '普通用户',
+    payMethod: 'wechat',
+    payChannel: 'speedzf',
+    channelName: 'speedzf',
+    deliveryMethod: '手动发货',
+    createTime: '2024-05-03 11:00:00',
+    completionTime: '',
+    remark: '已填写邮箱的已支付订单，待发货',
+    refundInfo: null,
+    hasEmail: true
+  })
+  
+  // 13. 手动发货 - 填写邮箱 - 已取消
+  orderList.value.push({
+    id: 'DEMO013',
+    orderId: 'P20240503003',
+    productName: 'Twitter账号 - 基础版',
+    category: 'Twitter账号',
+    originalPrice: '¥39.99',
+    purchasePrice: '¥35.00',
+    quantity: 1,
+    totalPrice: '¥39.99',
+    fee: '¥1.20',
+    status: '已取消',
+    cardInfo: '',
+    cardId: '',
+    userNickname: '手动发货填邮箱已取消',
+    userEmail: 'user13@example.com',
+    userRole: '普通用户',
+    payMethod: 'alipay',
+    payChannel: 'k4',
+    channelName: 'K4',
+    deliveryMethod: '手动发货',
+    createTime: '2024-05-03 12:00:00',
+    completionTime: '',
+    remark: '已填写邮箱的已取消订单',
+    refundInfo: null,
+    hasEmail: true
+  })
+  
+  // 14. 手动发货 - 填写邮箱 - 待支付
+  orderList.value.push({
+    id: 'DEMO014',
+    orderId: 'P20240503004',
+    productName: 'Twitter账号 - 入门版',
+    category: 'Twitter账号',
+    originalPrice: '¥29.99',
+    purchasePrice: '¥25.00',
+    quantity: 1,
+    totalPrice: '¥29.99',
+    fee: '¥0.90',
+    status: '待支付',
+    cardInfo: '',
+    cardId: '',
+    userNickname: '手动发货填邮箱待支付',
+    userEmail: 'user14@example.com',
+    userRole: '普通用户',
+    payMethod: 'wechat',
+    payChannel: 'speedzf',
+    channelName: 'speedzf',
+    deliveryMethod: '手动发货',
+    createTime: '2024-05-03 13:00:00',
+    completionTime: '',
+    remark: '已填写邮箱的待支付订单',
+    refundInfo: null,
+    hasEmail: true
+  })
+  
+  // 15. 手动发货 - 未填写邮箱 - 已退款
+  orderList.value.push({
+    id: 'DEMO015',
+    orderId: 'P20240503005',
+    productName: 'Twitter账号 - 豪华版',
+    category: 'Twitter账号',
+    originalPrice: '¥69.99',
+    purchasePrice: '¥65.00',
+    quantity: 1,
+    totalPrice: '¥69.99',
+    fee: '¥2.10',
+    status: '已退款',
+    cardInfo: '',
+    cardId: '',
+    userNickname: '手动发货填邮箱已退款',
+    userEmail: 'user15@example.com',
+    userRole: '普通用户',
+    payMethod: 'usdt',
+    payChannel: 'k4',
+    channelName: 'K4',
+    deliveryMethod: '手动发货',
+    createTime: '2024-05-03 14:00:00',
+    completionTime: '',
+    remark: '已填写邮箱的已退款订单',
+    refundInfo: {
+      refundAmount: 69.99,
+      refundRemark: '用户申请退款，已处理',
+      refundTime: '2024-05-03 15:00:00'
+    },
+    hasEmail: true
+  })
+  
+  // 16. 手动发货 - 未填写邮箱 - 已完成
+  orderList.value.push({
+    id: 'DEMO016',
+    orderId: 'P20240504001',
+    productName: 'Facebook账号 - 高级版',
+    category: 'Facebook账号',
+    originalPrice: '¥79.99',
+    purchasePrice: '¥75.00',
+    quantity: 1,
+    totalPrice: '¥79.99',
+    fee: '¥2.40',
+    status: '已完成',
+    cardInfo: 'facebook_user123----password123----recovery@example.com',
+    cardId: 'CARD20240504001',
+    userNickname: '手动发货未填邮箱完成',
+    userEmail: '',
+    userRole: '普通用户',
+    payMethod: 'alipay',
+    payChannel: 'k4',
+    channelName: 'K4',
+    deliveryMethod: '手动发货',
+    createTime: '2024-05-04 10:00:00',
+    completionTime: '2024-05-04 10:30:00',
+    remark: '未填写邮箱的已完成订单',
+    refundInfo: null,
+    hasEmail: false
+  })
+  
+  // 17. 手动发货 - 未填写邮箱 - 已支付
+  orderList.value.push({
+    id: 'DEMO017',
+    orderId: 'P20240504002',
+    productName: 'Facebook账号 - 标准版',
+    category: 'Facebook账号',
+    originalPrice: '¥69.99',
+    purchasePrice: '¥65.00',
+    quantity: 1,
+    totalPrice: '¥69.99',
+    fee: '¥2.10',
+    status: '已支付',
+    cardInfo: '',
+    cardId: '',
+    userNickname: '手动发货未填邮箱已支付',
+    userEmail: '',
+    userRole: '普通用户',
+    payMethod: 'wechat',
+    payChannel: 'speedzf',
+    channelName: 'speedzf',
+    deliveryMethod: '手动发货',
+    createTime: '2024-05-04 11:00:00',
+    completionTime: '',
+    remark: '未填写邮箱的已支付订单，待发货',
+    refundInfo: null,
+    hasEmail: false
+  })
+  
+  // 18. 手动发货 - 未填写邮箱 - 已取消
+  orderList.value.push({
+    id: 'DEMO018',
+    orderId: 'P20240504003',
+    productName: 'Facebook账号 - 基础版',
+    category: 'Facebook账号',
+    originalPrice: '¥59.99',
+    purchasePrice: '¥55.00',
+    quantity: 1,
+    totalPrice: '¥59.99',
+    fee: '¥1.80',
+    status: '已取消',
+    cardInfo: '',
+    cardId: '',
+    userNickname: '手动发货未填邮箱已取消',
+    userEmail: '',
+    userRole: '普通用户',
+    payMethod: 'alipay',
+    payChannel: 'k4',
+    channelName: 'K4',
+    deliveryMethod: '手动发货',
+    createTime: '2024-05-04 12:00:00',
+    completionTime: '',
+    remark: '未填写邮箱的已取消订单',
+    refundInfo: null,
+    hasEmail: false
+  })
+  
+  // 19. 手动发货 - 未填写邮箱 - 待支付
+  orderList.value.push({
+    id: 'DEMO019',
+    orderId: 'P20240504004',
+    productName: 'Facebook账号 - 入门版',
+    category: 'Facebook账号',
+    originalPrice: '¥49.99',
+    purchasePrice: '¥45.00',
+    quantity: 1,
+    totalPrice: '¥49.99',
+    fee: '¥1.50',
+    status: '待支付',
+    cardInfo: '',
+    cardId: '',
+    userNickname: '手动发货未填邮箱待支付',
+    userEmail: '',
+    userRole: '普通用户',
+    payMethod: 'wechat',
+    payChannel: 'speedzf',
+    channelName: 'speedzf',
+    deliveryMethod: '手动发货',
+    createTime: '2024-05-04 13:00:00',
+    completionTime: '',
+    remark: '未填写邮箱的待支付订单',
+    refundInfo: null,
+    hasEmail: false
+  })
+  
+  // 20. 手动发货 - 未填写邮箱 - 已退款
+  orderList.value.push({
+    id: 'DEMO020',
+    orderId: 'P20240504005',
+    productName: 'Facebook账号 - 豪华版',
+    category: 'Facebook账号',
+    originalPrice: '¥89.99',
+    purchasePrice: '¥85.00',
+    quantity: 1,
+    totalPrice: '¥89.99',
+    fee: '¥2.70',
+    status: '已退款',
+    cardInfo: '',
+    cardId: '',
+    userNickname: '手动发货未填邮箱已退款',
+    userEmail: '',
+    userRole: '普通用户',
+    payMethod: 'usdt',
+    payChannel: 'k4',
+    channelName: 'K4',
+    deliveryMethod: '手动发货',
+    createTime: '2024-05-04 14:00:00',
+    completionTime: '',
+    remark: '未填写邮箱的已退款订单',
+    refundInfo: {
+      refundAmount: 89.99,
+      refundRemark: '用户申请退款，已处理',
+      refundTime: '2024-05-04 15:00:00'
+    },
+    hasEmail: false
+  })
+  
+  // 复制到allOrderList
+  allOrderList.value = JSON.parse(JSON.stringify(orderList.value))
+  
+  // 更新分页相关数据
+  total.value = orderList.value.length
 }
 </script>
 
@@ -1723,59 +2402,36 @@ const addDemoOrder = () => {
   margin-top: 20px;
 }
 
-/* Styles for dialogs */
-.refund-dialog .refund-info {
-  margin-bottom: 20px;
-  padding: 15px;
-  background-color: #f9f9f9;
-  border-radius: 4px;
+/* 通用对话框样式 */
+:deep(.el-dialog__header) {
+  padding: 20px 24px;
+  margin-right: 0;
+  border-bottom: 1px solid #ebeef5;
 }
 
-.refund-dialog .info-item {
-  margin-bottom: 8px;
-  font-size: 14px;
+:deep(.el-dialog__title) {
+  font-size: 16px;
+  font-weight: 500;
 }
 
-.refund-dialog .info-item .label {
-  color: #606266;
-  margin-right: 5px;
+:deep(.el-dialog__body) {
+  padding: 20px 24px;
 }
 
-.refund-dialog .info-item .value {
-  color: #303133;
+:deep(.el-dialog__footer) {
+  padding: 16px 24px 20px;
 }
 
-.refund-dialog .info-item .price,
-.deliver-dialog .info-item .price {
-  color: #F56C6C;
-  font-weight: bold;
+/* 对话框底部按钮样式 */
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 
-/* 发货对话框样式 */
-.deliver-dialog .deliver-info {
-  margin-bottom: 20px;
-  padding: 15px;
-  background-color: #f9f9f9;
-  border-radius: 4px;
+.dialog-footer .el-button + .el-button {
+  margin-left: 16px;
 }
-
-.deliver-dialog .info-item {
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-.deliver-dialog .info-item .label {
-  color: #606266;
-  margin-right: 5px;
-}
-
-.deliver-dialog .info-item .value {
-  color: #303133;
-}
-
-/* Removing potentially conflicting deep selectors and general cleanup */
-/* Styles like :deep(.order-detail), :deep(.refund-dialog .el-dialog__header) etc. */
-/* will be re-evaluated if specific dialog styling is needed later, adhering to BEM or scoped styles */
 
 .order-detail-content pre.card-info-pre {
   background-color: #f5f7fa;
@@ -1859,5 +2515,62 @@ const addDemoOrder = () => {
   color: #909399 !important;
   font-weight: normal !important;
   font-style: italic;
+}
+
+:deep(.wider-dropdown-menu) {
+  min-width: 180px !important; /* 增加下拉菜单宽度 */
+}
+
+:deep(.wider-dropdown-menu .el-dropdown-menu__item) {
+  padding: 10px 20px; /* 增加内边距使文本更有呼吸空间 */
+  white-space: nowrap; /* 确保文本不换行 */
+}
+
+/* Styles for dialogs */
+.dialog-info-box {
+  margin-bottom: 20px;
+}
+
+.dialog-info-box .info-item {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.dialog-info-box .info-item .label {
+  color: #606266;
+  margin-right: 5px;
+}
+
+.dialog-info-box .info-item .value {
+  color: #303133;
+}
+
+.dialog-info-box .info-item .price {
+  color: #F56C6C;
+  font-weight: bold;
+}
+
+/* 新增的当前卡密显示样式 */
+.current-card-display {
+  width: 100%;
+}
+
+.current-card-title {
+  color: #606266;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.current-card-content {
+  font-family: monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: #303133;
+  font-size: 13px;
+  background-color: #f5f7fa;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #e9e9eb;
+  line-height: 1.5;
 }
 </style>

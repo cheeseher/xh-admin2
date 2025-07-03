@@ -31,6 +31,7 @@ export interface OrderItem {
   createTime: string;
   completionTime?: string;
   refundInfo: RefundInfo | null;
+  hasEmail?: boolean;
 }
 
 export interface ProductOption {
