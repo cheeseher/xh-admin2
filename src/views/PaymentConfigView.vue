@@ -97,17 +97,17 @@ const saveConfig = async () => {
   
   await formRef.value.validate((valid, fields) => {
     if (valid) {
-      saving.value = true;
+  saving.value = true;
       
       // 模拟API调用
       setTimeout(() => {
-        saving.value = false;
+  saving.value = false;
         ElMessage.success('支付系统配置保存成功');
         console.log('保存的配置数据:', paymentConfig);
       }, 800);
-    } else {
+  } else {
       console.log('表单验证失败:', fields);
-    }
+  }
   });
 };
 
