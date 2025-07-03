@@ -84,7 +84,7 @@
       </div>
 
       <!-- 表格 -->
-      <el-table :data="pagedData" v-loading="loading" border stripe @row-click="handleView" class="cost-table">
+      <el-table :data="pagedData" v-loading="loading" border stripe class="cost-table">
         <el-table-column prop="type" label="成本类型" width="150">
           <template #default="{ row }">
             <el-tag :type="getTagType(row.type)">
@@ -193,62 +193,7 @@
       </template>
     </el-dialog>
 
-    <!-- 查看详情弹窗 -->
-    <el-dialog title="成本详情" v-model="viewDialogVisible" width="600px">
-      <div v-if="viewData">
-        <el-descriptions :column="1" border>
-          <el-descriptions-item label="ID">{{ viewData.id }}</el-descriptions-item>
-          <el-descriptions-item label="成本类型">
-            <el-tag :type="getTagType(viewData.type)">
-              {{ formatType(viewData.type) }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="金额类型">
-            <el-tag :type="viewData.amountType === 'increase' ? 'success' : 'danger'">
-              {{ viewData.amountType === 'increase' ? '增加' : '减少' }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="成本金额">
-            <span :style="{ color: viewData.amountType === 'increase' ? '#67c23a' : '#f56c6c' }">
-              {{ viewData.amountType === 'increase' ? '+' : '-' }} ¥{{ viewData.amount.toFixed(2) }}
-            </span>
-          </el-descriptions-item>
-          <el-descriptions-item label="关联ID">
-            <template v-if="viewData.type === 'manual_entry'">-</template>
-            <template v-else-if="viewData.type === 'manual_delivery' || viewData.type === 'manual_delivery_update'">
-              订单ID
-            </template>
-            <template v-else-if="viewData.type === 'batch' || viewData.type === 'batch_update'">
-              批次ID
-            </template>
-          </el-descriptions-item>
-          <el-descriptions-item label="操作人">{{ viewData.operator }}</el-descriptions-item>
-          <el-descriptions-item label="创建时间">{{ viewData.createdAt }}</el-descriptions-item>
-          <el-descriptions-item label="备注">{{ viewData.remarks }}</el-descriptions-item>
-        </el-descriptions>
-      </div>
-      <template #footer>
-        <span class="dialog-footer-flex">
-          <el-popconfirm
-            v-if="viewData && canDelete(viewData)"
-            title="确认删除此成本记录吗?"
-            @confirm="handleDeleteFromView"
-            width="220"
-          >
-            <template #reference>
-              <el-button type="danger">删除</el-button>
-            </template>
-          </el-popconfirm>
-          <div v-else></div>
-          <div>
-            <el-button @click="viewDialogVisible = false">关闭</el-button>
-            <template v-if="viewData && canEdit(viewData)">
-              <el-button type="primary" @click="handleEditFromView">编辑</el-button>
-            </template>
-          </div>
-        </span>
-      </template>
-    </el-dialog>
+
   </div>
 </template>
 
@@ -278,11 +223,9 @@ interface CostRecord {
 
 const loading = ref(true)
 const dialogVisible = ref(false)
-const viewDialogVisible = ref(false)
 const isEdit = ref(false)
 const costFormRef = ref<FormInstance>()
 const allData = ref<CostRecord[]>([])
-const viewData = ref<CostRecord | null>(null)
 
 // 模拟的成本数据
 const mockCostData: CostRecord[] = [
@@ -638,12 +581,7 @@ const handleEdit = (row: CostRecord) => {
   dialogVisible.value = true
 }
 
-const handleEditFromView = () => {
-  if (viewData.value) {
-    handleEdit(viewData.value);
-    viewDialogVisible.value = false;
-  }
-}
+
 
 const resetForm = () => {
   costFormRef.value?.resetFields()
@@ -706,11 +644,6 @@ const handleDelete = (row: CostRecord) => {
   }
 }
 
-const handleView = (row: CostRecord) => {
-  viewData.value = row
-  viewDialogVisible.value = true
-}
-
 // 查看关联数据
 const viewRelatedOrder = (orderId: string) => {
   ElMessage.info(`查看订单详情：${orderId}，这里会跳转到订单详情页`);
@@ -728,13 +661,6 @@ const viewRelatedBatch = (batchId: string) => {
 const exportCostData = () => {
   ElMessage.success('成本数据导出成功');
   // 实际项目中应该调用导出API
-}
-
-const handleDeleteFromView = () => {
-  if (viewData.value) {
-    handleDelete(viewData.value)
-    viewDialogVisible.value = false
-  }
 }
 
 const handleTypeChange = () => {
@@ -800,9 +726,7 @@ const handleTypeChange = () => {
   font-size: 13px;
 }
 
-.cost-table .el-table__body-wrapper .el-table__row {
-  cursor: pointer;
-}
+
 
 .dialog-footer-flex {
   display: flex;
