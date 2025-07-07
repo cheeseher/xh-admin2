@@ -95,6 +95,7 @@
           stripe
           style="width: 100%"
           @selection-change="handleSelectionChange"
+          :row-class-name="tableRowClassName"
         >
           <el-table-column type="selection" width="55" />
           <el-table-column prop="orderNo" label="订单号" min-width="180" />
@@ -144,7 +145,7 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="status" label="订单状态" min-width="120">
+          <el-table-column prop="status" label="订单状态" width="100" fixed="right">
             <template #default="scope">
               <el-tag v-if="scope.row.status === 'pending'" type="warning">待付款</el-tag>
               <el-tag v-else-if="scope.row.status === 'completed'" type="success">已完成</el-tag>
@@ -894,6 +895,15 @@
     return order.amount - (order.fee || 0)
   }
   
+  // 添加表格行类名方法
+  const tableRowClassName = ({ row }: { row: any }) => {
+    // 使用一个简单的方式来检查行是否被选中：通过订单号匹配
+    if (multipleSelection.value && multipleSelection.value.some((selected: any) => selected.orderNo === row.orderNo)) {
+      return 'selected-row'
+    }
+    return ''
+  }
+  
   onMounted(() => {
     fetchOrders()
   })
@@ -1037,5 +1047,35 @@
     color: #67c23a;
     font-size: 12px;
     font-weight: bold;
+  }
+
+  /* 添加选中行背景色样式 - 使用不透明的浅蓝色 */
+  :deep(.selected-row) {
+    background-color: #e6f1fc !important; /* 使用不透明的浅蓝色 */
+  }
+
+  /* 确保选中行的斑马纹效果不会覆盖选中背景色 */
+  :deep(.selected-row.el-table__row--striped) {
+    background-color: #e6f1fc !important;
+  }
+
+  /* 确保选中行鼠标悬浮时保持选中背景色不变 */
+  :deep(.selected-row:hover > td.el-table__cell) {
+    background-color: #e6f1fc !important;
+  }
+
+  /* 确保选中行的斑马纹在鼠标悬浮时保持选中背景色不变 */
+  :deep(.selected-row.el-table__row--striped:hover > td.el-table__cell) {
+    background-color: #e6f1fc !important;
+  }
+
+  /* 强制所有选中行的单元格使用相同的背景色 */
+  :deep(.selected-row td.el-table__cell) {
+    background-color: #e6f1fc !important;
+  }
+
+  /* 确保斑马纹行的所有单元格在选中时也使用相同的背景色 */
+  :deep(.el-table__row--striped.selected-row td.el-table__cell) {
+    background-color: #e6f1fc !important;
   }
   </style>

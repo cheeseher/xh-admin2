@@ -152,9 +152,10 @@
             border 
             stripe
             @selection-change="handleSelectionChange"
+            :row-class-name="tableRowClassName"
           >
             <el-table-column type="selection" width="55"></el-table-column>
-            <el-table-column prop="orderId" label="订单号" width="130" fixed="left" align="center"></el-table-column>
+            <el-table-column prop="orderId" label="订单号" width="130" align="center"></el-table-column>
             <el-table-column label="用户信息" width="220">
               <template #default="scope">
                 <div class="user-info">
@@ -210,7 +211,7 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="状态" width="80" fixed="right" align="center">
+            <el-table-column label="状态" width="100" fixed="right" align="center">
               <template #default="scope">
                 <el-tag :type="getStatusType(scope.row.status)">{{ scope.row.status }}</el-tag>
               </template>
@@ -225,7 +226,7 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="userRole" label="用户身份/折扣" width="120">
+            <el-table-column prop="userRole" label="用户身份/折扣" width="140">
               <template #default="scope">
                 <el-tag :type="getUserRoleType(scope.row.userRole)" size="small">
                   {{ scope.row.userRole }} ({{ getUserDiscount(scope.row.userRole) }})
@@ -249,7 +250,11 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="createTime" label="创建时间" width="170" fixed="right" align="center"></el-table-column>
+            <el-table-column label="创建时间" width="180">
+              <template #default="scope">
+                {{ scope.row.createTime }}
+              </template>
+            </el-table-column>
             <el-table-column label="完成时间" width="180">
               <template #default="scope">
                 <span v-if="scope.row.completionTime">{{ scope.row.completionTime }}</span>
@@ -258,7 +263,7 @@
               </template>
             </el-table-column>
             <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
-            <el-table-column label="操作" width="90" fixed="right" align="center">
+            <el-table-column label="操作" width="120" fixed="right" align="center">
               <template #default="scope">
                 <el-dropdown trigger="hover" size="small">
                   <el-button type="primary" size="small">
@@ -2139,6 +2144,15 @@ const addDemoOrder = () => {
   // 更新分页相关数据
   total.value = orderList.value.length
 }
+
+// 添加表格行类名方法
+const tableRowClassName = ({ row }: { row: any }) => {
+  // 使用一个简单的方式来检查行是否被选中：通过ID匹配
+  if (multipleSelection.value && multipleSelection.value.some((selected: any) => selected.orderId === row.orderId)) {
+    return 'selected-row'
+  }
+  return ''
+}
 </script>
 
 <style>
@@ -2572,5 +2586,35 @@ const addDemoOrder = () => {
   border-radius: 4px;
   border: 1px solid #e9e9eb;
   line-height: 1.5;
+}
+
+/* 添加选中行背景色样式 - 使用不透明的浅蓝色 */
+:deep(.selected-row) {
+  background-color: #e6f1fc !important; /* 使用不透明的浅蓝色 */
+}
+
+/* 确保选中行的斑马纹效果不会覆盖选中背景色 */
+:deep(.selected-row.el-table__row--striped) {
+  background-color: #e6f1fc !important;
+}
+
+/* 确保选中行鼠标悬浮时保持选中背景色不变 */
+:deep(.selected-row:hover > td.el-table__cell) {
+  background-color: #e6f1fc !important;
+}
+
+/* 确保选中行的斑马纹在鼠标悬浮时保持选中背景色不变 */
+:deep(.selected-row.el-table__row--striped:hover > td.el-table__cell) {
+  background-color: #e6f1fc !important;
+}
+
+/* 强制所有选中行的单元格使用相同的背景色 */
+:deep(.selected-row td.el-table__cell) {
+  background-color: #e6f1fc !important;
+}
+
+/* 确保斑马纹行的所有单元格在选中时也使用相同的背景色 */
+:deep(.el-table__row--striped.selected-row td.el-table__cell) {
+  background-color: #e6f1fc !important;
 }
 </style>
