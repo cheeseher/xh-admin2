@@ -18,20 +18,27 @@ export interface OrderItem {
   fee: string;
   cardId?: string;
   cardInfo?: string;
-  costPrice?: number;
+  status: string;
   userNickname: string;
   userEmail: string;
   userRole: string;
   payMethod: string;
   payChannel: string;
-  channelName?: string;
+  channelName: string;
   deliveryMethod: string;
-  status: string;
-  remark?: string;
   createTime: string;
   completionTime?: string;
-  refundInfo: RefundInfo | null;
+  costPrice?: number;
+  remark?: string;
+  refundInfo?: RefundInfo;
   hasEmail?: boolean;
+  multipleCardInfo?: Array<{
+    cardId?: string;
+    cardInfo?: string;
+    selectedCardId?: string;
+    newCardInfo?: string;
+    costPrice?: number;
+  }>;
 }
 
 export interface ProductOption {

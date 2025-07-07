@@ -30,10 +30,10 @@
         </el-card>
       </el-col>
       <el-col :span="8">
-        <!-- 支付人数 -->
+        <!-- 支付单数 (原支付人数) -->
         <el-card shadow="hover" class="data-card">
           <div class="card-header">
-            <div class="title">支付人数</div>
+            <div class="title">支付单数</div>
             <div class="actions">
               <el-radio-group v-model="payUserTimeRange" size="small">
                 <el-radio-button label="total">总计</el-radio-button>
@@ -44,7 +44,7 @@
           </div>
           <div class="data-card-content">
             <div class="data-info">
-              <div class="data-value">{{ getPayUserData.value }} 人</div>
+              <div class="data-value">{{ getPayUserData.value }} 单</div>
               <div class="data-trend" v-if="payUserTimeRange === 'today'">
                 <span>较昨日</span>
                 <span class="up" v-if="Number(getPayUserData.growth) >= 0">↑ {{ getPayUserData.growth }}%</span>
@@ -134,10 +134,10 @@
         </el-card>
       </el-col>
       <el-col :span="8">
-        <!-- 人均消费 -->
+        <!-- 每单平均消费 (原人均消费) -->
         <el-card shadow="hover" class="data-card">
           <div class="card-header">
-            <div class="title">人均消费</div>
+            <div class="title">每单平均消费</div>
             <div class="actions">
               <el-radio-group v-model="avgConsumptionTimeRange" size="small">
                 <el-radio-button label="total">总计</el-radio-button>
@@ -165,10 +165,10 @@
     <!-- 第三行卡片：充值统计 -->
     <el-row :gutter="20" class="second-row">
       <el-col :span="8">
-        <!-- 充值人数 -->
+        <!-- 充值单数 (原充值人数) -->
         <el-card shadow="hover" class="data-card">
           <div class="card-header">
-            <div class="title">充值人数</div>
+            <div class="title">充值单数</div>
             <div class="actions">
               <el-radio-group v-model="rechargeUserTimeRange" size="small">
                 <el-radio-button label="total">总计</el-radio-button>
@@ -179,7 +179,7 @@
           </div>
           <div class="data-card-content">
             <div class="data-info">
-              <div class="data-value">{{ getRechargeUserData.value }} 人</div>
+              <div class="data-value">{{ getRechargeUserData.value }} 单</div>
               <div class="data-trend" v-if="rechargeUserTimeRange === 'today'">
                 <span>较昨日</span>
                 <span class="up" v-if="Number(getRechargeUserData.growth) >= 0">↑ {{ getRechargeUserData.growth }}%</span>
@@ -267,12 +267,17 @@
         :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
       >
         <el-table-column prop="name" label="商品名称" min-width="150" />
-        <el-table-column prop="payUsers" label="支付人数" min-width="100" sortable>
+        <el-table-column prop="totalRevenue" label="销售额" min-width="120" sortable>
           <template #default="{ row }">
-            {{ row.payUsers }} 人
+            ¥{{ formatNumber(row.totalRevenue) }}
           </template>
         </el-table-column>
-        <el-table-column prop="avgConsumption" label="人均消费" min-width="100" sortable>
+        <el-table-column prop="payUsers" label="支付单数" min-width="100" sortable>
+          <template #default="{ row }">
+            {{ row.payUsers }} 单
+          </template>
+        </el-table-column>
+        <el-table-column prop="avgConsumption" label="每单平均消费" min-width="120" sortable>
           <template #default="{ row }">
             ¥{{ formatNumber(row.avgConsumption) }}
           </template>
@@ -297,8 +302,9 @@
       <div class="table-footer">
         <div class="total-info">
           <span class="total-label">总计:</span>
-          <span class="total-value">支付人数: {{ accountProductsTotals.payUsers }} 人</span>
-          <span class="total-value">人均消费: ¥{{ formatNumber(accountProductsTotals.avgConsumption) }}</span>
+          <span class="total-value">销售额: ¥{{ formatNumber(accountProductsTotals.totalRevenue) }}</span>
+          <span class="total-value">支付单数: {{ accountProductsTotals.payUsers }} 单</span>
+          <span class="total-value">每单平均消费: ¥{{ formatNumber(accountProductsTotals.avgConsumption) }}</span>
           <span class="total-value">商品成本: ¥{{ formatNumber(accountProductsTotals.paymentAmount) }}</span>
           <span class="total-value">退款金额: ¥{{ formatNumber(accountProductsTotals.refundAmount) }}</span>
           <span class="total-value">结算金额: ¥{{ formatNumber(accountProductsTotals.netIncome) }}</span>
