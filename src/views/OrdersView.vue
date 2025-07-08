@@ -211,6 +211,16 @@
                 </div>
               </template>
             </el-table-column>
+            
+            <!-- 添加成本价列 -->
+            <el-table-column label="成本价" width="120">
+              <template #default="scope">
+                <div class="price-container">
+                  <span>{{ scope.row.costPrice || '¥0.00' }}</span>
+                </div>
+              </template>
+            </el-table-column>
+            
             <el-table-column label="状态" width="100" fixed="right" align="center">
               <template #default="scope">
                 <el-tag :type="getStatusType(scope.row.status)">{{ scope.row.status }}</el-tag>
