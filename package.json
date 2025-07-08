@@ -33,6 +33,7 @@
     "@types/node": "^20.11.19",
     "@types/xlsx": "^0.0.35",
     "@vitejs/plugin-vue": "^5.0.4",
+    "sass-embedded": "^1.89.2",
     "terser": "^5.39.0",
     "typescript": "^5.3.3",
     "vite": "^5.1.4"

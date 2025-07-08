@@ -71,6 +71,8 @@
               <span class="amount-value" style="color: #67C23A;">{{ successOrders }}</span>
               <span style="margin-left: 20px;">总充值金额：</span>
               <span class="amount-value">¥{{ totalAmount.toFixed(2) }}</span>
+              <span style="margin-left: 20px;">成功金额：</span>
+              <span class="amount-value" style="color: #67C23A;">¥{{ successAmount.toFixed(2) }}</span>
               <span style="margin-left: 20px;">总手续费：</span>
               <span class="amount-value" style="color: #E6A23C;">¥{{ totalFee.toFixed(2) }}</span>
               <span style="margin-left: 20px;">总入账金额：</span>
@@ -461,6 +463,13 @@
   const totalAmount = computed(() => {
     if (orderList.value.length === 0) return 0;
     return orderList.value.reduce((sum, order) => sum + order.amount, 0)
+  })
+  
+  // 计算筛选后的成功订单金额（状态为"已完成"的订单）
+  const successAmount = computed(() => {
+    return filteredOrderList.value
+      .filter(order => order.status === 'completed')
+      .reduce((sum, order) => sum + order.amount, 0)
   })
   
   // 多选相关

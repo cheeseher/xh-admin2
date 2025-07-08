@@ -469,7 +469,8 @@
       </div>
       
       <el-form :model="deliverForm" label-width="80px" :rules="deliverRules" ref="deliverFormRef">
-        <el-form-item label="成本价" v-if="deliverForm.deliveryMethod !== '自动发货'">
+        <!-- 修改手动发货模式下的成本价表单项，添加required属性 -->
+        <el-form-item label="成本价" prop="costPrice" required v-if="deliverForm.deliveryMethod !== '自动发货'">
           <el-input-number 
             v-model="deliverForm.costPrice" 
             :precision="2" 
@@ -480,474 +481,42 @@
           ></el-input-number>
         </el-form-item>
         
-        <!-- 自动发货模式下显示成本价 -->
-        <el-form-item label="成本价" v-if="deliverForm.deliveryMethod === '自动发货'">
-          <div class="auto-cost-price">
-            <span v-if="deliverForm.selectedCardIds && deliverForm.selectedCardIds.length > 0">¥{{ deliverForm.costPrice.toFixed(2) }}</span>
-            <span v-else class="select-card-tip">选择卡密后自动获取</span>
-          </div>
+        <!-- 修改自动发货模式下的成本价表单项，添加required属性 -->
+        <el-form-item label="成本价" prop="costPrice" required v-if="deliverForm.deliveryMethod === '自动发货'">
+          <el-input-number 
+            v-model="deliverForm.costPrice" 
+            :precision="2" 
+            :step="0.01" 
+            :min="0" 
+            style="width: 100%;"
+            placeholder="请输入成本价"
+          ></el-input-number>
         </el-form-item>
         
-        <!-- 显示当前卡密信息，仅在编辑模式下显示 -->
-        <el-form-item label="当前卡密" v-if="isEditingDeliveryInfo">
-          <div v-if="deliverForm.quantity === 1" class="current-card-display">
-            <div class="current-card-title">卡密ID: {{ deliverForm.cardId }}</div>
-            <div class="current-card-content">{{ deliverForm.currentCardInfo }}</div>
+        <!-- 替换为一个统一的卡密信息输入表单，不区分单卡密和多卡密 -->
+        <el-form-item label="卡密信息" prop="cardInfo">
+          <div v-if="deliverForm.quantity > 1" class="multiple-cards-info">
+            共需 {{ deliverForm.quantity }} 个卡密，请在下方输入框中输入所有卡密信息，多个卡密请用换行分隔
           </div>
-          <div v-else class="current-multiple-cards-display">
-            <div class="current-card-title">当前共 {{ deliverForm.quantity }} 个卡密</div>
-            
-            <!-- 如果卡密数量大于5个，提供下载按钮 -->
-            <div v-if="deliverForm.quantity > 5" class="card-actions">
-              <el-button size="small" type="primary" plain @click="downloadCurrentCardInfo">
-                <el-icon><Download /></el-icon>下载全部卡密信息
-              </el-button>
-            </div>
-            
-            <!-- 卡密信息内容区 -->
-            <div v-if="deliverForm.quantity <= 5 && deliverForm.multipleCardInfo && deliverForm.multipleCardInfo.length > 0">
-              <div v-for="(card, index) in deliverForm.multipleCardInfo" :key="index" class="multiple-card-item">
-                <div class="card-item-title">卡密 {{ index + 1 }} - ID: {{ card.cardId || '未指定' }}</div>
-                <div class="card-item-content">{{ card.cardInfo }}</div>
-              </div>
-            </div>
-            <div v-else-if="deliverForm.quantity > 5 && deliverForm.multipleCardInfo && deliverForm.multipleCardInfo.length > 0">
-              <el-tabs v-model="activeCardTab" type="card">
-                <el-tab-pane 
-                  v-for="(card, index) in deliverForm.multipleCardInfo" 
-                  :key="index" 
-                  :label="`卡密 ${index + 1}`" 
-                  :name="String(index)"
-                >
-                  <div class="card-item-title">卡密 {{ index + 1 }} - ID: {{ card.cardId || '未指定' }}</div>
-                  <div class="card-item-content">{{ card.cardInfo }}</div>
-                </el-tab-pane>
-              </el-tabs>
-            </div>
-            <div v-else class="card-item-content">
-              {{ deliverForm.currentCardInfo }}
-            </div>
-          </div>
-        </el-form-item>
-        
-        <!-- 修改卡密信息输入方式 - 单卡密情况 -->
-        <el-form-item 
-          label="卡密信息" 
-          prop="cardInfo" 
-          v-if="deliverForm.deliveryMethod !== '自动发货' && !isEditingDeliveryInfo && deliverForm.quantity === 1">
           <el-input
             v-model="deliverForm.cardInfo"
             type="textarea"
-            :rows="4"
-            placeholder="请输入卡密信息"
+            :rows="deliverForm.quantity > 1 ? 8 : 4"
+            :placeholder="deliverForm.quantity > 1 ? '请输入所有卡密信息，多个卡密请用换行分隔' : '请输入卡密信息'"
           ></el-input>
-        </el-form-item>
-        
-        <!-- 修改卡密信息输入方式 - 少量多卡密情况 (2-5个) -->
-        <template v-if="deliverForm.deliveryMethod !== '自动发货' && !isEditingDeliveryInfo && deliverForm.quantity > 1 && deliverForm.quantity <= 5">
-          <div class="multiple-cards-container">
-            <div class="multiple-cards-title">卡密信息 (共需 {{ deliverForm.quantity }} 个)</div>
-            <div v-for="(card, index) in deliverForm.multipleCardInfo" :key="index" class="multiple-card-form-item">
-              <div class="card-index">卡密 {{ index + 1 }}</div>
-              <el-input
-                v-model="deliverForm.multipleCardInfo[index].cardInfo"
-                type="textarea"
-                :rows="3"
-                :placeholder="`请输入第 ${index + 1} 个卡密信息`"
-              ></el-input>
-            </div>
-          </div>
-        </template>
-        
-        <!-- 修改卡密信息输入方式 - 大量多卡密情况 (>5个) -->
-        <template v-if="deliverForm.deliveryMethod !== '自动发货' && !isEditingDeliveryInfo && deliverForm.quantity > 5">
-          <div class="multiple-cards-container">
-            <div class="multiple-cards-title">卡密信息 (共需 {{ deliverForm.quantity }} 个)</div>
-            
-            <!-- 批量操作区域 -->
-            <div class="batch-operations">
-              <el-button type="primary" plain @click="showBatchImportDialog">
-                <el-icon><Upload /></el-icon>批量导入卡密
-              </el-button>
-              <el-button type="success" plain @click="generateAllCards">
-                <el-icon><RefreshRight /></el-icon>一键生成所有卡密
-              </el-button>
-            </div>
-            
-            <!-- 使用选项卡分组显示卡密输入框 -->
-            <el-tabs v-model="activeCardTab" type="card">
-              <el-tab-pane 
-                v-for="(card, index) in deliverForm.multipleCardInfo" 
-                :key="index" 
-                :label="`卡密 ${index + 1}`" 
-                :name="String(index)"
-              >
-                <div class="card-index">卡密 {{ index + 1 }}</div>
-                <el-input
-                  v-model="deliverForm.multipleCardInfo[index].cardInfo"
-                  type="textarea"
-                  :rows="3"
-                  :placeholder="`请输入第 ${index + 1} 个卡密信息`"
-                ></el-input>
-              </el-tab-pane>
-            </el-tabs>
-            
-            <!-- 快速导航区 -->
-            <div class="quick-navigation">
-              <el-pagination
-                small
-                :page-size="1"
-                layout="prev, pager, next"
-                :total="deliverForm.quantity"
-                :current-page="Number(activeCardTab) + 1"
-                @current-change="handleCardPageChange"
-              ></el-pagination>
-              <div class="completed-info">
-                已填写 {{ getCompletedCardCount() }} / {{ deliverForm.quantity }} 个卡密
-              </div>
-            </div>
-          </div>
-        </template>
-        
-        <!-- 在编辑模式下为非自动发货类型添加新卡密信息输入 - 单卡密 -->
-        <el-form-item 
-          label="新卡密信息(选填)" 
-          prop="cardInfo" 
-          v-if="deliverForm.deliveryMethod !== '自动发货' && isEditingDeliveryInfo && deliverForm.quantity === 1">
-          <el-input
-            v-model="deliverForm.cardInfo"
-            type="textarea"
-            :rows="4"
-            placeholder="请输入新的卡密信息（可选）"
-          ></el-input>
-        </el-form-item>
-        
-        <!-- 在编辑模式下为非自动发货类型添加新卡密信息输入 - 少量多卡密 (2-5个) -->
-        <template v-if="deliverForm.deliveryMethod !== '自动发货' && isEditingDeliveryInfo && deliverForm.quantity > 1 && deliverForm.quantity <= 5">
-          <div class="multiple-cards-container">
-            <div class="multiple-cards-title">新卡密信息 (可选)</div>
-            <div v-for="(card, index) in deliverForm.multipleCardInfo" :key="index" class="multiple-card-form-item">
-              <div class="card-index">卡密 {{ index + 1 }}</div>
-              <el-input
-                v-model="deliverForm.multipleCardInfo[index].newCardInfo"
-                type="textarea"
-                :rows="3"
-                :placeholder="`请输入第 ${index + 1} 个新卡密信息（可选）`"
-              ></el-input>
-            </div>
-          </div>
-        </template>
-        
-        <!-- 在编辑模式下为非自动发货类型添加新卡密信息输入 - 大量多卡密 (>5个) -->
-        <template v-if="deliverForm.deliveryMethod !== '自动发货' && isEditingDeliveryInfo && deliverForm.quantity > 5">
-          <div class="multiple-cards-container">
-            <div class="multiple-cards-title">新卡密信息 (可选)</div>
-            
-            <!-- 批量操作区域 -->
-            <div class="batch-operations">
-              <el-button type="primary" plain @click="showBatchImportDialog">
-                <el-icon><Upload /></el-icon>批量导入新卡密
-              </el-button>
-              <el-button type="success" plain @click="generateAllCards">
-                <el-icon><RefreshRight /></el-icon>一键生成所有新卡密
-              </el-button>
-            </div>
-            
-            <!-- 使用选项卡分组显示卡密输入框 -->
-            <el-tabs v-model="activeEditCardTab" type="card">
-              <el-tab-pane 
-                v-for="(card, index) in deliverForm.multipleCardInfo" 
-                :key="index" 
-                :label="`卡密 ${index + 1}`" 
-                :name="`edit_${index}`"
-              >
-                <div class="card-index">卡密 {{ index + 1 }}</div>
-                <el-input
-                  v-model="deliverForm.multipleCardInfo[index].newCardInfo"
-                  type="textarea"
-                  :rows="3"
-                  :placeholder="`请输入第 ${index + 1} 个新卡密信息（可选）`"
-                ></el-input>
-              </el-tab-pane>
-            </el-tabs>
-            
-            <!-- 快速导航区 -->
-            <div class="quick-navigation">
-              <el-pagination
-                small
-                :page-size="1"
-                layout="prev, pager, next"
-                :total="deliverForm.quantity"
-                :current-page="Number(activeEditCardTab.replace('edit_', '')) + 1"
-                @current-change="handleEditCardPageChange"
-              ></el-pagination>
-              <div class="completed-info">
-                已填写 {{ getCompletedNewCardCount() }} / {{ deliverForm.quantity }} 个新卡密
-              </div>
-            </div>
-          </div>
-        </template>
-        
-        <!-- 添加卡密选择功能 - 单卡密 -->
-        <el-form-item 
-          label="选择卡密" 
-          prop="selectedCardId" 
-          v-if="deliverForm.deliveryMethod === '自动发货' && !isEditingDeliveryInfo && deliverForm.quantity === 1">
-          <el-select 
-            v-model="deliverForm.selectedCardId" 
-            filterable 
-            placeholder="请选择未售出的卡密" 
-            style="width: 100%;"
-            @change="handleCardSelect"
-          >
-            <el-option
-              v-for="card in availableCards"
-              :key="card.cardId"
-              :label="card.cardId"
-              :value="card.cardId"
-            >
-              <div class="card-option">
-                <div class="card-id">ID: {{ card.cardId }}</div>
-                <div class="card-batch" v-if="card.batchId">批次: {{ card.batchId }}</div>
-              </div>
-            </el-option>
-          </el-select>
-          <div class="card-preview" v-if="deliverForm.selectedCardId">
-            <div class="card-preview-title">卡密预览:</div>
-            <div class="card-preview-content">{{ getSelectedCardInfo() }}</div>
+          
+          <!-- 批量操作区域，仅在多卡密时显示 -->
+          <div class="batch-operations" v-if="deliverForm.quantity > 5">
+            <el-button type="primary" plain @click="showBatchImportDialog">
+              <el-icon><Upload /></el-icon>批量导入卡密
+            </el-button>
+            <el-button type="success" plain @click="generateAllCards" v-if="deliverForm.deliveryMethod === '自动发货'">
+              <el-icon><RefreshRight /></el-icon>一键生成所有卡密
+            </el-button>
           </div>
         </el-form-item>
         
-        <!-- 添加卡密选择功能 - 少量多卡密 (2-5个) -->
-        <template v-if="deliverForm.deliveryMethod === '自动发货' && !isEditingDeliveryInfo && deliverForm.quantity > 1 && deliverForm.quantity <= 5">
-          <div class="multiple-cards-container">
-            <div class="multiple-cards-title">选择卡密 (共需 {{ deliverForm.quantity }} 个)</div>
-            <div v-for="(card, index) in deliverForm.multipleCardInfo" :key="index" class="multiple-card-form-item">
-              <div class="card-index">卡密 {{ index + 1 }}</div>
-              <el-select 
-                v-model="deliverForm.multipleCardInfo[index].selectedCardId" 
-                filterable 
-                placeholder="请选择未售出的卡密" 
-                style="width: 100%;"
-                @change="(value) => handleMultipleCardSelect(value, index)"
-              >
-                <el-option
-                  v-for="card in getAvailableCardsForIndex(index)"
-                  :key="card.cardId"
-                  :label="card.cardId"
-                  :value="card.cardId"
-                >
-                  <div class="card-option">
-                    <div class="card-id">ID: {{ card.cardId }}</div>
-                    <div class="card-batch" v-if="card.batchId">批次: {{ card.batchId }}</div>
-                  </div>
-                </el-option>
-              </el-select>
-              <div class="card-preview" v-if="deliverForm.multipleCardInfo[index].selectedCardId">
-                <div class="card-preview-title">卡密 {{ index + 1 }} 预览:</div>
-                <div class="card-preview-content">{{ getSelectedMultipleCardInfo(index) }}</div>
-              </div>
-            </div>
-          </div>
-        </template>
-        
-        <!-- 添加卡密选择功能 - 大量多卡密 (>5个) -->
-        <template v-if="deliverForm.deliveryMethod === '自动发货' && !isEditingDeliveryInfo && deliverForm.quantity > 5">
-          <div class="multiple-cards-container">
-            <div class="multiple-cards-title">选择卡密 (共需 {{ deliverForm.quantity }} 个)</div>
-            
-            <!-- 批量操作区域 -->
-            <div class="batch-operations">
-              <el-button type="primary" plain @click="showBatchSelectDialog">
-                <el-icon><Select /></el-icon>批量选择卡密
-              </el-button>
-              <el-button type="success" plain @click="autoSelectAllCards">
-                <el-icon><Checked /></el-icon>智能匹配全部卡密
-              </el-button>
-            </div>
-            
-            <!-- 使用选项卡分组显示卡密选择框 -->
-            <el-tabs v-model="activeSelectCardTab" type="card">
-              <el-tab-pane 
-                v-for="(card, index) in deliverForm.multipleCardInfo" 
-                :key="index" 
-                :label="`卡密 ${index + 1}`" 
-                :name="`select_${index}`"
-              >
-                <div class="card-index">卡密 {{ index + 1 }}</div>
-                <el-select 
-                  v-model="deliverForm.multipleCardInfo[index].selectedCardId" 
-                  filterable 
-                  placeholder="请选择未售出的卡密" 
-                  style="width: 100%;"
-                  @change="(value) => handleMultipleCardSelect(value, index)"
-                >
-                  <el-option
-                    v-for="card in getAvailableCardsForIndex(index)"
-                    :key="card.cardId"
-                    :label="card.cardId"
-                    :value="card.cardId"
-                  >
-                    <div class="card-option">
-                      <div class="card-id">ID: {{ card.cardId }}</div>
-                      <div class="card-batch" v-if="card.batchId">批次: {{ card.batchId }}</div>
-                    </div>
-                  </el-option>
-                </el-select>
-                <div class="card-preview" v-if="deliverForm.multipleCardInfo[index].selectedCardId">
-                  <div class="card-preview-title">卡密 {{ index + 1 }} 预览:</div>
-                  <div class="card-preview-content">{{ getSelectedMultipleCardInfo(index) }}</div>
-                </div>
-              </el-tab-pane>
-            </el-tabs>
-            
-            <!-- 快速导航区 -->
-            <div class="quick-navigation">
-              <el-pagination
-                small
-                :page-size="1"
-                layout="prev, pager, next"
-                :total="deliverForm.quantity"
-                :current-page="Number(activeSelectCardTab.replace('select_', '')) + 1"
-                @current-change="handleSelectCardPageChange"
-              ></el-pagination>
-              <div class="completed-info">
-                已选择 {{ getSelectedCardCount() }} / {{ deliverForm.quantity }} 个卡密
-              </div>
-            </div>
-          </div>
-        </template>
-        
-        <!-- 添加新卡密选择功能，仅在自动发货且编辑模式时显示 - 单卡密 -->
-        <el-form-item 
-          label="更改为" 
-          prop="selectedCardId" 
-          v-if="deliverForm.deliveryMethod === '自动发货' && isEditingDeliveryInfo && deliverForm.quantity === 1">
-          <el-select 
-            v-model="deliverForm.selectedCardId" 
-            filterable 
-            placeholder="请选择新的卡密" 
-            style="width: 100%;"
-            @change="handleCardSelect"
-          >
-            <el-option
-              v-for="card in availableCards"
-              :key="card.cardId"
-              :label="card.cardId"
-              :value="card.cardId"
-            >
-              <div class="card-option">
-                <div class="card-id">ID: {{ card.cardId }}</div>
-                <div class="card-batch" v-if="card.batchId">批次: {{ card.batchId }}</div>
-              </div>
-            </el-option>
-          </el-select>
-          <div class="card-preview" v-if="deliverForm.selectedCardId">
-            <div class="card-preview-title">新卡密预览:</div>
-            <div class="card-preview-content">{{ getSelectedCardInfo() }}</div>
-          </div>
-        </el-form-item>
-        
-        <!-- 添加新卡密选择功能 - 少量多卡密 (2-5个) -->
-        <template v-if="deliverForm.deliveryMethod === '自动发货' && isEditingDeliveryInfo && deliverForm.quantity > 1 && deliverForm.quantity <= 5">
-          <div class="multiple-cards-container">
-            <div class="multiple-cards-title">更改卡密 (选择需要更改的卡密)</div>
-            <div v-for="(card, index) in deliverForm.multipleCardInfo" :key="index" class="multiple-card-form-item">
-              <div class="card-index">卡密 {{ index + 1 }}</div>
-              <el-select 
-                v-model="deliverForm.multipleCardInfo[index].selectedCardId" 
-                filterable 
-                placeholder="请选择新的卡密" 
-                style="width: 100%;"
-                @change="(value) => handleMultipleCardSelect(value, index)"
-              >
-                <el-option
-                  v-for="card in getAvailableCardsForIndex(index)"
-                  :key="card.cardId"
-                  :label="card.cardId"
-                  :value="card.cardId"
-                >
-                  <div class="card-option">
-                    <div class="card-id">ID: {{ card.cardId }}</div>
-                    <div class="card-batch" v-if="card.batchId">批次: {{ card.batchId }}</div>
-                  </div>
-                </el-option>
-              </el-select>
-              <div class="card-preview" v-if="deliverForm.multipleCardInfo[index].selectedCardId">
-                <div class="card-preview-title">新卡密 {{ index + 1 }} 预览:</div>
-                <div class="card-preview-content">{{ getSelectedMultipleCardInfo(index) }}</div>
-              </div>
-            </div>
-          </div>
-        </template>
-        
-        <!-- 添加新卡密选择功能 - 大量多卡密 (>5个) -->
-        <template v-if="deliverForm.deliveryMethod === '自动发货' && isEditingDeliveryInfo && deliverForm.quantity > 5">
-          <div class="multiple-cards-container">
-            <div class="multiple-cards-title">更改卡密 (选择需要更改的卡密)</div>
-            
-            <!-- 批量操作区域 -->
-            <div class="batch-operations">
-              <el-button type="primary" plain @click="showBatchSelectDialog">
-                <el-icon><Select /></el-icon>批量选择新卡密
-              </el-button>
-              <el-button type="success" plain @click="autoSelectAllCards">
-                <el-icon><Checked /></el-icon>智能匹配全部新卡密
-              </el-button>
-            </div>
-            
-            <!-- 使用选项卡分组显示卡密选择框 -->
-            <el-tabs v-model="activeEditSelectCardTab" type="card">
-              <el-tab-pane 
-                v-for="(card, index) in deliverForm.multipleCardInfo" 
-                :key="index" 
-                :label="`卡密 ${index + 1}`" 
-                :name="`edit_select_${index}`"
-              >
-                <div class="card-index">卡密 {{ index + 1 }}</div>
-                <el-select 
-                  v-model="deliverForm.multipleCardInfo[index].selectedCardId" 
-                  filterable 
-                  placeholder="请选择新的卡密" 
-                  style="width: 100%;"
-                  @change="(value) => handleMultipleCardSelect(value, index)"
-                >
-                  <el-option
-                    v-for="card in getAvailableCardsForIndex(index)"
-                    :key="card.cardId"
-                    :label="card.cardId"
-                    :value="card.cardId"
-                  >
-                    <div class="card-option">
-                      <div class="card-id">ID: {{ card.cardId }}</div>
-                      <div class="card-batch" v-if="card.batchId">批次: {{ card.batchId }}</div>
-                    </div>
-                  </el-option>
-                </el-select>
-                <div class="card-preview" v-if="deliverForm.multipleCardInfo[index].selectedCardId">
-                  <div class="card-preview-title">新卡密 {{ index + 1 }} 预览:</div>
-                  <div class="card-preview-content">{{ getSelectedMultipleCardInfo(index) }}</div>
-                </div>
-              </el-tab-pane>
-            </el-tabs>
-            
-            <!-- 快速导航区 -->
-            <div class="quick-navigation">
-              <el-pagination
-                small
-                :page-size="1"
-                layout="prev, pager, next"
-                :total="deliverForm.quantity"
-                :current-page="Number(activeEditSelectCardTab.replace('edit_select_', '')) + 1"
-                @current-change="handleEditSelectCardPageChange"
-              ></el-pagination>
-              <div class="completed-info">
-                已选择 {{ getSelectedNewCardCount() }} / {{ deliverForm.quantity }} 个新卡密
-              </div>
-            </div>
-          </div>
-        </template>
-        
+        <!-- 保留备注输入框 -->
         <el-form-item label="备注" prop="remark">
           <el-input
             v-model="deliverForm.remark"
@@ -1522,6 +1091,7 @@ const deliverForm = reactive({
   deliveryMethod: '',
   selectedCardId: '',
   currentCardInfo: '', // 添加当前卡密信息属性
+  newCardInfo: '', // 添加新卡密信息统一输入框
   quantity: 1, // 添加数量属性
   multipleCardInfo: [] as Array<{
     cardId?: string;
@@ -1609,15 +1179,10 @@ const deliverRules = reactive<FormRules>({
       message: '请输入成本价', 
       trigger: 'blur',
       validator: (rule, value, callback) => {
-        // 只在非自动发货时验证
-        if (deliverForm.deliveryMethod !== '自动发货') {
-          if (!value && value !== 0) {
-            callback(new Error('请输入成本价'))
-          } else if (typeof value !== 'number') {
-            callback(new Error('成本价必须为数字'))
-          } else {
-            callback()
-          }
+        if (!value && value !== 0) {
+          callback(new Error('请输入成本价'))
+        } else if (typeof value !== 'number') {
+          callback(new Error('成本价必须为数字'))
         } else {
           callback()
         }
@@ -1626,12 +1191,12 @@ const deliverRules = reactive<FormRules>({
   ],
   cardInfo: [
     { 
-      required: false, 
+      required: true, 
       message: '请输入卡密信息', 
       trigger: 'blur',
       validator: (rule, value, callback) => {
-        // 只在非编辑模式且非自动发货时验证，编辑模式下新卡密信息为选填
-        if (!isEditingDeliveryInfo.value && deliverForm.deliveryMethod !== '自动发货') {
+        // 验证卡密信息，不区分自动发货和手动发货
+        if (!isEditingDeliveryInfo.value) {
           if (!value) {
             callback(new Error('请输入卡密信息'))
           } else {
@@ -1644,80 +1209,51 @@ const deliverRules = reactive<FormRules>({
       }
     }
   ],
-  selectedCardId: [
-    { 
-      required: true, 
-      message: '请选择卡密', 
-      trigger: 'change',
-      validator: (rule, value, callback) => {
-        // 只在自动发货且不是编辑模式时验证
-        if (deliverForm.deliveryMethod === '自动发货' && !isEditingDeliveryInfo.value) {
-          if (!value) {
-            callback(new Error('请选择卡密'))
-          } else {
-            callback()
-          }
-        } else {
-          callback()
-        }
-      }
-    }
-  ]
+
 })
 
 // 修改发货处理函数，使用弹窗表单
 const handleDeliver = (row: any) => {
+  // 复用发货表单
   deliverForm.id = row.id
   deliverForm.orderId = row.orderId
   deliverForm.productName = row.productName
   deliverForm.category = row.category
+  deliverForm.costPrice = row.costPrice || 0
+  deliverForm.remark = row.remark || ''
   deliverForm.deliveryMethod = row.deliveryMethod
-  deliverForm.selectedCardId = ''
   deliverForm.quantity = row.quantity || 1
-  deliverForm.selectedCardIds = []
+  deliverForm.selectedCardId = ''
+  deliverForm.newCardInfo = '' // 清空新卡密信息
   
-  // 初始化多卡密信息数组
-  if (row.quantity > 1) {
-    // 清空现有数据
+  // 初始化单卡密或多卡密信息
+  if (row.quantity === 1) {
+    deliverForm.cardInfo = row.cardInfo || ''
+    deliverForm.cardId = row.cardId || ''  // 添加当前卡密ID
+    deliverForm.currentCardInfo = row.cardInfo || '' // 保存当前卡密信息
+  } else {
+    // 初始化多卡密信息
     deliverForm.multipleCardInfo = []
     
-    // 创建数组，长度与购买数量一致
-    for (let i = 0; i < row.quantity; i++) {
-      deliverForm.multipleCardInfo.push({
-        cardId: '',
-        cardInfo: '',
-        selectedCardId: '',
-        newCardInfo: '',
-        costPrice: 0
-      })
-    }
-  }
-  
-  // 如果是非自动发货，则生成卡密信息和ID
-  if (row.deliveryMethod !== '自动发货') {
-    if (row.quantity === 1) {
-      const generatedCard = generateCardInfo(row.category, row.productName)
-      deliverForm.cardInfo = generatedCard.cardInfo
-      deliverForm.cardId = generatedCard.cardId
+    // 如果row中有多卡密信息，则使用它
+    if (row.multipleCardInfo && row.multipleCardInfo.length > 0) {
+      deliverForm.multipleCardInfo = JSON.parse(JSON.stringify(row.multipleCardInfo))
     } else {
-      // 为每个卡密生成信息
+      // 否则创建临时的多卡密信息
       for (let i = 0; i < row.quantity; i++) {
         const generatedCard = generateCardInfo(row.category, row.productName)
-        if (deliverForm.multipleCardInfo[i]) {
-          deliverForm.multipleCardInfo[i].cardInfo = generatedCard.cardInfo
-          deliverForm.multipleCardInfo[i].cardId = generatedCard.cardId
-        }
+        deliverForm.multipleCardInfo.push({
+          cardId: generatedCard.cardId,
+          cardInfo: generatedCard.cardInfo,
+          selectedCardId: '',
+          newCardInfo: '',
+          costPrice: row.costPrice ? row.costPrice / row.quantity : 0
+        })
       }
     }
-  } else {
-    deliverForm.cardInfo = ''
-    deliverForm.cardId = ''
   }
   
-  deliverForm.costPrice = 0
-  deliverForm.remark = ''
-  
-  // 重置对话框标题和编辑状态
+  // 更改对话框标题
   deliverDialogTitle.value = '订单发货'
   isEditingDeliveryInfo.value = false
   deliverDialogVisible.value = true
@@ -1734,12 +1270,13 @@ const handleEditDeliveryInfo = (row: any) => {
   deliverForm.remark = row.remark || ''
   deliverForm.deliveryMethod = row.deliveryMethod
   deliverForm.quantity = row.quantity || 1
+  deliverForm.newCardInfo = '' // 清空新卡密信息
   
   // 初始化单卡密或多卡密信息
   if (row.quantity === 1) {
     deliverForm.cardInfo = row.cardInfo || ''
-    deliverForm.cardId = row.cardId || ''  // 添加当前卡密ID
-    deliverForm.currentCardInfo = row.cardInfo || '' // 保存当前卡密信息
+  deliverForm.cardId = row.cardId || ''  // 添加当前卡密ID
+  deliverForm.currentCardInfo = row.cardInfo || '' // 保存当前卡密信息
   } else {
     // 初始化多卡密信息
     deliverForm.multipleCardInfo = []
@@ -1783,27 +1320,27 @@ const submitDeliverForm = async () => {
         if (isEditingDeliveryInfo.value) {
           // 单卡密场景
           if (deliverForm.quantity === 1) {
-            // 如果是自动发货模式且选择了新卡密
-            if (deliverForm.deliveryMethod === '自动发货' && deliverForm.selectedCardId) {
-              const selectedCard = availableCards.value.find(card => card.cardId === deliverForm.selectedCardId)
-              if (selectedCard) {
-                // 更新卡密信息和ID
-                orderList.value[index].cardInfo = selectedCard.cardInfo
-                orderList.value[index].cardId = selectedCard.cardId
-                orderList.value[index].costPrice = selectedCard.cost
-                
-                // 在实际应用中，这里应该将原卡密标记为可用，新卡密标记为已售出
-                ElMessage.success(`订单 ${deliverForm.orderId} 卡密信息已更新为新卡密 ${selectedCard.cardId}`)
-              }
-            } else if (deliverForm.deliveryMethod !== '自动发货') {
-              // 手动发货模式，只有在用户输入了新卡密信息时才更新
-              if (deliverForm.cardInfo) {
-                orderList.value[index].cardInfo = deliverForm.cardInfo
-                ElMessage.success(`订单 ${deliverForm.orderId} 卡密信息已更新`)
-              }
+          // 如果是自动发货模式且选择了新卡密
+          if (deliverForm.deliveryMethod === '自动发货' && deliverForm.selectedCardId) {
+            const selectedCard = availableCards.value.find(card => card.cardId === deliverForm.selectedCardId)
+            if (selectedCard) {
+              // 更新卡密信息和ID
+              orderList.value[index].cardInfo = selectedCard.cardInfo
+              orderList.value[index].cardId = selectedCard.cardId
+              orderList.value[index].costPrice = selectedCard.cost
               
-              // 成本价总是更新
-              orderList.value[index].costPrice = deliverForm.costPrice
+              // 在实际应用中，这里应该将原卡密标记为可用，新卡密标记为已售出
+              ElMessage.success(`订单 ${deliverForm.orderId} 卡密信息已更新为新卡密 ${selectedCard.cardId}`)
+            }
+          } else if (deliverForm.deliveryMethod !== '自动发货') {
+            // 手动发货模式，只有在用户输入了新卡密信息时才更新
+            if (deliverForm.cardInfo) {
+              orderList.value[index].cardInfo = deliverForm.cardInfo
+              ElMessage.success(`订单 ${deliverForm.orderId} 卡密信息已更新`)
+            }
+            
+            // 成本价总是更新
+            orderList.value[index].costPrice = deliverForm.costPrice
             }
           }
           // 多卡密场景
@@ -1854,18 +1391,18 @@ const submitDeliverForm = async () => {
           if (allIndex !== -1) {
             // 复制相同的更新操作到 allOrderList
             if (deliverForm.quantity === 1) {
-              if (deliverForm.deliveryMethod === '自动发货' && deliverForm.selectedCardId) {
-                const selectedCard = availableCards.value.find(card => card.cardId === deliverForm.selectedCardId)
-                if (selectedCard) {
-                  allOrderList.value[allIndex].cardInfo = selectedCard.cardInfo
-                  allOrderList.value[allIndex].cardId = selectedCard.cardId
-                  allOrderList.value[allIndex].costPrice = selectedCard.cost
-                }
-              } else if (deliverForm.deliveryMethod !== '自动发货') {
-                if (deliverForm.cardInfo) {
-                  allOrderList.value[allIndex].cardInfo = deliverForm.cardInfo
-                }
-                allOrderList.value[allIndex].costPrice = deliverForm.costPrice
+            if (deliverForm.deliveryMethod === '自动发货' && deliverForm.selectedCardId) {
+              const selectedCard = availableCards.value.find(card => card.cardId === deliverForm.selectedCardId)
+              if (selectedCard) {
+                allOrderList.value[allIndex].cardInfo = selectedCard.cardInfo
+                allOrderList.value[allIndex].cardId = selectedCard.cardId
+                allOrderList.value[allIndex].costPrice = selectedCard.cost
+              }
+            } else if (deliverForm.deliveryMethod !== '自动发货') {
+              if (deliverForm.cardInfo) {
+                allOrderList.value[allIndex].cardInfo = deliverForm.cardInfo
+              }
+              allOrderList.value[allIndex].costPrice = deliverForm.costPrice
               }
             } else if (deliverForm.quantity > 1) {
               // 复制多卡密更新
@@ -1887,10 +1424,10 @@ const submitDeliverForm = async () => {
         } else {
           // 原有的发货逻辑 - 单卡密
           if (deliverForm.quantity === 1) {
-            orderList.value[index].status = '已完成'
-            orderList.value[index].cardInfo = deliverForm.cardInfo
-            orderList.value[index].cardId = deliverForm.cardId
-            orderList.value[index].costPrice = deliverForm.costPrice
+          orderList.value[index].status = '已完成'
+          orderList.value[index].cardInfo = deliverForm.cardInfo
+          orderList.value[index].cardId = deliverForm.cardId
+          orderList.value[index].costPrice = deliverForm.costPrice
             
             // 如果是自动发货，将选中的卡密标记为已售出
             if (deliverForm.deliveryMethod === '自动发货' && deliverForm.selectedCardId) {
@@ -1931,9 +1468,9 @@ const submitDeliverForm = async () => {
             allOrderList.value[allIndex].status = '已完成'
             
             if (deliverForm.quantity === 1) {
-              allOrderList.value[allIndex].cardInfo = deliverForm.cardInfo
-              allOrderList.value[allIndex].cardId = deliverForm.cardId
-              allOrderList.value[allIndex].costPrice = deliverForm.costPrice
+            allOrderList.value[allIndex].cardInfo = deliverForm.cardInfo
+            allOrderList.value[allIndex].cardId = deliverForm.cardId
+            allOrderList.value[allIndex].costPrice = deliverForm.costPrice
             } else {
               allOrderList.value[allIndex].multipleCardInfo = JSON.parse(JSON.stringify(deliverForm.multipleCardInfo))
               allOrderList.value[allIndex].costPrice = deliverForm.costPrice
@@ -2290,8 +1827,8 @@ const addDemoOrder = () => {
     category: '谷歌邮箱',
     originalPrice: '¥12.99',
     purchasePrice: '¥12.00',
-    quantity: 2,
-    totalPrice: '¥25.98',
+    quantity: 1,
+    totalPrice: '¥12.99',
     fee: '¥0.80',
     status: '已支付',
     cardInfo: '',
@@ -2578,8 +2115,8 @@ const addDemoOrder = () => {
     category: 'Twitter账号',
     originalPrice: '¥49.99',
     purchasePrice: '¥45.00',
-    quantity: 2,
-    totalPrice: '¥99.98',
+    quantity: 1,
+    totalPrice: '¥49.99',
     fee: '¥3.00',
     status: '已支付',
     cardInfo: '',
@@ -2871,27 +2408,52 @@ const showBatchImportDialog = () => {
   batchImportDialogVisible.value = true
 }
 
+// 修改批量导入卡密函数，直接将内容设置到deliverForm.cardInfo或deliverForm.newCardInfo
 const importBatchCards = () => {
   // 解析输入的卡密信息
   const cardInfos = batchImportContent.value.split('\n').filter(line => line.trim() !== '')
   
-  // 将卡密信息添加到deliverForm.multipleCardInfo中
-  cardInfos.forEach(cardInfo => {
-    const [cardId, username, password, ...rest] = cardInfo.split('####')
-    deliverForm.multipleCardInfo.push({
-      cardId,
-      cardInfo: `账号：${username}\n密码：${password}\n卡密ID：${cardId}`,
-      selectedCardId: cardId,
-      newCardInfo: `账号：${username}\n密码：${password}\n卡密ID：${cardId}`,
-      costPrice: 0
-    })
-  })
+  // 自动发货模式下的处理
+  if (deliverForm.deliveryMethod === '自动发货') {
+    // 根据是否处于编辑模式选择正确的表单字段
+    if (isEditingDeliveryInfo.value) {
+      // 编辑模式下，更新newCardInfo
+      deliverForm.newCardInfo = cardInfos.join('\n')
+    } else {
+      // 新增模式下，更新cardInfo
+      deliverForm.cardInfo = cardInfos.join('\n')
+    }
+  }
   
   // 重置输入框
   batchImportContent.value = ''
   
   // 关闭弹窗
   batchImportDialogVisible.value = false
+  
+  ElMessage.success(`成功导入${cardInfos.length}个卡密信息`)
+}
+
+// 一键生成所有卡密 - 直接生成到单一文本框
+const generateAllCards = () => {
+  // 根据商品分类和数量生成卡密
+  let generatedCardInfo = []
+  
+  for (let i = 0; i < deliverForm.quantity; i++) {
+    const card = generateCardInfo(deliverForm.category, deliverForm.productName)
+    generatedCardInfo.push(card.cardInfo)
+  }
+  
+  // 设置到表单
+  if (isEditingDeliveryInfo.value) {
+    // 编辑模式
+    deliverForm.newCardInfo = generatedCardInfo.join('\n\n')
+  } else {
+    // 新增模式
+    deliverForm.cardInfo = generatedCardInfo.join('\n\n')
+  }
+  
+  ElMessage.success(`已成功生成${deliverForm.quantity}个卡密信息`)
 }
 
 const handleBatchSelectionChange = (selection: OrderItem[]) => {
