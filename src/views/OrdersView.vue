@@ -125,6 +125,8 @@
               <span class="amount-value" style="color: #67C23A;">{{ successOrders }}</span>
               <span style="margin-left: 20px;">订单总金额：</span>
               <span class="amount-value">¥{{ totalAmount.toFixed(2) }}</span>
+              <span style="margin-left: 20px;">成功金额：</span>
+              <span class="amount-value" style="color: #67C23A;">¥{{ successAmount.toFixed(2) }}</span>
               <span style="margin-left: 20px;">总手续费：</span>
               <span class="amount-value" style="color: #E6A23C;">¥{{ totalFee.toFixed(2) }}</span>
               <span style="margin-left: 20px;">总入账金额：</span>
@@ -1794,6 +1796,17 @@ const generateCardInfo = (category: string, productName: string) => {
     }
   }
 }
+
+// 定义成功金额计算属性
+const successAmount = computed(() => {
+  // 筛选状态为已完成的订单
+  const successOrders = filteredOrderList.value.filter(order => order.status === '已完成');
+  // 计算总金额
+  return successOrders.reduce((total, order) => {
+    const price = parseFloat(order.totalPrice.replace('¥', ''));
+    return total + price;
+  }, 0);
+});
 
 // 添加示例订单数据，覆盖所有流程图中的状态
 const addDemoOrder = () => {
