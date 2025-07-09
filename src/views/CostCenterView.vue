@@ -8,8 +8,8 @@
             <el-option label="人工录入成本" value="manual_entry"></el-option>
             <el-option label="批次成本" value="batch"></el-option>
             <el-option label="批次成本修改" value="batch_update"></el-option>
-            <el-option label="手动发货" value="manual_delivery"></el-option>
-            <el-option label="手动发货成本修改" value="manual_delivery_update"></el-option>
+            <el-option label="人工发货" value="manual_delivery"></el-option>
+            <el-option label="人工发货成本修改" value="manual_delivery_update"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="金额类型">
@@ -57,7 +57,7 @@
         </el-col>
         <el-col :span="6">
           <el-card shadow="hover" class="summary-card">
-            <div class="summary-title">手动发货成本</div>
+            <div class="summary-title">人工发货成本</div>
             <div class="summary-value">¥{{ Math.abs(manualDeliveryCost).toFixed(2) }}</div>
           </el-card>
         </el-col>
@@ -246,7 +246,7 @@ const mockCostData: CostRecord[] = [
     amountType: 'increase',
     relatedId: 'ORDER-20231026-005',
     amount: 25.5,
-    remarks: '手动发货类型订单在发货弹窗内输入的备注',
+    remarks: '人工发货类型订单在发货弹窗内输入的备注',
     createdAt: '2023-10-26 11:30:00',
     operator: '管理员B',
     source: 'system'
@@ -307,7 +307,7 @@ const mockCostData: CostRecord[] = [
     amountType: 'increase',
     relatedId: 'ORDER-20231030-008',
     amount: 75.0,
-    remarks: '手动发货类型订单在发货弹窗内输入的备注',
+    remarks: '人工发货类型订单在发货弹窗内输入的备注',
     createdAt: '2023-10-30 09:15:00',
     operator: '管理员B',
     source: 'system'
@@ -335,7 +335,7 @@ const mockCostData: CostRecord[] = [
     amountType: 'increase',
     relatedId: 'ORDER-20231101-001',
     amount: 50.0,
-    remarks: '手动发货类型订单在发货弹窗内输入的备注',
+    remarks: '人工发货类型订单在发货弹窗内输入的备注',
     createdAt: '2023-11-01 10:00:00',
     operator: '管理员C',
     source: 'system'
@@ -346,7 +346,7 @@ const mockCostData: CostRecord[] = [
     amountType: 'increase',
     relatedId: 'ORDER-20231026-005',
     amount: 4.5,
-    remarks: '商品订单页面，手动发货类型，已完成订单，点击操作列的修改卡密信息，编辑卡密信息弹窗内输入的备注',
+    remarks: '商品订单页面，人工发货类型，已完成订单，点击操作列的修改卡密信息，编辑卡密信息弹窗内输入的备注',
     createdAt: '2023-11-01 11:00:00',
     operator: '管理员B',
     source: 'system',
@@ -361,7 +361,7 @@ const mockCostData: CostRecord[] = [
     amountType: 'decrease',
     relatedId: 'ORDER-20231101-001',
     amount: 5.0,
-    remarks: '商品订单页面，手动发货类型，已完成订单，点击操作列的修改卡密信息，编辑卡密信息弹窗内输入的备注',
+    remarks: '商品订单页面，人工发货类型，已完成订单，点击操作列的修改卡密信息，编辑卡密信息弹窗内输入的备注',
     createdAt: '2023-11-02 14:20:00',
     operator: '管理员C',
     source: 'system',
@@ -479,9 +479,9 @@ const formatType = (type: CostRecord['type']) => {
     case 'batch_update':
       return '批次成本修改'
     case 'manual_delivery':
-      return '手动发货'
+      return '人工发货'
     case 'manual_delivery_update':
-      return '手动发货成本修改'
+      return '人工发货成本修改'
     case 'manual_entry':
       return '人工录入成本'
     default:
@@ -598,7 +598,7 @@ const submitForm = async () => {
   if (!costFormRef.value) return;
   await costFormRef.value.validate((valid) => {
     if (valid) {
-      // 确保批次成本和手动发货类型的金额类型只能为"增加"
+      // 确保批次成本和人工发货类型的金额类型只能为"增加"
       if (costForm.type === 'batch' || costForm.type === 'manual_delivery') {
         costForm.amountType = 'increase';
       }
@@ -664,7 +664,7 @@ const exportCostData = () => {
 }
 
 const handleTypeChange = () => {
-  // 当选择批次成本或手动发货类型时，自动将金额类型设置为"增加"
+  // 当选择批次成本或人工发货类型时，自动将金额类型设置为"增加"
   if (costForm.type === 'batch' || costForm.type === 'manual_delivery') {
     costForm.amountType = 'increase';
   }
