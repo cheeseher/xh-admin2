@@ -231,9 +231,6 @@
             <el-table-column prop="cardInfo" label="卡密信息" min-width="120">
               <template #default="scope">
                 <div>
-                  <div v-if="scope.row.deliveryMethod === '自动发货' && scope.row.cardId">
-                    <span class="card-id">ID: {{ scope.row.cardId }}</span>
-                  </div>
                   <el-button link type="primary" @click="viewCardInfo(scope.row)">查看</el-button>
                 </div>
               </template>
