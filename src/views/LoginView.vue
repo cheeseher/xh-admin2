@@ -83,9 +83,9 @@ const captchaUrl = ref('https://picsum.photos/120/40?random=' + Math.random())
 
 // 登录表单数据
 const loginForm = reactive({
-  username: '',
-  password: '',
-  captcha: '',
+  username: 'admin',
+  password: '123456',
+  captcha: '1234',
   remember: false
 })
 
