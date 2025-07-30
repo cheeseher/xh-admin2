@@ -2969,7 +2969,7 @@ const submitSortEdit = async () => {
       )
       
       if (duplicateSort) {
-        ElMessage.error(`排序值 ${sortEditForm.newSort} 已被商品"${duplicateSort.name}"使用，请选择其他排序值`)
+        ElMessage.error(`该排序已被占用`)
         return
       }
       
