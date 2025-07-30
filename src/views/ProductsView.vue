@@ -133,6 +133,19 @@
             <span class="status-text">{{ scope.row.statusBool ? '上架中' : '已下架' }}</span>
           </template>
         </el-table-column>
+        <el-table-column prop="sort" label="排序" width="110">
+          <template #default="scope">
+            <div class="sort-display">
+              <span class="sort-value">{{ scope.row.sort || '-' }}</span>
+              <el-icon 
+                class="edit-icon" 
+                @click="handleEditSort(scope.row)"
+              >
+                <Edit />
+              </el-icon>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
         <el-table-column label="操作" width="120" fixed="right">
@@ -827,6 +840,43 @@
       </template>
     </el-dialog>
 
+
+
+    <!-- 排序编辑对话框 -->
+    <el-dialog
+      v-model="sortEditDialogVisible"
+      title="编辑商品排序"
+      width="400px"
+      :destroy-on-close="true"
+    >
+      <el-form :model="sortEditForm" label-width="80px" :rules="sortEditRules" ref="sortEditFormRef">
+        <el-form-item label="商品名称">
+          <el-input v-model="sortEditForm.productName" disabled></el-input>
+        </el-form-item>
+        <el-form-item label="当前排序">
+          <el-input v-model="sortEditForm.currentSort" disabled></el-input>
+        </el-form-item>
+        <el-form-item label="新排序值" prop="newSort" required>
+          <el-input-number 
+            v-model="sortEditForm.newSort" 
+            :min="1" 
+            :max="9999" 
+            :precision="0" 
+            :step="1" 
+            style="width: 100%;" 
+            placeholder="请输入排序值（1-9999）"
+          ></el-input-number>
+          <div class="form-tip">数值越小排序越靠前</div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="sortEditDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitSortEdit" :loading="sortEditSubmitting">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
     <!-- 批量修改成本价弹窗 -->
     <el-dialog
       v-model="batchUpdateCostDialogVisible"
@@ -895,7 +945,9 @@ import {
   InfoFilled, 
   Picture, 
   Upload,
-  // QuestionFilled, UploadFilled, Edit, Box, Goods are unused
+  Edit,
+  EditPen,
+  // QuestionFilled, UploadFilled, Box, Goods are unused
 } from '@element-plus/icons-vue'
 import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
@@ -932,6 +984,8 @@ const tableData = ref([
     inventoryType: '卡密',
     autoReleaseCycle: 7,
     autoDisableDays: 30,
+    sort: 10,
+    sortRemark: '热门商品，优先展示',
     packageInfo: [
       { id: 'pkg001', name: '10个/包', price: 150.00, stock: 50, type: 'fixed' },
       { id: 'pkg002', name: '50个/包', price: 700.00, stock: 20, type: 'fixed' },
@@ -958,6 +1012,8 @@ const tableData = ref([
     inventoryType: '账号密码',
     autoReleaseCycle: 0,
     autoDisableDays: 0,
+    sort: 20,
+    sortRemark: '新品推荐',
     packageInfo: []
   },
   {
@@ -981,6 +1037,8 @@ const tableData = ref([
     inventoryType: '卡密',
     autoReleaseCycle: 15,
     autoDisableDays: 60,
+    sort: 30,
+    sortRemark: '企业级邮箱',
     packageInfo: []
   },
   {
@@ -1004,6 +1062,8 @@ const tableData = ref([
     inventoryType: '账号密码',
     autoReleaseCycle: 0,
     autoDisableDays: 0,
+    sort: 40,
+    sortRemark: '老账号，权重高',
     packageInfo: [
       { id: 'pkg003', name: '小包', price: 280.00, stock: 15, type: 'fixed' },
     ]
@@ -1892,6 +1952,9 @@ onMounted(() => {
   
   // 获取商品列表
   getProductList()
+  
+  // 初始化时对表格数据进行排序
+  sortTableData()
 })
 
 // 预验算相关
@@ -2855,6 +2918,8 @@ const cancelSimulatedUpload = (index: number) => {
   pkg.fileName = '';
 }
 
+
+
 // 批量修改成本价相关
 const batchUpdateCostDialogVisible = ref(false)
 const batchUpdateCostForm = reactive({
@@ -2863,6 +2928,90 @@ const batchUpdateCostForm = reactive({
   remark: ''
 })
 const batchUpdating = ref(false)
+
+
+
+// 排序表格数据
+const sortTableData = () => {
+  tableData.value.sort((a, b) => {
+    // 首先按分类排序
+    if (a.category !== b.category) {
+      return a.category.localeCompare(b.category)
+    }
+    // 然后按排序值排序
+    const sortA = a.sort || 9999
+    const sortB = b.sort || 9999
+    return sortA - sortB
+  })
+}
+
+
+
+// 处理编辑排序
+const handleEditSort = (row: any) => {
+  sortEditForm.productId = row.id
+  sortEditForm.productName = row.name
+  sortEditForm.currentSort = row.sort || '-'
+  sortEditForm.newSort = row.sort || 100
+  sortEditDialogVisible.value = true
+}
+
+// 提交排序编辑
+const submitSortEdit = async () => {
+  if (!sortEditFormRef.value) return
+  
+  await sortEditFormRef.value.validate((valid, fields) => {
+    if (valid) {
+      // 检查是否有重复的排序值
+      const duplicateSort = tableData.value.find(item => 
+        item.id !== sortEditForm.productId && 
+        item.sort === sortEditForm.newSort
+      )
+      
+      if (duplicateSort) {
+        ElMessage.error(`排序值 ${sortEditForm.newSort} 已被商品"${duplicateSort.name}"使用，请选择其他排序值`)
+        return
+      }
+      
+      sortEditSubmitting.value = true
+      
+      // 模拟API请求
+      setTimeout(() => {
+        // 更新本地数据
+        const product = tableData.value.find(item => item.id === sortEditForm.productId)
+        if (product) {
+          product.sort = sortEditForm.newSort
+        }
+        
+        ElMessage.success(`商品"${sortEditForm.productName}"排序已更新为 ${sortEditForm.newSort}`)
+        sortEditDialogVisible.value = false
+        sortEditSubmitting.value = false
+        
+        // 重新排序表格数据
+        sortTableData()
+      }, 800)
+    } else {
+      console.log('表单验证失败', fields)
+    }
+  })
+}
+
+// 排序编辑相关
+const sortEditDialogVisible = ref(false)
+const sortEditFormRef = ref<FormInstance>()
+const sortEditSubmitting = ref(false)
+const sortEditForm = reactive({
+  productId: '',
+  productName: '',
+  currentSort: '',
+  newSort: 100
+})
+const sortEditRules = reactive<FormRules>({
+  newSort: [
+    { required: true, message: '请输入排序值', trigger: 'blur' },
+    { type: 'number', min: 1, max: 9999, message: '排序值必须在1-9999之间', trigger: 'blur' }
+  ]
+})
 
 // 处理批量修改成本价
 const handleBatchUpdateCost = () => {
@@ -4167,4 +4316,43 @@ const submitBatchUpdateCost = async () => {
   color: #E6A23C;
   font-weight: bold;
 }
+
+/* 排序显示样式 */
+.sort-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.sort-value {
+  color: #303133;
+  font-size: 14px;
+}
+
+.edit-icon {
+  color: #409eff;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: bold;
+  stroke-width: 2;
+}
+
+.edit-icon:hover {
+  color: #66b1ff;
+  transform: scale(1.1);
+}
+
+/* 排序提示样式 */
+.sort-tip {
+  margin-top: 8px !important;
+  padding: 8px 12px;
+  background-color: #f0f9ff;
+  border-left: 3px solid #409eff;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #409eff;
+}
+
 </style>

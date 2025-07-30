@@ -110,6 +110,15 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/inventory',
+    name: 'inventory',
+    component: () => import('../views/InventoryView.vue'),
+    meta: {
+      title: '库存管理',
+      requiresAuth: true
+    }
+  },
+  {
     path: '/system',
     name: 'system',
     redirect: '/system/settings',
