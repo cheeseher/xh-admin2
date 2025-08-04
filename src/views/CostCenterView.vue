@@ -21,6 +21,18 @@
         <el-form-item label="关联ID">
           <el-input v-model="filterForm.relatedId" placeholder="请输入关联ID" clearable />
         </el-form-item>
+        <el-form-item label="商品分类">
+          <el-select v-model="filterForm.productCategory" placeholder="请选择商品分类" clearable style="width: 168px">
+            <el-option label="谷歌邮箱" value="谷歌邮箱"></el-option>
+            <el-option label="微软邮箱" value="微软邮箱"></el-option>
+            <el-option label="Instagram账号" value="Instagram账号"></el-option>
+            <el-option label="Twitter账号" value="Twitter账号"></el-option>
+            <el-option label="Facebook账号" value="Facebook账号"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="商品名称">
+          <el-input v-model="filterForm.productName" placeholder="请输入商品名称" clearable />
+        </el-form-item>
         <el-form-item label="日期范围">
           <el-date-picker
             v-model="filterForm.dateRange"
@@ -96,11 +108,35 @@
           <template #default="{ row }">
             <template v-if="row.type === 'manual_entry'">-</template>
             <template v-else-if="row.type === 'manual_delivery' || row.type === 'manual_delivery_update'">
-              <span>订单ID</span>
+              <span>{{ row.relatedId }}</span>
             </template>
             <template v-else-if="row.type === 'batch' || row.type === 'batch_update'">
-              <span>批次ID</span>
+              <span>{{ row.relatedId }}</span>
             </template>
+          </template>
+        </el-table-column>
+        <el-table-column prop="productCategory" label="商品分类" min-width="120">
+          <template #default="{ row }">
+            <template v-if="row.productCategory">
+              <el-tag type="info" size="small">{{ row.productCategory }}</el-tag>
+            </template>
+            <template v-else>-</template>
+          </template>
+        </el-table-column>
+        <el-table-column prop="productName" label="商品名称" min-width="150">
+          <template #default="{ row }">
+            <template v-if="row.productName">
+              <span class="product-name">{{ row.productName }}</span>
+            </template>
+            <template v-else>-</template>
+          </template>
+        </el-table-column>
+        <el-table-column prop="quantity" label="数量" width="100">
+          <template #default="{ row }">
+            <template v-if="row.quantity !== undefined">
+              <span class="quantity">{{ row.quantity }}</span>
+            </template>
+            <template v-else>-</template>
           </template>
         </el-table-column>
         <el-table-column prop="amount" label="成本金额" sortable min-width="150">
@@ -208,6 +244,9 @@ interface CostRecord {
   type: 'manual_delivery' | 'manual_entry' | 'batch' | 'batch_update' | 'manual_delivery_update'
   amountType: 'increase' | 'decrease'
   relatedId: string
+  productCategory?: string // 商品分类
+  productName?: string // 商品名称
+  quantity?: number // 数量
   amount: number
   remarks: string
   createdAt: string
@@ -234,7 +273,10 @@ const mockCostData: CostRecord[] = [
     type: 'batch',
     amountType: 'increase',
     relatedId: 'P20240701001',
-    amount: 500.0,
+    productCategory: '谷歌邮箱',
+    productName: 'Gmail邮箱 - 自动发货 (高质量Gmail账号)',
+    quantity: 150,
+    amount: 825.0,
     remarks: '批量导入库存或者新增库存的时候输入的备注',
     createdAt: '2023-10-26 10:00:00',
     operator: '管理员A',
@@ -245,7 +287,10 @@ const mockCostData: CostRecord[] = [
     type: 'manual_delivery',
     amountType: 'increase',
     relatedId: 'ORDER-20231026-005',
-    amount: 25.5,
+    productCategory: 'Instagram账号',
+    productName: 'Instagram活跃账号 - 手动发货 (真人活跃粉)',
+    quantity: 1,
+    amount: 10.0,
     remarks: '人工发货类型订单在发货弹窗内输入的备注',
     createdAt: '2023-10-26 11:30:00',
     operator: '管理员B',
@@ -278,7 +323,10 @@ const mockCostData: CostRecord[] = [
     type: 'batch',
     amountType: 'increase',
     relatedId: 'P20240702005',
-    amount: 250.0,
+    productCategory: '微软邮箱',
+    productName: '微软邮箱 - Outlook (企业邮箱)',
+    quantity: 5,
+    amount: 20.0,
     remarks: '批量导入库存或者新增库存的时候输入的备注',
     createdAt: '2023-10-28 12:00:00',
     operator: '管理员D',
@@ -289,16 +337,19 @@ const mockCostData: CostRecord[] = [
     type: 'batch_update',
     amountType: 'decrease',
     relatedId: 'P20240701001',
-    amount: 100.0,
+    productCategory: '谷歌邮箱',
+    productName: 'Gmail邮箱 - 自动发货 (高质量Gmail账号)',
+    quantity: 150,
+    amount: 150.0,
     remarks: '库存管理抽屉页面，批量修改成本价弹窗内输入的备注',
     createdAt: '2023-10-29 14:30:00',
     operator: '管理员A',
     source: 'system',
     changeDetail: {
-      from: 5.0,
-      to: 4.0,
-      totalFrom: 500.0,
-      totalTo: 400.0
+      from: 5.5,
+      to: 4.5,
+      totalFrom: 825.0,
+      totalTo: 675.0
     }
   },
   {
@@ -306,7 +357,10 @@ const mockCostData: CostRecord[] = [
     type: 'manual_delivery',
     amountType: 'increase',
     relatedId: 'ORDER-20231030-008',
-    amount: 75.0,
+    productCategory: 'Twitter账号',
+    productName: 'Twitter老账号 - 随机粉丝数 (带推文记录)',
+    quantity: 3,
+    amount: 37.5,
     remarks: '人工发货类型订单在发货弹窗内输入的备注',
     createdAt: '2023-10-30 09:15:00',
     operator: '管理员B',
@@ -317,16 +371,19 @@ const mockCostData: CostRecord[] = [
     type: 'batch_update',
     amountType: 'increase',
     relatedId: 'P20240702005',
-    amount: 50.0,
+    productCategory: '微软邮箱',
+    productName: '微软邮箱 - Outlook (企业邮箱)',
+    quantity: 5,
+    amount: 2.5,
     remarks: '库存管理抽屉页面，批量修改成本价弹窗内输入的备注',
     createdAt: '2023-10-31 10:00:00',
     operator: '管理员D',
     source: 'system',
     changeDetail: {
-      from: 2.5,
-      to: 3.0,
-      totalFrom: 250.0,
-      totalTo: 300.0
+      from: 4.0,
+      to: 4.5,
+      totalFrom: 20.0,
+      totalTo: 22.5
     }
   },
   {
@@ -334,7 +391,10 @@ const mockCostData: CostRecord[] = [
     type: 'manual_delivery',
     amountType: 'increase',
     relatedId: 'ORDER-20231101-001',
-    amount: 50.0,
+    productCategory: 'Facebook账号',
+    productName: 'Facebook账号（美国）',
+    quantity: 2,
+    amount: 25.0,
     remarks: '人工发货类型订单在发货弹窗内输入的备注',
     createdAt: '2023-11-01 10:00:00',
     operator: '管理员C',
@@ -345,14 +405,17 @@ const mockCostData: CostRecord[] = [
     type: 'manual_delivery_update',
     amountType: 'increase',
     relatedId: 'ORDER-20231026-005',
-    amount: 4.5,
+    productCategory: 'Instagram账号',
+    productName: 'Instagram活跃账号 - 手动发货 (真人活跃粉)',
+    quantity: 1,
+    amount: 2.0,
     remarks: '商品订单页面，人工发货类型，已完成订单，点击操作列的修改卡密信息，编辑卡密信息弹窗内输入的备注',
     createdAt: '2023-11-01 11:00:00',
     operator: '管理员B',
     source: 'system',
     changeDetail: {
-      from: 25.5,
-      to: 30.0
+      from: 10.0,
+      to: 12.0
     }
   },
   {
@@ -360,14 +423,17 @@ const mockCostData: CostRecord[] = [
     type: 'manual_delivery_update',
     amountType: 'decrease',
     relatedId: 'ORDER-20231101-001',
+    productCategory: 'Facebook账号',
+    productName: 'Facebook账号（美国）',
+    quantity: 2,
     amount: 5.0,
     remarks: '商品订单页面，人工发货类型，已完成订单，点击操作列的修改卡密信息，编辑卡密信息弹窗内输入的备注',
     createdAt: '2023-11-02 14:20:00',
     operator: '管理员C',
     source: 'system',
     changeDetail: {
-      from: 50.0,
-      to: 45.0
+      from: 25.0,
+      to: 20.0
     }
   }
 ]
@@ -389,6 +455,8 @@ const filterForm = reactive({
   type: '',
   amountType: '',
   relatedId: '',
+  productCategory: '',
+  productName: '',
   dateRange: [] as string[]
 })
 
@@ -397,6 +465,8 @@ const filteredData = computed(() => {
     const typeMatch = filterForm.type ? item.type === filterForm.type : true;
     const amountTypeMatch = filterForm.amountType ? item.amountType === filterForm.amountType : true;
     const idMatch = filterForm.relatedId ? item.relatedId.includes(filterForm.relatedId) : true;
+    const categoryMatch = filterForm.productCategory ? item.productCategory === filterForm.productCategory : true;
+    const nameMatch = filterForm.productName ? (item.productName && item.productName.includes(filterForm.productName)) : true;
     
     // 日期筛选
     let dateMatch = true;
@@ -409,7 +479,7 @@ const filteredData = computed(() => {
       dateMatch = itemDate >= startDate && itemDate <= endDate;
     }
     
-    return typeMatch && amountTypeMatch && idMatch && dateMatch;
+    return typeMatch && amountTypeMatch && idMatch && categoryMatch && nameMatch && dateMatch;
   });
 });
 
@@ -456,6 +526,8 @@ const resetFilter = () => {
   filterForm.type = '';
   filterForm.amountType = '';
   filterForm.relatedId = '';
+  filterForm.productCategory = '';
+  filterForm.productName = '';
   filterForm.dateRange = [];
   pagination.currentPage = 1;
 }
@@ -726,11 +798,18 @@ const handleTypeChange = () => {
   font-size: 13px;
 }
 
+.product-name {
+  color: #303133;
+}
 
+.quantity {
+  color: #409eff;
+  font-weight: 600;
+}
 
 .dialog-footer-flex {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-</style> 
+</style>
