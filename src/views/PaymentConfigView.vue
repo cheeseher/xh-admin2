@@ -10,18 +10,8 @@
         </div>
       </div>
       
-      <!-- Tabs区域 -->
-      <el-tabs v-model="activePaymentMethod" class="payment-tabs">
-        <el-tab-pane label="微信支付" name="wechat">
-          <payment-channel-list payment-method-key="wechat" />
-        </el-tab-pane>
-        <el-tab-pane label="支付宝支付" name="alipay">
-          <payment-channel-list payment-method-key="alipay" />
-        </el-tab-pane>
-        <el-tab-pane label="USDT支付" name="usdt">
-          <payment-channel-list payment-method-key="usdt" />
-        </el-tab-pane>
-      </el-tabs>
+      <!-- 支付通道配置 -->
+      <PaymentChannelList />
     </el-card>
     
     <!-- 等待时间编辑弹窗 -->
@@ -62,7 +52,6 @@ import PaymentChannelList from '../components/PaymentChannelList.vue';
 import { usePaymentStore } from '../stores/paymentStore';
 
 const paymentStore = usePaymentStore();
-const activePaymentMethod = ref<'wechat' | 'alipay' | 'usdt'>('wechat');
 const waitingTimeDialogVisible = ref(false);
 const saving = ref(false);
 
@@ -129,4 +118,4 @@ const saveWaitingTime = () => {
   display: flex;
   justify-content: flex-end;
 }
-</style> 
+</style>

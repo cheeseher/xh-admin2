@@ -20,25 +20,48 @@
       stripe
       empty-text="暂无通道配置"
       style="width: 100%; margin-top: 16px;">
-      <el-table-column prop="name" label="通道名称" min-width="180" />
-      <el-table-column label="送单权重" width="120" align="center">
+      <el-table-column prop="name" label="通道名称" width="180" />
+      <el-table-column prop="merchantId" label="商户号" width="120" align="center" />
+      <el-table-column prop="merchantKey" label="商户密钥" width="200" align="center">
+          <template #default="{ row }">
+            {{ row.merchantKey.substring(0, 8) }}****
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="支付方式" width="300" align="center">
+          <template #default="{ row }">
+            <div class="payment-methods">
+              <el-tag 
+                v-if="row.supportedPaymentTypes.wechat" 
+                type="success" 
+                size="small" 
+                class="payment-tag"
+              >
+                微信支付 | {{ row.wechatConfig.rate }}% | {{ row.wechatConfig.weight }} | {{ row.wechatConfig.minAmount }}～{{ row.wechatConfig.maxAmount }}
+              </el-tag>
+              <el-tag 
+                v-if="row.supportedPaymentTypes.alipay" 
+                type="primary" 
+                size="small" 
+                class="payment-tag"
+              >
+                支付宝 | {{ row.alipayConfig.rate }}% | {{ row.alipayConfig.weight }} | {{ row.alipayConfig.minAmount }}～{{ row.alipayConfig.maxAmount }}
+              </el-tag>
+              <el-tag 
+                v-if="row.supportedPaymentTypes.usdt" 
+                type="warning" 
+                size="small" 
+                class="payment-tag"
+              >
+                USDT | {{ row.usdtConfig.rate }}% | {{ row.usdtConfig.weight }} | {{ row.usdtConfig.minAmount }}～{{ row.usdtConfig.maxAmount }}
+              </el-tag>
+            </div>
+          </template>
+        </el-table-column>
+ 
+        <el-table-column prop="status" label="状态" width="100" align="center">
         <template #default="{ row }">
-          {{ row.ratio }}
-        </template>
-      </el-table-column>
-      <el-table-column prop="fee" label="手续费 (%)" width="120" align="center">
-        <template #default="{ row }">
-          {{ row.fee.toFixed(2) }}
-        </template>
-      </el-table-column>
-      <el-table-column label="单笔限额" width="160" align="center">
-        <template #default="{ row }">
-          {{ row.minAmount || 0 }} - {{ row.maxAmount ? row.maxAmount : '不限' }}
-        </template>
-      </el-table-column>
-      <el-table-column label="状态" width="100" align="center">
-        <template #default="{ row }">
-          <el-tag :type="row.status === 'enabled' ? 'success' : 'info'">
+          <el-tag :type="row.status === 'enabled' ? 'success' : 'danger'">
             {{ row.status === 'enabled' ? '启用' : '禁用' }}
           </el-tag>
         </template>
@@ -56,104 +79,281 @@
     <el-dialog
       v-model="dialogVisible"
       :title="'编辑支付通道'" 
-      width="500px"
+      width="600px"
       append-to-body
       destroy-on-close 
     >
-      <el-form :model="currentChannel" label-width="100px" ref="channelFormRef">
-        <el-form-item
-          label="通道名称"
-          prop="name"
-          required
-          :rules="[{ required: true, message: '通道名称不能为空', trigger: 'blur' }]"
-        >
-          <el-input v-model="currentChannel.name" placeholder="例如: 老微信通道A" />
-        </el-form-item>
-        <el-form-item
-          label="支付方式"
-          prop="paymentMethodKey"
-        >
-          <el-select v-model="currentChannel.paymentMethodKey" placeholder="选择支付方式" disabled style="width: 168px;">
-            <el-option label="微信支付" value="wechat"></el-option>
-            <el-option label="支付宝支付" value="alipay"></el-option>
-            <el-option label="USDT支付" value="usdt"></el-option>
-          </el-select>
-        </el-form-item>
-        
-        <el-form-item
-          label="送单权重"
-          prop="ratio" 
-          required
-          :rules="[
-            { required: true, message: '送单权重不能为空', trigger: 'blur' },
-            { type: 'number', min: 0, max: 100, message: '权重需在0-100之间', trigger: 'blur' }
-          ]"
-        >
-          <el-input-number 
-            v-model="currentChannel.ratio" 
-            :min="0" 
-            :max="100"
-            controls-position="right"
-            style="width: 168px;" />
-           <div v-if="currentChannel.status === 'enabled' && currentChannel.ratio === 0 && !isSingleEnabledChannel" class="el-form-item__extra_tip ratio-warning-text">
-            提示：权重为0的启用通道实际送单比例为0%。
+      <el-form :model="currentChannel" label-width="120px" ref="channelFormRef">
+        <!-- 基础配置区域 -->
+        <div class="config-section">
+          <div class="section-title">基础配置</div>
+          
+          <el-form-item
+            label="通道名称"
+            prop="name"
+            required
+            :rules="[{ required: true, message: '通道名称不能为空', trigger: 'blur' }]"
+          >
+            <el-input v-model="currentChannel.name" placeholder="例如: 老微信通道A" />
+          </el-form-item>
+          
+          <el-form-item
+            label="商户号"
+            prop="merchantId"
+            required
+            :rules="[{ required: true, message: '商户号不能为空', trigger: 'blur' }]"
+          >
+            <el-input v-model="currentChannel.merchantId" placeholder="请输入商户号" />
+          </el-form-item>
+          
+          <el-form-item
+            label="商户密钥"
+            prop="merchantKey"
+            required
+            :rules="[{ required: true, message: '商户密钥不能为空', trigger: 'blur' }]"
+          >
+            <el-input v-model="currentChannel.merchantKey" placeholder="请输入商户密钥" type="password" show-password />
+          </el-form-item>
+        </div>
+
+        <!-- 支付类型配置区域 -->
+        <div class="config-section">
+          <div class="section-title">支付类型配置</div>
+          
+          <el-form-item label="微信支付">
+            <el-switch 
+              v-model="currentChannel.supportedPaymentTypes.wechat"
+              active-text="启用"
+              inactive-text="禁用"
+            />
+          </el-form-item>
+          
+          <!-- 微信支付配置 -->
+          <div v-if="currentChannel.supportedPaymentTypes.wechat" class="wechat-config">
+            <el-form-item
+              label="产品编码"
+              prop="wechatConfig.productCode"
+              :rules="currentChannel.supportedPaymentTypes.wechat ? [{ required: true, message: '产品编码不能为空', trigger: 'blur' }] : []"
+            >
+              <el-input v-model="currentChannel.wechatConfig.productCode" placeholder="请输入微信支付产品编码" />
+            </el-form-item>
+            
+            <el-form-item
+              label="送单权重"
+              prop="wechatConfig.weight"
+              :rules="currentChannel.supportedPaymentTypes.wechat ? [{ required: true, message: '送单权重不能为空', trigger: 'blur' }] : []"
+            >
+              <el-input-number 
+                v-model="currentChannel.wechatConfig.weight" 
+                :min="0" 
+                :max="100" 
+                controls-position="right"
+                style="width: 200px;" 
+              />
+            </el-form-item>
+            
+            <el-form-item
+              label="费率"
+              prop="wechatConfig.rate"
+              :rules="currentChannel.supportedPaymentTypes.wechat ? [{ required: true, message: '费率不能为空', trigger: 'blur' }] : []"
+            >
+              <el-input-number 
+                v-model="currentChannel.wechatConfig.rate" 
+                :min="0" 
+                :max="100" 
+                :precision="2"
+                :step="0.01"
+                controls-position="right"
+                style="width: 200px;" 
+              /> %
+            </el-form-item>
+            
+            <el-form-item
+              label="单笔限额"
+              required
+            >
+              <div class="price-range-container">
+                <el-input-number 
+                  v-model="currentChannel.wechatConfig.minAmount" 
+                  :min="0" 
+                  :max="currentChannel.wechatConfig.maxAmount || 999999"
+                  :step="10"
+                  controls-position="right"
+                  placeholder="最低限额"
+                  style="width: 168px;" />
+                <span class="range-separator">至</span>
+                <el-input-number 
+                  v-model="currentChannel.wechatConfig.maxAmount" 
+                  :min="currentChannel.wechatConfig.minAmount || 0" 
+                  :step="100"
+                  controls-position="right"
+                  placeholder="最高限额"
+                  style="width: 168px;" />
+              </div>
+            </el-form-item>
           </div>
-        </el-form-item>
-        
-        <el-form-item
-          label="手续费"
-          prop="fee"
-          required
-          :rules="[
-            { required: true, message: '手续费不能为空', trigger: 'blur' },
-            { type: 'number', min: 0, max: 100, message: '手续费需在0-100之间', trigger: 'blur' }
-          ]"
-        >
-          <el-input-number 
-            v-model="currentChannel.fee" 
-            :min="0" 
-            :max="100" 
-            :precision="2"
-            :step="0.1"
-            controls-position="right"
-            style="width: 168px;" /> %
-        </el-form-item>
-        
-        <el-form-item
-          label="单笔限额"
-          required
-        >
-          <div class="price-range-container">
-            <el-input-number 
-              v-model="currentChannel.minAmount" 
-              :min="0" 
-              :max="currentChannel.maxAmount ? currentChannel.maxAmount : 999999"
-              :step="10"
-              controls-position="right"
-              placeholder="最低限额"
-              style="width: 168px;" />
-            <span class="range-separator">至</span>
-            <el-input-number 
-              v-model="currentChannel.maxAmount" 
-              :min="currentChannel.minAmount || 0" 
-              :step="100"
-              controls-position="right"
-              placeholder="最高限额 (0表示不限)"
-              style="width: 168px;" />
+          
+          <el-form-item label="支付宝">
+            <el-switch 
+              v-model="currentChannel.supportedPaymentTypes.alipay"
+              active-text="启用"
+              inactive-text="禁用"
+            />
+          </el-form-item>
+          
+          <!-- 支付宝配置 -->
+          <div v-if="currentChannel.supportedPaymentTypes.alipay" class="alipay-config">
+            <el-form-item
+              label="产品编码"
+              prop="alipayConfig.productCode"
+              :rules="currentChannel.supportedPaymentTypes.alipay ? [{ required: true, message: '产品编码不能为空', trigger: 'blur' }] : []"
+            >
+              <el-input v-model="currentChannel.alipayConfig.productCode" placeholder="请输入支付宝产品编码" />
+            </el-form-item>
+            
+            <el-form-item
+              label="送单权重"
+              prop="alipayConfig.weight"
+              :rules="currentChannel.supportedPaymentTypes.alipay ? [{ required: true, message: '送单权重不能为空', trigger: 'blur' }] : []"
+            >
+              <el-input-number 
+                v-model="currentChannel.alipayConfig.weight" 
+                :min="0" 
+                :max="100" 
+                controls-position="right"
+                style="width: 200px;" 
+              />
+            </el-form-item>
+            
+            <el-form-item
+              label="费率"
+              prop="alipayConfig.rate"
+              :rules="currentChannel.supportedPaymentTypes.alipay ? [{ required: true, message: '费率不能为空', trigger: 'blur' }] : []"
+            >
+              <el-input-number 
+                v-model="currentChannel.alipayConfig.rate" 
+                :min="0" 
+                :max="100" 
+                :precision="2"
+                :step="0.01"
+                controls-position="right"
+                style="width: 200px;" 
+              /> %
+            </el-form-item>
+            
+            <el-form-item
+              label="单笔限额"
+              required
+            >
+              <div class="price-range-container">
+                <el-input-number 
+                  v-model="currentChannel.alipayConfig.minAmount" 
+                  :min="0" 
+                  :max="currentChannel.alipayConfig.maxAmount || 999999"
+                  :step="10"
+                  controls-position="right"
+                  placeholder="最低限额"
+                  style="width: 168px;" />
+                <span class="range-separator">至</span>
+                <el-input-number 
+                  v-model="currentChannel.alipayConfig.maxAmount" 
+                  :min="currentChannel.alipayConfig.minAmount || 0" 
+                  :step="100"
+                  controls-position="right"
+                  placeholder="最高限额"
+                  style="width: 168px;" />
+              </div>
+            </el-form-item>
           </div>
-          <div class="el-form-item__extra_tip">单笔交易限额范围，0表示不限</div>
-        </el-form-item>
+          
+          <el-form-item label="USDT">
+            <el-switch 
+              v-model="currentChannel.supportedPaymentTypes.usdt"
+              active-text="启用"
+              inactive-text="禁用"
+            />
+          </el-form-item>
+          
+          <!-- USDT配置 -->
+          <div v-if="currentChannel.supportedPaymentTypes.usdt" class="usdt-config">
+            <el-form-item
+              label="产品编码"
+              prop="usdtConfig.productCode"
+              :rules="currentChannel.supportedPaymentTypes.usdt ? [{ required: true, message: '产品编码不能为空', trigger: 'blur' }] : []"
+            >
+              <el-input v-model="currentChannel.usdtConfig.productCode" placeholder="请输入USDT产品编码" />
+            </el-form-item>
+            
+            <el-form-item
+              label="送单权重"
+              prop="usdtConfig.weight"
+              :rules="currentChannel.supportedPaymentTypes.usdt ? [{ required: true, message: '送单权重不能为空', trigger: 'blur' }] : []"
+            >
+              <el-input-number 
+                v-model="currentChannel.usdtConfig.weight" 
+                :min="0" 
+                :max="100" 
+                controls-position="right"
+                style="width: 200px;" 
+              />
+            </el-form-item>
+            
+            <el-form-item
+              label="费率"
+              prop="usdtConfig.rate"
+              :rules="currentChannel.supportedPaymentTypes.usdt ? [{ required: true, message: '费率不能为空', trigger: 'blur' }] : []"
+            >
+              <el-input-number 
+                v-model="currentChannel.usdtConfig.rate" 
+                :min="0" 
+                :max="100" 
+                :precision="2"
+                :step="0.01"
+                controls-position="right"
+                style="width: 200px;" 
+              /> %
+            </el-form-item>
+            
+            <el-form-item
+              label="单笔限额"
+              required
+            >
+              <div class="price-range-container">
+                <el-input-number 
+                  v-model="currentChannel.usdtConfig.minAmount" 
+                  :min="0" 
+                  :max="currentChannel.usdtConfig.maxAmount || 999999"
+                  :step="10"
+                  controls-position="right"
+                  placeholder="最低限额"
+                  style="width: 168px;" />
+                <span class="range-separator">至</span>
+                <el-input-number 
+                  v-model="currentChannel.usdtConfig.maxAmount" 
+                  :min="currentChannel.usdtConfig.minAmount || 0" 
+                  :step="100"
+                  controls-position="right"
+                  placeholder="最高限额"
+                  style="width: 168px;" />
+              </div>
+            </el-form-item>
+          </div>
+        </div>
         
-        <el-form-item label="状态" prop="status">
-          <el-switch
-            v-model="currentChannel.status"
-            active-value="enabled"
-            inactive-value="disabled"
-            @change="handleStatusSwitchInDialog"
-          />
-          <span class="status-text">{{ currentChannel.status === 'enabled' ? '启用' : '禁用' }}</span>
-        </el-form-item>
-      </el-form>
+        <el-divider content-position="left">状态配置</el-divider>
+        <div class="status-config">
+          <el-form-item label="状态" prop="status">
+            <el-switch
+              v-model="currentChannel.status"
+              active-value="enabled"
+              inactive-value="disabled"
+              @change="handleStatusSwitchInDialog"
+            />
+            <span class="status-text">{{ currentChannel.status === 'enabled' ? '启用' : '禁用' }}</span>
+          </el-form-item>
+        </div>
+ 
+        </el-form>
       
       <template #footer>
         <div class="form-buttons">
@@ -175,17 +375,13 @@ interface CurrentChannelState extends Omit<PaymentChannel, 'id'> {
   id?: string; // id 在新建时可能不存在，或者在 resetForm 后被清除
 }
 
-const props = defineProps<{
-  paymentMethodKey: 'wechat' | 'alipay' | 'usdt';
-}>();
-
 const paymentStore = usePaymentStore();
 const channelFormRef = ref<FormInstance>();
 const dialogVisible = ref(false);
 const submitLoading = ref(false);
 
 const channelsWithActualRatio = computed(() => 
-  paymentStore.getChannelsByMethodWithActualRatio(props.paymentMethodKey)
+  paymentStore.channels
 );
 
 const enabledChannelsCount = computed(() => 
@@ -209,22 +405,46 @@ const showAlertForInvalidWeights = computed(() => {
 
 const initialChannelState = (): CurrentChannelState => ({
   name: '',
-  paymentMethodKey: props.paymentMethodKey,
+  merchantId: '',
+  merchantKey: '',
+  paymentMethodKey: 'wechat', // 默认为微信支付
   ratio: 1,
   status: 'enabled',
   fee: 0,
   minAmount: 100,
   maxAmount: 10000,
-  id: undefined // 确保 id 初始为 undefined
+  id: undefined, // 确保 id 初始为 undefined
+  supportedPaymentTypes: {
+    wechat: false,
+    alipay: false,
+    usdt: false
+  },
+  wechatConfig: {
+    productCode: '',
+    weight: 0,
+    rate: 0,
+    minAmount: 0,
+    maxAmount: 0
+  },
+  alipayConfig: {
+    productCode: '',
+    weight: 0,
+    rate: 0,
+    minAmount: 0,
+    maxAmount: 0
+  },
+  usdtConfig: {
+    productCode: '',
+    weight: 0,
+    rate: 0,
+    minAmount: 0,
+    maxAmount: 0
+  }
 });
 
 const currentChannel = reactive<CurrentChannelState>(initialChannelState());
 
-watch(() => props.paymentMethodKey, (newKey) => {
-  currentChannel.paymentMethodKey = newKey;
-  // 当支付方式切换时，可能需要重置表单到对应方式的初始状态
-  // resetForm(); // 考虑是否需要，或者仅更新 key
-});
+// 移除了props相关的watch，因为不再需要从父组件接收paymentMethodKey
 
 const resetForm = () => {
   const freshState = initialChannelState();
@@ -380,4 +600,85 @@ const submitChannelForm = async () => {
   margin: 0 8px;
   color: #909399;
 }
-</style> 
+
+.config-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.payment-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.payment-tag {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.payment-type-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.payment-type-item .el-switch {
+  margin-right: 8px;
+}
+
+.payment-type-label {
+  font-size: 14px;
+  color: #606266;
+  min-width: 80px;
+}
+
+.alipay-config, .wechat-config, .usdt-config {
+  margin-left: 20px;
+  padding: 12px;
+  background-color: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  margin-top: 8px;
+}
+
+.status-config {
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.alipay-config-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.alipay-config-item:last-child {
+  margin-bottom: 0;
+}
+
+.alipay-config-label {
+  font-size: 13px;
+  color: #909399;
+  min-width: 70px;
+  margin-right: 8px;
+}
+</style>

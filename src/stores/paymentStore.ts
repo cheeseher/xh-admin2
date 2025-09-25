@@ -3,12 +3,42 @@ import { defineStore } from 'pinia';
 export interface PaymentChannel {
   id: string;
   name: string; // 通道名称，例如 "老微信通道", "SpeedZF-支付宝H5"
+  merchantId: string; // 商户号
+  merchantKey: string; // 商户密钥
   paymentMethodKey: 'wechat' | 'alipay' | 'usdt'; // 该通道属于哪种支付方式
   ratio: number; // 送单权重 (例如: 1, 2, 3等整数，代表相对比例)
   status: 'enabled' | 'disabled';
   fee: number; // 手续费率 (%)
   minAmount?: number; // 单笔最低金额
   maxAmount?: number; // 单笔最高金额
+  // 支付类型配置
+  supportedPaymentTypes: {
+    wechat: boolean;
+    alipay: boolean;
+    usdt: boolean;
+  };
+  // 各支付类型的具体配置
+  wechatConfig?: {
+    productCode: string; // 产品编码
+    weight: number; // 送单权重
+    minAmount: number; // 单笔最低金额
+    maxAmount: number; // 单笔最高金额
+    rate: number; // 费率
+  };
+  alipayConfig?: {
+    productCode: string; // 产品编码
+    rate: number; // 费率
+    weight: number; // 送单权重
+    minAmount: number; // 单笔最低金额
+    maxAmount: number; // 单笔最高金额
+  };
+  usdtConfig?: {
+    productCode: string; // 产品编码
+    weight: number; // 送单权重
+    minAmount: number; // 单笔最低金额
+    maxAmount: number; // 单笔最高金额
+    rate: number; // 费率
+  };
 }
 
 interface PaymentState {
@@ -19,16 +49,52 @@ interface PaymentState {
 // 初始演示数据 - ratio 现在代表权重
 const initialChannels: PaymentChannel[] = [
   // 微信支付 - 3个通道
-  { id: 'wc1', name: '老微信通道', paymentMethodKey: 'wechat', ratio: 3, status: 'enabled', fee: 5.0, minAmount: 100, maxAmount: 5000 },
-  { id: 'wc2', name: '新微信通道', paymentMethodKey: 'wechat', ratio: 3, status: 'enabled', fee: 4.0, minAmount: 200, maxAmount: 10000 },
-  { id: 'wc3', name: '微信通道 3', paymentMethodKey: 'wechat', ratio: 3, status: 'disabled', fee: 4.0, minAmount: 100, maxAmount: 3000 }, // 初始禁用一个作为测试
+  { 
+    id: 'wc1', name: '老微信通道', merchantId: 'WX001', merchantKey: 'wx_key_123456', 
+    paymentMethodKey: 'wechat', ratio: 3, status: 'enabled', fee: 5.0, 
+    minAmount: 100, maxAmount: 5000,
+    supportedPaymentTypes: { wechat: true, alipay: false, usdt: false },
+    wechatConfig: { productCode: 'WECHAT_NATIVE', weight: 3, minAmount: 100, maxAmount: 5000, rate: 5.0 }
+  },
+  { 
+    id: 'wc2', name: '新微信通道', merchantId: 'WX002', merchantKey: 'wx_key_789012', 
+    paymentMethodKey: 'wechat', ratio: 3, status: 'enabled', fee: 4.0, 
+    minAmount: 200, maxAmount: 10000,
+    supportedPaymentTypes: { wechat: true, alipay: false, usdt: false },
+    wechatConfig: { productCode: 'WECHAT_JSAPI', weight: 3, minAmount: 200, maxAmount: 10000, rate: 4.0 }
+  },
+  { 
+    id: 'wc3', name: '微信通道 3', merchantId: 'WX003', merchantKey: 'wx_key_345678', 
+    paymentMethodKey: 'wechat', ratio: 3, status: 'disabled', fee: 4.0, 
+    minAmount: 100, maxAmount: 3000,
+    supportedPaymentTypes: { wechat: true, alipay: false, usdt: false },
+    wechatConfig: { productCode: 'WECHAT_H5', weight: 3, minAmount: 100, maxAmount: 3000, rate: 4.0 }
+  },
   
   // 支付宝支付 - 2个通道
-  { id: 'ali1', name: '老支付宝通道', paymentMethodKey: 'alipay', ratio: 6, status: 'enabled', fee: 5.0, minAmount: 50, maxAmount: 2000 },
-  { id: 'ali2', name: '新支付宝通道', paymentMethodKey: 'alipay', ratio: 4, status: 'enabled', fee: 4.0, minAmount: 100, maxAmount: 5000 },
+  { 
+    id: 'ali1', name: '老支付宝通道', merchantId: 'ALI001', merchantKey: 'ali_key_123456', 
+    paymentMethodKey: 'alipay', ratio: 6, status: 'enabled', fee: 5.0, 
+    minAmount: 50, maxAmount: 2000,
+    supportedPaymentTypes: { wechat: false, alipay: true, usdt: false },
+    alipayConfig: { productCode: 'FAST_INSTANT_TRADE_PAY', rate: 0.6, weight: 6, minAmount: 50, maxAmount: 2000 }
+  },
+  { 
+    id: 'ali2', name: '新支付宝通道', merchantId: 'ALI002', merchantKey: 'ali_key_789012', 
+    paymentMethodKey: 'alipay', ratio: 4, status: 'enabled', fee: 4.0, 
+    minAmount: 100, maxAmount: 5000,
+    supportedPaymentTypes: { wechat: false, alipay: true, usdt: false },
+    alipayConfig: { productCode: 'QUICK_MSECURITY_PAY', rate: 0.55, weight: 4, minAmount: 100, maxAmount: 5000 }
+  },
   
   // USDT支付 - 1个通道
-  { id: 'usdt1', name: 'USDT通道', paymentMethodKey: 'usdt', ratio: 1, status: 'enabled', fee: 5.0, minAmount: 10, maxAmount: 1000 },
+  { 
+    id: 'usdt1', name: 'USDT通道', merchantId: 'USDT001', merchantKey: 'usdt_key_123456', 
+    paymentMethodKey: 'usdt', ratio: 1, status: 'enabled', fee: 5.0, 
+    minAmount: 10, maxAmount: 1000,
+    supportedPaymentTypes: { wechat: false, alipay: false, usdt: true },
+    usdtConfig: { productCode: 'USDT_TRC20', weight: 1, minAmount: 10, maxAmount: 1000, rate: 5.0 }
+  },
 ];
 const DEFAULT_WAITING_TIME = 1; // 默认1分钟
 
@@ -135,4 +201,4 @@ export const usePaymentStore = defineStore('payment', {
       }
     },
   },
-}); 
+});
